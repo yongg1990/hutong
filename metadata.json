@@ -1,0 +1,6 @@
+{
+  "name": "中药互通互认平台",
+  "description": "基于Vue3和Element Plus的中药互通互认平台前端控制台系统，涵盖工作台、业务协同、接入治理、主数据、可信查询、互通输出与运行管理。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

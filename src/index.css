@@ -1,0 +1,74 @@
+@import "tailwindcss";
+@import "element-plus/dist/index.css";
+
+:root {
+  --color-brand: #176B4D;
+  --color-brand-soft: #e7f1ec;
+  --color-ink: #18211D;
+  --color-muted: #617068;
+  --color-border: #D9E0DC;
+  --color-surface: #FFFFFF;
+  --color-canvas: #F4F6F5;
+  --color-info: #166A8F;
+  --color-warn: #A45C00;
+  --color-danger: #B42318;
+  --color-success: #157347;
+  --color-sidebar: #1D2B25;
+
+  /* Element Plus primary color override */
+  --el-color-primary: #176B4D;
+  --el-color-primary-light-3: #438f74;
+  --el-color-primary-light-5: #73b39d;
+  --el-color-primary-light-7: #a7d6c5;
+  --el-color-primary-light-9: #e7f1ec;
+  --el-color-primary-dark-2: #12523b;
+  --el-border-radius-base: 4px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  color: var(--color-ink);
+  background-color: var(--color-canvas);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom platform utility classes */
+.mono {
+  font-family: Consolas, Monaco, "Courier New", monospace;
+}
+
+/* Element Plus customizations to fit tight desktop console feel */
+.el-button--primary {
+  background-color: var(--color-brand) !important;
+  border-color: var(--color-brand) !important;
+}
+
+.el-table {
+  --el-table-header-bg-color: #f6f8f7;
+  --el-table-header-text-color: #526159;
+  --el-table-border-color: #edf0ee;
+  font-size: 13px;
+}
+
+.el-tabs__item.is-active {
+  color: var(--color-brand) !important;
+  font-weight: 700;
+}
+
+.el-tabs__active-bar {
+  background-color: var(--color-brand) !important;
+}
+
+.el-drawer__header {
+  margin-bottom: 0 !important;
+  padding: 16px 20px !important;
+  border-bottom: 1px solid var(--color-border);
+}
