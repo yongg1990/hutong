@@ -701,11 +701,8 @@ export const rbacApi = {
     if (idx !== -1) {
       stored[idx] = { ...stored[idx], ...data };
       setLocal('tcmirp_users_store', stored);
-      return apiCall(
-        request.put(`/settings/users/${id}`, stored[idx]),
-        stored[idx],
-        '更新用户信息'
-      );
+      // User update is not part of the current Swagger document.
+      return stored[idx];
     }
     throw new Error('用户不存在');
   },
@@ -715,19 +712,11 @@ export const rbacApi = {
     const next = stored.filter(u => String(u.id) !== String(id));
     setLocal('tcmirp_users_store', next);
 
-    return apiCall(
-      request.delete(`/settings/users/${id}`),
-      { success: true },
-      '删除用户'
-    );
+    return { success: true };
   },
 
   async resetPassword(id: string | number): Promise<{ success: boolean; tempPass: string }> {
-    return apiCall(
-      request.post(`/settings/users/${id}/reset-password`),
-      { success: true, tempPass: 'Tcmirp@2026#' },
-      '重置用户密码'
-    );
+    return { success: true, tempPass: 'Tcmirp@2026#' };
   },
 
   // ================= 3. 角色与权限管理 (Roles & Permissions) =================
@@ -830,11 +819,8 @@ export const rbacApi = {
     const next = stored.filter(r => String(r.id) !== String(id) && String(r.roleId) !== String(id));
     setLocal('tcmirp_roles_store', next);
 
-    return apiCall(
-      request.delete(`/tenant-access/roles/${id}`),
-      { success: true },
-      '删除角色'
-    );
+    // Role deletion is not currently published by Swagger; keep local state.
+    return { success: true };
   },
 
   // ================= 4. 权限点定义管理 (Permissions) =================

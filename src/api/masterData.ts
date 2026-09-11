@@ -125,11 +125,11 @@ export const masterDataApi = {
         partyType: payload.partyType,
         partyName: payload.partyName,
         regionCode,
-        attributes: {
+        attributes: JSON.stringify({
           partyCode: newParty.partyCode,
           region: newParty.region,
           ...(payload.attributes || {})
-        }
+        })
       }).then((res: any) => {
         return {
           ...newParty,
@@ -232,12 +232,12 @@ export const masterDataApi = {
         projectSpaceId: Number(payload.projectSpaceId) || 1,
         objectType: payload.objectType,
         ownerPartyId: Number(payload.ownerPartyId) || 1,
-        attributes: {
+        attributes: JSON.stringify({
           objectCode: newObj.objectCode,
           displayName: newObj.displayName,
           ownerParty: newObj.ownerParty,
           ...(payload.attributes || {})
-        },
+        }),
         sourceBusinessKey: payload.sourceBusinessKey || newObj.objectCode
       }).then((res: any) => {
         return {
@@ -291,6 +291,7 @@ export const masterDataApi = {
       codes.push({
         schemeCode: 'NATIONAL_MEDICAL_INSURANCE_16',
         code: newPiece.medicalInsuranceCode,
+        validFrom: new Date().toISOString().slice(0, 10),
         sourceAuthority: '国家医疗保障局'
       });
     }
@@ -298,6 +299,7 @@ export const masterDataApi = {
       codes.push({
         schemeCode: 'NMPA_DRUG_TRACE',
         code: newPiece.nmpaCode,
+        validFrom: new Date().toISOString().slice(0, 10),
         sourceAuthority: '国家药品监督管理局'
       });
     }

@@ -192,7 +192,7 @@ const rules = {
 onMounted(async () => {
   try {
     tenants.value = await rbacApi.getTenants();
-    if (tenants.value.length > 0 && !form.value.tenantId) {
+    if (tenants.value.length > 0 && !tenants.value.some(t => String(t.id) === String(form.value.tenantId))) {
       form.value.tenantId = tenants.value[0].id;
     }
   } catch (err) {

@@ -1,9 +1,11 @@
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, loadEnv} from 'vite';
 
-export default defineConfig(() => {
+export default defineConfig(({mode}) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const backendTarget = env.VITE_BACKEND_TARGET || 'http://192.168.1.39:8900';
   return {
     plugins: [vue(), tailwindcss()],
     resolve: {
@@ -19,7 +21,7 @@ export default defineConfig(() => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
       proxy: {
         '/api/tcmirp': {
-          target: process.env.VITE_BACKEND_TARGET || 'http://192.168.1.39:8900',
+          target: backendTarget,
           changeOrigin: true,
           secure: false,
         },

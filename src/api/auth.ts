@@ -1,5 +1,6 @@
 import { request, apiCall } from './client';
-import { rbacApi, type UserItem } from './rbac';
+import B from '@/utils/Secret/BigInt';
+import R from '@/utils/Secret/RSA';
 
 export interface LoginPayload {
   username: string;
@@ -27,125 +28,64 @@ export interface LogoutResult {
   message: string;
 }
 
-/**
- * 身份认证与权限会话服务 (Swagger: /api/tcmirp/auth/*)
- */
+// The backend login contract uses the legacy RSA/BigInt PKCS#1 v1.5 format.
+B.setMaxDigits(129);
+const loginRsaKey = new R.RSAKeyPair(
+  '010001',
+  '',
+  'DBCC53814668BD44D2185B1195A00C5222DAB190AEF5397E6466918D560337ECA438CF8725BA35A2F38B79BC7C1A441ED610D361B990008A47B42633C23D6674DC8545032BF161B83FE0E1B7609D1A8DD72B23AEDC60830A1614D9A7D22A3419FC9616BA858FC9D2D4A390B6A4D3CE5488CAD6F4264A1412E5E30FF372C80515'
+);
+
+function encryptLoginPassword(password: string): string {
+  return R.encryptedString(loginRsaKey, password);
+}
+
+/** Authentication API defined by Swagger /tenant-access/auth/*. */
 export const authApi = {
-  /**
-   * 用户登录 POST /api/tcmirp/auth/login
-   */
   async login(payload: LoginPayload): Promise<LoginResult> {
-    // Determine user profile based on mock/seed users if backend unreachable
-    const users = await rbacApi.getUsers();
-    let matched = users.find(u => u.username.toLowerCase() === payload.username.trim().toLowerCase());
-    
-    if (!matched) {
-      // Allow demo fallback login
-      matched = {
-        id: `USER-${Date.now().toString(36).toUpperCase()}`,
-        username: payload.username.trim(),
-        realName: payload.username.trim() === 'admin' ? '系统总管' : payload.username.trim(),
-        tenantId: payload.tenantId || 'TENANT-YN-DEMO',
-        tenantName: '云南省中药材全产业链协同示范联盟',
-        roles: ['ROLE_SUPER_ADMIN'],
-        phone: '13888000000',
-        email: `${payload.username}@tcmirp.cn`,
-        status: 'ACTIVE',
-        lastLoginAt: new Date().toLocaleString(),
-        createdAt: new Date().toLocaleString()
-      };
-    }
+    // Authentication must be confirmed by the backend. Do not use apiCall's
+    // offline fallback here, otherwise a failed login would create a local session.
+    const response = await request.post<any>('/tenant-access/auth/login', {
+      username: payload.username.trim(),
+      password: encryptLoginPassword(payload.password)
+    });
+    const res = response?.data?.token ? response.data : response;
+    const token = res?.token;
+    if (!token) throw new Error('登录接口未返回有效 token，无法建立会话');
 
-    const fallbackResult: LoginResult = {
-      token: `jwt_tcmirp_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`,
-      tokenType: 'Bearer',
-      expiresIn: 86400,
-      user: {
-        id: String(matched.id),
-        username: matched.username,
-        realName: matched.realName,
-        roles: matched.roles || ['ROLE_OPERATOR'],
-        tenantId: String(matched.tenantId),
-        tenantName: matched.tenantName || '云南省中药材全产业链协同示范联盟',
-        permissions: ['workspace:view', 'business:all', 'governance:all', 'trust:all', 'settings:all']
-      }
+    const user = res?.user || {
+      id: String(res?.userId || payload.username.trim()),
+      username: payload.username.trim(),
+      realName: payload.username.trim(),
+      tenantId: String(res?.tenantId || payload.tenantId || 'TENANT-YN-DEMO'),
+      tenantName: String(res?.tenantName || '云南省中药材全产业链协同示范联盟'),
+      roles: ['ROLE_OPERATOR'],
+      permissions: []
     };
 
-    const res = await apiCall<any>(
-      request.post('/tenant-access/auth/login', {
-        username: payload.username.trim(),
-        password: payload.password
-      }),
-      fallbackResult,
-      '用户登录'
-    );
-
-    // Extract token: matches login interface response data.token (or res.token if already unwrapped)
-    const token = res?.data?.token || res?.token || fallbackResult.token;
-    const user = res?.user || res?.data?.user || fallbackResult.user;
-
-    // Save session info with weappauthorization
-    if (token) {
-      localStorage.setItem('weappauthorization', token);
-      localStorage.setItem('tcmirp_token', token);
-    }
-    if (user) {
-      localStorage.setItem('tcmirp_user', JSON.stringify(user));
-      localStorage.setItem('tcmirp_tenant_id', user.tenantId);
-      localStorage.setItem('tcmirp_tenant_name', user.tenantName);
-    }
-
-    return {
-      token,
-      tokenType: 'Bearer',
-      expiresIn: res?.expiresIn || 86400,
-      user
-    };
+    localStorage.setItem('weappauthorization', token);
+    localStorage.setItem('tcmirp_token', token);
+    localStorage.setItem('tcmirp_user', JSON.stringify(user));
+    localStorage.setItem('tcmirp_tenant_id', user.tenantId);
+    localStorage.setItem('tcmirp_tenant_name', user.tenantName);
+    localStorage.setItem('tcmirp_session_source', 'backend');
+    return { token, tokenType: 'Bearer', expiresIn: Number(res?.expiresIn || 86400), user };
   },
 
-  /**
-   * 用户退出登录 POST /api/tcmirp/tenant-access/auth/logout
-   */
   async logout(): Promise<LogoutResult> {
     const token = localStorage.getItem('weappauthorization') || localStorage.getItem('tcmirp_token') || '';
     const res = await apiCall<LogoutResult>(
-      request.post('/tenant-access/auth/logout', {}, {
-        headers: {
-          weappauthorization: token,
-          WeAppAuthorization: token
-        }
-      }),
+      request.post('/tenant-access/auth/logout', {}, { headers: { WeAppAuthorization: token } }),
       { success: true, message: '安全登出成功' },
       '用户退出登录'
     );
-
-    localStorage.removeItem('weappauthorization');
-    localStorage.removeItem('tcmirp_token');
-    localStorage.removeItem('tcmirp_user');
-    localStorage.removeItem('tcmirp_tenant_id');
-    localStorage.removeItem('tcmirp_tenant_name');
-
+    ['weappauthorization', 'tcmirp_token', 'tcmirp_user', 'tcmirp_tenant_id', 'tcmirp_tenant_name', 'tcmirp_session_source'].forEach(k => localStorage.removeItem(k));
     return res;
   },
 
-  /**
-   * 获取当前登录用户信息 GET /api/tcmirp/auth/me
-   */
   async getCurrentUser(): Promise<any> {
     const cached = localStorage.getItem('tcmirp_user');
-    let fallback = null;
-    if (cached) {
-      try {
-        fallback = JSON.parse(cached);
-      } catch (e) {
-        fallback = null;
-      }
-    }
-
-    return apiCall(
-      request.get('/auth/me'),
-      fallback,
-      '获取当前会话用户'
-    );
+    if (!cached) return null;
+    try { return JSON.parse(cached); } catch { return null; }
   }
 };

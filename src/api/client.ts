@@ -34,8 +34,38 @@ export const request = axios.create({
   }
 });
 
+// Keep calls aligned with the currently published Swagger contract. The UI has
+// additional offline/demo views whose endpoints are not present in this backend;
+// those calls intentionally fall through to apiCall's local fallback.
+const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
+  { method: 'POST', pattern: /^\/tenant-access\/auth\/(login|logout)$/ },
+  { method: 'GET', pattern: /^\/tenant-access\/(tenants|users|permissions)$/ },
+  { method: 'POST', pattern: /^\/tenant-access\/(tenants|users|permissions)$/ },
+  { method: 'GET', pattern: /^\/tenant-access\/tenants\/\d+$/ },
+  { method: 'POST', pattern: /^\/tenant-access\/tenants\/\d+\/update$/ },
+  { method: 'GET', pattern: /^\/tenant-access\/tenants\/\d+\/delete$/ },
+  { method: 'POST', pattern: /^\/tenant-access\/users\/\d+\/roles$/ },
+  { method: 'GET', pattern: /^\/tenant-access\/users\/\d+\/roles\/\d+\/delete$/ },
+  { method: 'POST', pattern: /^\/tenant-access\/roles\/tenant$/ },
+  { method: 'POST', pattern: /^\/tenant-access\/roles\/\d+\/permissions$/ },
+  { method: 'POST', pattern: /^\/tenant-access\/permissions\/\d+\/update$/ },
+  { method: 'GET', pattern: /^\/tenant-access\/permissions\/\d+\/delete$/ },
+  { method: 'POST', pattern: new RegExp('^/openapi/v1/(trace-codes|source-systems|raw-records|parties|mappings/test|identifiers-resolve|identifier-bindings|event-fact/events|event-fact/config/schemas|event-fact/config/schemas/test|event-fact/config/event-types|decoction-piece-products|business-objects|batches)$') },
+  { method: 'POST', pattern: /^\/openapi\/v1\/raw-records\/\d+\/replays$/ },
+  { method: 'POST', pattern: new RegExp('^/openapi/v1/event-fact/config/schemas/[^/]+/[^/]+/publish$') },
+  { method: 'GET', pattern: new RegExp('^/openapi/v1/event-fact/schemas/[^/]+/[^/]+$') },
+  { method: 'GET', pattern: new RegExp('^/openapi/v1/event-fact/events/[0-9]+$') },
+  { method: 'POST', pattern: new RegExp('^/admin/v1/(project-spaces|deployment-instances)$') },
+  { method: 'GET', pattern: new RegExp('^/admin/v1/(project-spaces|deployment-instances)/[0-9]+$') }
+];
+
 // Request Interceptor
 request.interceptors.request.use((config) => {
+  const method = (config.method || 'get').toUpperCase();
+  const rawUrl = String(config.url || '').split('?')[0];
+  if (!swaggerEndpointPatterns.some(item => item.method === method && item.pattern.test(rawUrl))) {
+    return Promise.reject(Object.assign(new Error('该接口未在当前 Swagger 文档发布，已使用本地演示数据'), { code: 'UNSUPPORTED_ENDPOINT' }));
+  }
   // Retrieve token from weappauthorization or tcmirp_token
   const token = localStorage.getItem('weappauthorization') || localStorage.getItem('tcmirp_token');
 
@@ -85,14 +115,18 @@ request.interceptors.response.use((response: AxiosResponse) => {
       localStorage.removeItem('weappauthorization');
       localStorage.removeItem('tcmirp_token');
       localStorage.removeItem('tcmirp_user');
+      localStorage.removeItem('tcmirp_session_source');
       if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
         const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
         window.location.href = `/login?redirect=${redirectUrl}`;
       }
-      return Promise.reject(new Error(res.message || '登录令牌已失效，请重新登录'));
+      const authError = Object.assign(new Error(res.message || '登录令牌已失效，请重新登录'), {
+        response: { status: Number(res.code) }
+      });
+      return Promise.reject(authError);
     }
 
-    if (res.code === 200 || res.code === 0 || res.code === '200') {
+    if (res.code === 200 || res.code === 0 || res.code === '0' || res.code === '200') {
       return res.data !== undefined ? res.data : res;
     }
     // Business error returned by backend
@@ -114,6 +148,7 @@ request.interceptors.response.use((response: AxiosResponse) => {
     localStorage.removeItem('weappauthorization');
     localStorage.removeItem('tcmirp_token');
     localStorage.removeItem('tcmirp_user');
+    localStorage.removeItem('tcmirp_session_source');
     if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
       const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
       window.location.href = `/login?redirect=${redirectUrl}`;
@@ -136,8 +171,14 @@ export async function apiCall<T>(
     return result as T;
   } catch (err: any) {
     // 401 Unauthorized token expired
-    if (err?.response?.status === 401) {
+    if (err?.response?.status === 401 || err?.response?.status === 403) {
       throw err;
+    }
+
+    // A local/demo-only page intentionally has no endpoint in the current
+    // Swagger document; this is not evidence that the backend is offline.
+    if (err?.code === 'UNSUPPORTED_ENDPOINT') {
+      return fallbackData;
     }
 
     apiStatus.isOnline = false;

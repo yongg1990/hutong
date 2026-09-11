@@ -18,7 +18,16 @@ export interface AuthState {
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => {
-    const savedToken = localStorage.getItem('weappauthorization') || localStorage.getItem('tcmirp_token') || '';
+    const storedToken = localStorage.getItem('weappauthorization') || localStorage.getItem('tcmirp_token') || '';
+    const hasBackendSession = localStorage.getItem('tcmirp_session_source') === 'backend';
+    const isLegacyDemoToken = /^(jwt_tcmirp_|local-|demo-|mock-|fake-|dev-token)/i.test(storedToken);
+    const savedToken = !hasBackendSession || isLegacyDemoToken ? '' : storedToken;
+    if (!savedToken && storedToken) {
+      localStorage.removeItem('weappauthorization');
+      localStorage.removeItem('tcmirp_token');
+      localStorage.removeItem('tcmirp_user');
+      localStorage.removeItem('tcmirp_session_source');
+    }
     let savedUser = null;
     try {
       const raw = localStorage.getItem('tcmirp_user');
@@ -29,16 +38,8 @@ export const useAuthStore = defineStore('auth', {
 
     return {
       token: savedToken,
-      isLoggedIn: !!savedToken,
-      user: savedUser || {
-        id: 'USER-1001',
-        username: 'admin_yn_tcm',
-        realName: '张工 (系统总管)',
-        roles: ['ROLE_SUPER_ADMIN'],
-        tenantId: 'TENANT-YN-DEMO',
-        tenantName: '云南省中药材全产业链协同示范联盟',
-        permissions: ['workspace:view', 'business:all', 'governance:all', 'trust:all', 'settings:all']
-      }
+      isLoggedIn: Boolean(savedToken && savedUser),
+      user: savedUser
     };
   },
 
@@ -75,13 +76,16 @@ export const useAuthStore = defineStore('auth', {
         localStorage.removeItem('weappauthorization');
         localStorage.removeItem('tcmirp_token');
         localStorage.removeItem('tcmirp_user');
+        localStorage.removeItem('tcmirp_session_source');
       }
     },
 
     initSession() {
       const token = localStorage.getItem('weappauthorization') || localStorage.getItem('tcmirp_token');
       const rawUser = localStorage.getItem('tcmirp_user');
-      if (token && rawUser) {
+      const isBackendSession = localStorage.getItem('tcmirp_session_source') === 'backend';
+      const isLegacyDemoToken = Boolean(token && /^(jwt_tcmirp_|local-|demo-|mock-|fake-|dev-token)/i.test(token));
+      if (token && rawUser && isBackendSession && !isLegacyDemoToken) {
         try {
           this.token = token;
           this.user = JSON.parse(rawUser);
@@ -95,7 +99,19 @@ export const useAuthStore = defineStore('auth', {
           }
         } catch (e) {
           console.error('Failed to parse cached user', e);
+          this.token = '';
+          this.isLoggedIn = false;
+          this.user = null;
+          localStorage.removeItem('tcmirp_session_source');
         }
+      } else {
+        this.token = '';
+        this.isLoggedIn = false;
+        this.user = null;
+        localStorage.removeItem('weappauthorization');
+        localStorage.removeItem('tcmirp_token');
+        localStorage.removeItem('tcmirp_user');
+        localStorage.removeItem('tcmirp_session_source');
       }
     }
   }

@@ -1,6 +1,6 @@
 # 云南省中药材全产业链追溯与治理协同平台 · 项目交接文档 (HANDOVER)
 
-> **文档版本**：v1.0.0  
+> **文档版本**：v1.1.0  
 > **交接日期**：2026-09-11  
 > **平台名称**：云南省中药材全产业链追溯与治理协同平台（中药互通互认平台）  
 > **开发团队**：前端工程与架构研发组  
@@ -18,6 +18,7 @@
 7. [本地开发与部署指南](#7-本地开发与部署指南)
 8. [状态管理与本地持久化](#8-状态管理与本地持久化)
 9. [后续演进建议与已知待办](#9-后续演进建议与已知待办)
+10. [本次交接变更](#10-本次交接变更)
 
 ---
 
@@ -225,7 +226,11 @@
   }
   ```
 - **登录后处理**：
-  前端将 `data.token` 存入 `localStorage.setItem('weappauthorization', token)`。
+  前端将 `data.token` 存入 `localStorage.setItem('weappauthorization', token)`，同时保存兼容键 `tcmirp_token`。登录成功后写入 `tcmirp_session_source=backend`，只有后端登录产生的会话才能在刷新后恢复。
+
+- **密码加密**：登录密码使用 `src/utils/Secret/BigInt.js` 与 `src/utils/Secret/RSA.js` 按历史 Vue2 兼容算法加密后提交。初始化配置为 `B.setMaxDigits(129)`，RSA 公钥指数为 `010001`，模数为项目约定的 1024 位公钥。
+
+- **严格登录**：登录请求不使用离线 Mock fallback。后端不可达、账号密码错误或响应中没有有效 `token` 时，登录失败，不会生成本地演示 token。
 
 #### (2) 请求拦截器 Header 自动装配
 位于 `src/api/client.ts`，每次发起 HTTP 请求时，自动注入以下标准化头信息：
@@ -247,6 +252,9 @@ config.headers.set('X-Request-Id', `REQ-${Date.now()}-${random}`);
 - 若网络超时或服务离线（排除 401 鉴权过期），会自动回退至内置的标准 Mock 基准数据，并在控制台给出友好提示，保障平台始终可演示、可交付。
 - 若接收到后端 `401 / 403`，则会主动清除已失效凭证并安全引导至 `/login` 页面。
 
+#### (4) Swagger 接口白名单
+`src/api/client.ts` 中的 `swaggerEndpointPatterns` 用于限制真实请求只访问当前 Swagger 已确认的路径。未发布的页面接口会直接使用页面已有的本地基准数据，不影响页面浏览；登录、登出接口不走该 fallback。
+
 ---
 
 ## 6. 关键技术实现与避坑指南
@@ -255,13 +263,18 @@ config.headers.set('X-Request-Id', `REQ-${Date.now()}-${random}`);
 - **踩坑记录**：若在 Axios 请求拦截器中写 `if (!token) return Promise.reject(...)`，会导致**登录请求自身因为尚未拥有 Token 而被直接拒绝**，形成死锁。
 - **现行规范**：登录接口及无 Token 状态下正常发送请求；拦截器只在 `token` 存在时负责将其附带到请求头，不做任何前置阻断。
 
-### 6.2 【重要规避】SVG 图谱节点悬停抖动（Jitter Loop）
+### 6.2 登录路由守卫与旧会话清理
+- `src/router/index.ts` 对 `/` 下的业务路由设置 `requiresAuth`，未登录访问 `/workspace` 或其他业务页面时跳转到 `/login?redirect=...`。
+- 登录页在已有有效后端会话时跳回工作台；退出登录、后端返回 `401/403` 时清理本地会话并回到登录页。
+- `src/stores/authStore.ts` 会清理历史版本遗留的 `jwt_tcmirp_*`、`local-*`、`demo-*`、`mock-*` 等演示 token，以及缺少 `tcmirp_session_source=backend` 的旧缓存。
+
+### 6.3 【重要规避】SVG 图谱节点悬停抖动（Jitter Loop）
 - **踩坑记录**：在 `GraphvizLineageCanvas.vue` 中，曾对 SVG 的 `<g class="graph-node">` 使用了 CSS `transform: translateY(-2px)` 动效。由于修改了 SVG 元素几何坐标，光标在卡片边缘会频繁触发 `mouseenter` 与 `mouseleave` 的快速交替振荡（高频抖动）。
 - **现行规范**：
   - SVG 内元素**严禁使用改变坐标的 `translateY` 悬停动效**；
   - 统一使用 `<filter id="card-shadow-hover">` 微阴影加深滤镜结合边框高亮（`stroke-width: 2.2px`）实现平滑、稳定、不抖动的悬停反馈。
 
-### 6.3 路由异步分包异常自愈
+### 6.4 路由异步分包异常自愈
 - **机制说明**：在 `src/router/index.ts` 中配置了 `router.onError`，当网络波动或热重载导致动态 chunk 404 时，基于 `sessionStorage` 的单次标记进行平滑恢复，避免页面无限重载死循环。
 - **高频入口**：`Login.vue` 与 `Workspace.vue` 采用了静态直接加载，确保入口页面绝对秒开且无异步拉取失败风险。
 
@@ -310,6 +323,7 @@ npm run preview
 | `tcmirp_tenant_name`| 当前租户中文名称 | 顶部导航及各类凭证显示 |
 | `tcmirp_project_id` | 当前项目空间编号 | `X-Project-Id` 请求头注入 |
 | `tcmirp_api_base` | 自定义接口基础路径（可选） | 联调时动态切换服务地址 |
+| `tcmirp_session_source` | 会话来源标记，当前有效值为 `backend` | 防止旧版本地演示会话绕过登录 |
 
 ---
 
@@ -318,6 +332,28 @@ npm run preview
 1. **真实区块链 RPC 直连对接**：目前存证上链部分采用后端代理验证，后续若开放前置链节点，可在 `src/api/trust.ts` 中直接接入联盟链 JSON-RPC 验签。
 2. **WebSocket 实时告警推送**：针对质量异常案卷和上链失败补偿单，可在 `AppLayout.vue` 中挂载全局 WebSocket 长连接，实现右下角实时消息弹窗通知。
 3. **数据大屏与 GIS 产地分布**：可在工作台进一步集成云南省各州市中药材示范基地（文山三七、昭通天麻、丽江当归等）的二维/三维地理大屏。
+
+---
+
+## 10. 本次交接变更
+
+### 10.1 已完成
+- 已按 Swagger 文档完成核心页面接口封装与真实接口优先、离线数据兜底策略。重点改动位于 `src/api/client.ts`、`src/api/events.ts`、`src/api/masterData.ts`、`src/api/rbac.ts`、`src/config/pageApiRegistry.ts`。
+- 已恢复真实账号登录：`src/api/auth.ts` 调用 `POST /tenant-access/auth/login`，登录密码按 RSA/BigInt 兼容算法加密。
+- 已恢复 token 请求头注入：`weappauthorization`、`WeAppAuthorization`、`Authorization: Bearer ...`。
+- 已恢复业务路由登录拦截：未登录不能直接进入工作台和业务页面。
+- 已清除临时“随便登录、不走登录接口”的逻辑；不能访问后端或登录接口不返回 token 时不会建立会话。
+
+### 10.2 验证记录
+- `npm run lint`：通过。
+- 已验证未登录访问根路径会跳转至 `/login?redirect=/workspace`。
+- 按当前任务要求未执行 `npm run build`。
+
+### 10.3 继续开发前检查
+1. 确认后端地址 `http://192.168.1.39:8900` 在当前网络可访问。
+2. 首次联调先打开 Swagger 登录接口，确认请求体密码字段要求与 RSA 加密格式一致。
+3. 若浏览器仍显示旧版本页面，执行 `Ctrl + F5`；旧演示 token 会在启动时自动清理。
+4. 修改接口路径时同步更新 `src/api/client.ts` 的 `swaggerEndpointPatterns`，否则该请求会使用本地 fallback。
 
 ---
 *本交接文档由工程团队整理，如有任何系统架构或接口联调疑问，请优先查阅 `src/api/client.ts` 与 `src/router/index.ts`。*

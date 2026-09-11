@@ -75,6 +75,22 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     ]
   },
 
+  // 5. 接入治理 - 事件与 Schema 配置 (APP-04 事件配置与事实引擎)
+  '/governance/events': {
+    hasApi: true,
+    moduleName: '事件类型与 Schema 配置',
+    apiPath: '/openapi/v1/event-fact/config/schemas',
+    specDoc: 'OpenAPI 3.1.0 / APP-04 事件配置与事实引擎',
+    protocol: 'RESTful JSON / Axios',
+    status: 'CONNECTED',
+    endpoints: [
+      { method: 'GET', path: '/openapi/v1/event-fact/schemas/{eventType}/{schemaVersion}', desc: '查询已发布 Schema (schema)' },
+      { method: 'POST', path: '/openapi/v1/event-fact/config/schemas', desc: '创建 Schema 草稿 (schema)' },
+      { method: 'POST', path: '/openapi/v1/event-fact/config/schemas/test', desc: '测试 Schema (test)' },
+      { method: 'POST', path: '/openapi/v1/event-fact/config/schemas/{eventType}/{schemaVersion}/publish', desc: '发布 Schema (publish)' }
+    ]
+  },
+
   // 5. 主数据中心 - 主体机构 (APP-02 主体、对象与监管编码)
   '/master-data/parties': {
     hasApi: true,

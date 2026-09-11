@@ -47,8 +47,20 @@ export const eventsApi = {
     evidenceIds?: string[];
   }): Promise<{ success: boolean; eventId: string; txHash?: string }> {
     const generatedId = '01J7EVENT' + Math.floor(Math.random() * 899999 + 100000);
+    const projectSpaceId = Number(localStorage.getItem('tcmirp_project_id')) || 1;
+    const sourceSystemId = Number(localStorage.getItem('tcmirp_source_system_id')) || 1;
+    const schemaVersion = payload.eventType === 'QUALITY_INSPECTED' ? '1.2.0' : payload.eventType === 'PRESCRIPTION_RECEIVED' ? '1.1.0' : '1.0.0';
     return apiCall(
-      request.post('/events', payload),
+      request.post('/openapi/v1/event-fact/events', {
+        projectSpaceId,
+        sourceSystemId,
+        eventType: payload.eventType,
+        schemaVersion,
+        sourceBusinessKey: String(payload.payload?.businessKey || payload.payload?.batchNo || generatedId),
+        occurredAt: String(payload.payload?.occurredAt || new Date().toISOString().slice(0, 19).replace('T', ' ')),
+        payloadJson: JSON.stringify(payload.payload),
+        rawRecordId: payload.evidenceIds?.[0] ? Number(payload.evidenceIds[0]) || undefined : undefined
+      }).then((res: any) => ({ success: true, eventId: String(res?.eventId || generatedId), txHash: res?.payloadDigest })),
       {
         success: true,
         eventId: generatedId,
@@ -64,16 +76,20 @@ export const eventsApi = {
     payload: Record<string, any>;
   }): Promise<{ valid: boolean; errors: string[] }> {
     return apiCall(
-      request.post('/events/validate', payload),
+      request.post('/openapi/v1/event-fact/config/schemas/test', {
+        eventType: payload.eventType,
+        schemaVersion: payload.eventType === 'QUALITY_INSPECTED' ? '1.2.0' : '1.0.0',
+        payloadJson: JSON.stringify(payload.payload)
+      }).then((res: any) => ({ valid: Boolean(res?.valid), errors: res?.errors || [] })),
       { valid: true, errors: [] },
       '事件预检验'
     );
   },
 
-  // 获取事件契约定义 Schema GET /api/tcmirp/events/schemas/{eventType}
-  async getEventSchema(eventType: string): Promise<any> {
+  // 获取已发布事件 Schema（Swagger: /openapi/v1/event-fact/schemas/{eventType}/{schemaVersion}）
+  async getEventSchema(eventType: string, schemaVersion = '1.0.0'): Promise<any> {
     return apiCall(
-      request.get(`/events/schemas/${eventType}`),
+      request.get('/openapi/v1/event-fact/schemas/' + eventType + '/' + schemaVersion),
       null,
       '获取事件契约Schema'
     );

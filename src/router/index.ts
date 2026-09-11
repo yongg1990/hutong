@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import AppLayout from '@/components/layout/AppLayout.vue';
 import Login from '@/pages/auth/Login.vue';
 import Workspace from '@/pages/workspace/Workspace.vue';
+import { useAuthStore } from '@/stores/authStore';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -14,6 +15,7 @@ const router = createRouter({
     {
       path: '/',
       component: AppLayout,
+      meta: { requiresAuth: true },
       redirect: '/workspace',
       children: [
         {
@@ -175,6 +177,28 @@ const router = createRouter({
       ]
     }
   ]
+});
+
+// Require a restored token before entering the application shell.
+router.beforeEach((to) => {
+  const authStore = useAuthStore();
+  // Re-read persisted session data so stale HMR/runtime state cannot bypass login.
+  authStore.initSession();
+  const isLoginRoute = to.path === '/login';
+  const hasSession = Boolean(authStore.token && authStore.isLoggedIn);
+
+  if (isLoginRoute) {
+    return hasSession ? { path: '/workspace' } : true;
+  }
+
+  if (to.matched.some(record => record.meta.requiresAuth) && !hasSession) {
+    return {
+      path: '/login',
+      query: { redirect: to.fullPath }
+    };
+  }
+
+  return true;
 });
 
 // Auto-recovery for dynamic module import errors (e.g., during network hiccup or container reload)

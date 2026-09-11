@@ -62,6 +62,7 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import SchemaDiffModal from '@/components/common/SchemaDiffModal.vue';
 import { useMetadataStore } from '@/stores/metadataStore';
+import { eventsApi } from '@/api/events';
 
 const router = useRouter();
 const metadataStore = useMetadataStore();
@@ -77,9 +78,20 @@ const openDiffModal = () => {
   }
 };
 
-const viewSchema = (row: any) => {
+const viewSchema = async (row: any) => {
   selectedSchema.value = row;
   schemaDrawerVisible.value = true;
+  try {
+    const published = await eventsApi.getEventSchema(row.eventType, row.schemaVersion);
+    if (published) {
+      const raw = published.schemaJson || published.fieldsJson;
+      if (raw) {
+        row.fieldsJson = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      }
+    }
+  } catch {
+    // Keep the local schema snapshot visible when the backend has no published version.
+  }
 };
 
 const generateSampleSchema = (schema: any) => {
