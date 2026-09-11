@@ -70,7 +70,6 @@ onMounted(() => {
 
 const handleSearch = async () => {
   await loadEvidences();
-  ElMessage.success('检索完成！');
 };
 
 const handleReset = async () => {

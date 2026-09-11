@@ -321,7 +321,6 @@ onMounted(() => {
 
 const handleSearch = () => {
   loadTenants();
-  ElMessage.success('筛选完成！');
 };
 
 const handleReset = () => {

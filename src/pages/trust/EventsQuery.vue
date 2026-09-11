@@ -75,7 +75,6 @@ onMounted(() => {
 
 const handleSearch = async () => {
   await loadEvents();
-  ElMessage.success('检索完成！');
 };
 
 const handleReset = async () => {

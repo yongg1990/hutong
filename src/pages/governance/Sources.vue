@@ -158,7 +158,7 @@ onMounted(() => {
 });
 
 const handleSearch = () => {
-  ElMessage.success(`检索完成，当前匹配 ${filteredSources.value.length} 个来源系统`);
+  // Query executed silently without toast popup
 };
 
 const handleReset = () => {

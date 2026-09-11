@@ -285,14 +285,13 @@ const totalPledgedAmount = computed(() => {
 });
 
 const handleSearch = () => {
-  ElMessage.success(`查询完成，找到 ${filteredOrders.value.length} 笔订单`);
+  // Query executed silently without toast popup
 };
 
 const handleReset = () => {
   orderNoKey.value = '';
   selectedWh.value = '';
   currentStage.value = 'ALL';
-  ElMessage.info('重置为全部交割订单');
 };
 </script>
 

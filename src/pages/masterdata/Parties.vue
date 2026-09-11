@@ -289,7 +289,6 @@ onMounted(() => {
 
 const handleSearch = async () => {
   await loadParties();
-  ElMessage.success('检索完成！');
 };
 
 const handleReset = async () => {

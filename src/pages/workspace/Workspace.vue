@@ -380,7 +380,6 @@ const loadData = async () => {
 
 const refreshData = async () => {
   await loadData();
-  ElMessage.success('工作台待处理事项已刷新！');
 };
 
 onMounted(() => {

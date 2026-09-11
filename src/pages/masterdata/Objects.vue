@@ -135,7 +135,6 @@ onMounted(() => {
 
 const handleSearch = async () => {
   await loadObjects();
-  ElMessage.success('业务对象检索成功！');
 };
 
 const handleReset = async () => {

@@ -281,7 +281,7 @@ onMounted(() => {
 });
 
 const handleSearch = () => {
-  ElMessage.success('角色筛选完成！');
+  // Query executed silently without toast popup
 };
 
 const handleReset = () => {

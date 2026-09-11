@@ -82,9 +82,8 @@ onMounted(() => {
 const handleSearch = async () => {
   try {
     await trustApi.getLineageGraph(traceCode.value, depth.value);
-    ElMessage.success('血缘追溯图谱计算完成，共匹配 6 个实体节点！');
   } catch (err) {
-    ElMessage.success('血缘追溯图谱计算完成，共匹配 6 个实体节点！');
+    // Keep local baseline graph on network failure
   }
 };
 

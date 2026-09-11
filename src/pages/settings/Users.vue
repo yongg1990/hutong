@@ -311,7 +311,7 @@ onMounted(() => {
 });
 
 const handleSearch = () => {
-  ElMessage.success('用户筛选完成！');
+  // Query executed silently without toast popup
 };
 
 const handleReset = () => {

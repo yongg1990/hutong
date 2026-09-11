@@ -98,7 +98,7 @@ const props = withDefaults(
     apiInfo?: PageApiInfo | null;
   }>(),
   {
-    showApiBadge: true,
+    showApiBadge: false,
     apiInfo: undefined
   }
 );

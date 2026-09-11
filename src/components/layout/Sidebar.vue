@@ -2,9 +2,6 @@
   <aside class="sidebar">
     <div class="sidebar-header">
       <span class="sidebar-header-title">功能导航</span>
-      <span class="sidebar-api-summary" title="所有已接入Swagger后端API的页面均已标注备注">
-        <span class="pulse-dot"></span> 接口已通
-      </span>
     </div>
 
     <el-menu
@@ -16,13 +13,9 @@
       active-text-color="#176b4d"
     >
       <!-- 1. Workspace -->
-      <el-menu-item index="/workspace" :title="workspaceMenu.title + (workspaceMenu.hasApi ? ' (已对接接口: ' + workspaceMenu.apiPath + ')' : '')">
+      <el-menu-item index="/workspace">
         <el-icon><DataBoard /></el-icon>
         <span class="menu-name">{{ workspaceMenu.title }}</span>
-        <span v-if="workspaceMenu.hasApi" class="menu-api-badge" :title="'已对接接口: ' + workspaceMenu.apiPath">
-          <span class="api-dot"></span>
-          <span class="api-text">已对接</span>
-        </span>
       </el-menu-item>
 
       <!-- 2. Menu Groups -->
@@ -35,13 +28,8 @@
           v-for="item in group.items"
           :key="item.path"
           :index="item.path"
-          :title="item.title + (item.hasApi ? ' (已对接接口: ' + item.apiPath + ')' : '')"
         >
           <span class="menu-name">{{ item.title }}</span>
-          <span v-if="item.hasApi" class="menu-api-badge" :title="'已对接接口: ' + item.apiPath">
-            <span class="api-dot"></span>
-            <span class="api-text">已对接</span>
-          </span>
         </el-menu-item>
       </el-sub-menu>
     </el-menu>
@@ -183,26 +171,6 @@ const menuGroups = [
   letter-spacing: 0.5px;
 }
 
-.sidebar-api-summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: #137333;
-  background: #e6f4ea;
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-weight: 500;
-}
-
-.pulse-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #1e8e3e;
-  box-shadow: 0 0 0 2px rgba(30, 142, 62, 0.2);
-}
-
 .sidebar-menu {
   border-right: none;
   flex: 1;
@@ -217,36 +185,6 @@ const menuGroups = [
 
 .group-title {
   flex: 1;
-}
-
-.menu-api-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  line-height: 1;
-  padding: 2px 6px;
-  border-radius: 10px;
-  background-color: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
-  font-weight: 500;
-  margin-left: 6px;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
-}
-
-.menu-api-badge .api-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background-color: #10b981;
-  flex-shrink: 0;
-}
-
-.menu-api-badge .api-text {
-  font-size: 10px;
-  letter-spacing: 0.2px;
 }
 
 :deep(.el-sub-menu__title) {
@@ -265,26 +203,11 @@ const menuGroups = [
   padding-right: 14px !important;
 }
 
-:deep(.el-menu-item:hover) .menu-api-badge {
-  background-color: #d1fae5;
-  border-color: #6ee7b7;
-}
-
 :deep(.el-menu-item.is-active) {
   background-color: var(--color-brand-soft);
   font-weight: 600;
   border-right: 3.5px solid var(--color-brand);
   color: var(--color-brand) !important;
-}
-
-:deep(.el-menu-item.is-active) .menu-api-badge {
-  background-color: var(--color-brand);
-  color: #ffffff;
-  border-color: var(--color-brand);
-}
-
-:deep(.el-menu-item.is-active) .menu-api-badge .api-dot {
-  background-color: #a7f3d0;
 }
 
 .sidebar-footer {

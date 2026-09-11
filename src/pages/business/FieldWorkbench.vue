@@ -235,14 +235,13 @@ const selectBatch = (row: FieldCropBatch) => {
 };
 
 const handleSearch = () => {
-  ElMessage.success(`查询完成，找到 ${filteredBatches.value.length} 条记录`);
+  // Query executed silently without toast popup
 };
 
 const handleReset = () => {
   searchKeyword.value = '';
   selectedBase.value = '';
   currentStage.value = 'ALL';
-  ElMessage.info('刷新已重置为全部数据');
 };
 
 const exportData = () => {
