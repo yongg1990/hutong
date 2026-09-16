@@ -106,7 +106,28 @@ export const useMetadataStore = defineStore('metadata', {
   }),
   getters: {
     getSchemaByType: (state) => (eventType: string) => {
-      return state.schemas.find((s) => s.eventType === eventType) || state.schemas[0];
+      const matched = state.schemas.find((s) => s.eventType === eventType);
+      if (matched) return matched;
+      return {
+        eventType,
+        eventTypeName: eventType,
+        schemaVersion: '1.0.0',
+        scenarioCode: 'SUPPLY_CHAIN',
+        status: 'PUBLISHED',
+        groups: [
+          { code: 'BASIC', title: '业务事件基本信息', fields: ['businessKey', 'batchNo', 'occurredAt', 'remark'] }
+        ],
+        jsonSchema: {
+          type: 'object',
+          required: ['businessKey', 'occurredAt'],
+          properties: {
+            businessKey: { type: 'string', title: '来源业务唯一键' },
+            batchNo: { type: 'string', title: '关联批次号' },
+            occurredAt: { type: 'string', title: '事件发生时间' },
+            remark: { type: 'string', title: '业务说明' }
+          }
+        }
+      } as EventSchemaConfig;
     }
   }
 });

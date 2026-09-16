@@ -3,27 +3,34 @@
     <PageHeader
       title="中药追溯图谱与血缘分析"
       subtitle="全链路溯源图谱分析 · 支持节点多维穿透与合规断链预警"
-    >
-      <template #actions>
-        <el-button @click="exportGraph">导出矢量图 (SVG)</el-button>
-        <el-button type="primary" @click="runBreakChainCheck">
-          执行合规断链检测
-        </el-button>
-      </template>
-    </PageHeader>
+    />
 
     <FilterBar @search="handleSearch" @reset="handleReset">
-      <el-input v-model="traceCode" placeholder="追溯码/医保码/批次号" style="width: 240px" />
+      <el-select v-model="rootType" placeholder="根主体类型" style="width: 160px">
+        <el-option label="EVENT" value="EVENT" />
+        <el-option label="OBJECT" value="OBJECT" />
+        <el-option label="BATCH" value="BATCH" />
+      </el-select>
+      <el-input-number v-model="rootId" :min="1" placeholder="根主体 ID" style="width: 180px" />
+      <el-input-number v-model="projectSpaceId" :min="1" placeholder="项目空间 ID" style="width: 160px" />
+      <el-input v-model="purposeCode" placeholder="访问用途" style="width: 160px" />
       <el-select v-model="depth" placeholder="血缘展开深度" style="width: 140px">
         <el-option label="3 层 (推荐)" :value="3" />
         <el-option label="5 层" :value="5" />
         <el-option label="全图谱" :value="10" />
       </el-select>
+      <el-input-number v-model="maxNodes" :min="1" :max="1000" placeholder="最大节点数" style="width: 150px" />
     </FilterBar>
+
+    <div v-if="lineageResult" class="result-summary">
+      <span>根主体 ID: <b class="mono">{{ lineageResult.rootId }}</b></span>
+      <span>来源版本: <b class="mono">{{ lineageResult.sourceVersion || '-' }}</b></span>
+      <span>截断状态: <b>{{ lineageResult.truncated ? '是' : '否' }}</b></span>
+    </div>
 
     <!-- Graph Canvas Container -->
     <div class="lineage-container">
-      <GraphvizLineageCanvas @node-click="handleNodeClick" />
+      <GraphvizLineageCanvas :nodes="lineageResult?.nodes" :edges="lineageResult?.edges" @node-click="handleNodeClick" />
     </div>
 
     <!-- Node Detail Drawer -->
@@ -31,8 +38,7 @@
       <div v-if="selectedNode">
         <div class="kv-row"><span>节点编号:</span> <b class="mono">{{ selectedNode.id }}</b></div>
         <div class="kv-row"><span>节点类型:</span> <b>{{ selectedNode.type }}</b></div>
-        <div class="kv-row"><span>时间状态:</span> <b>2026-08-08 15:30:00</b></div>
-        <div class="kv-row"><span>合规检验:</span> <StatusTag code="ACCEPTED" label="通过 100%" /></div>
+        <pre class="node-json mono">{{ JSON.stringify(selectedNode, null, 2) }}</pre>
 
         <el-divider />
 
@@ -59,14 +65,18 @@ import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
-import StatusTag from '@/components/common/StatusTag.vue';
 import GraphvizLineageCanvas from '@/components/specialized/GraphvizLineageCanvas.vue';
 import { trustApi } from '@/api/trust';
 
 const router = useRouter();
 const route = useRoute();
-const traceCode = ref('8691234567890123');
+const rootType = ref('OBJECT');
+const rootId = ref<number | undefined>(1);
+const projectSpaceId = ref(Number(localStorage.getItem('tcmirp_project_space_id')) || 1);
+const purposeCode = ref(localStorage.getItem('tcmirp_purpose_code') || 'TRACE');
 const depth = ref(3);
+const maxNodes = ref(100);
+const lineageResult = ref<any>(null);
 
 const drawerVisible = ref(false);
 const selectedNode = ref<any>(null);
@@ -74,22 +84,35 @@ const selectedNode = ref<any>(null);
 onMounted(() => {
   const queryVal = (route.query.batchNo || route.query.code || route.query.eventId) as string;
   if (queryVal) {
-    traceCode.value = queryVal;
+    rootId.value = Number(queryVal) || undefined;
+    rootType.value = route.query.eventId ? 'EVENT' : route.query.batchNo ? 'BATCH' : 'OBJECT';
     ElMessage.info(`已自动定位溯源标的: ${queryVal}`);
   }
 });
 
 const handleSearch = async () => {
+  if (!rootId.value) {
+    ElMessage.warning('请输入有效的根主体 ID');
+    return;
+  }
   try {
-    await trustApi.getLineageGraph(traceCode.value, depth.value);
+    lineageResult.value = await trustApi.getLineageGraph({
+      rootType: rootType.value, rootId: rootId.value, projectSpaceId: projectSpaceId.value,
+      purposeCode: purposeCode.value, maxDepth: depth.value, maxNodes: maxNodes.value
+    });
   } catch (err) {
     // Keep local baseline graph on network failure
   }
 };
 
 const handleReset = () => {
-  traceCode.value = '';
+  rootType.value = 'OBJECT';
+  rootId.value = undefined;
+  projectSpaceId.value = Number(localStorage.getItem('tcmirp_project_space_id')) || 1;
+  purposeCode.value = localStorage.getItem('tcmirp_purpose_code') || 'TRACE';
   depth.value = 3;
+  maxNodes.value = 100;
+  lineageResult.value = null;
 };
 
 const handleNodeClick = (node: any) => {
@@ -112,13 +135,6 @@ const goToEvidence = () => {
   router.push('/trust/evidence');
 };
 
-const exportGraph = () => {
-  ElMessage.success('SVG 格式溯源图谱下载完成！');
-};
-
-const runBreakChainCheck = () => {
-  ElMessage.info('正在扫描全链条... 结论: 无断链异常，链路连续性得分 100%。');
-};
 </script>
 
 <style scoped>
@@ -131,6 +147,17 @@ const runBreakChainCheck = () => {
   flex-direction: column;
 }
 
+.result-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 13px;
+}
+
 .kv-row {
   display: flex;
   justify-content: space-between;
@@ -141,5 +168,15 @@ const runBreakChainCheck = () => {
 
 .kv-row span {
   color: var(--color-muted);
+}
+
+.node-json {
+  max-height: 320px;
+  overflow: auto;
+  margin-top: 12px;
+  padding: 12px;
+  background: #f6f8f7;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>

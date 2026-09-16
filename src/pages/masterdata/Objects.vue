@@ -23,13 +23,14 @@
 
     <div class="panel">
       <el-table :data="objects" v-loading="loading">
-        <el-table-column prop="objectCode" label="对象统一编码" width="180" class-name="mono" />
-        <el-table-column prop="displayName" label="显示名称" min-width="200" />
-        <el-table-column prop="objectType" label="对象类型" width="140" />
-        <el-table-column prop="ownerParty" label="所属主体机构" min-width="180" />
+        <el-table-column prop="id" label="对象 ID" width="120" class-name="mono" />
+        <el-table-column prop="objectCode" label="对象统一编码 *" width="180" class-name="mono" />
+        <el-table-column prop="displayName" label="显示名称 *" min-width="200" />
+        <el-table-column prop="objectType" label="对象类型 *" width="140" />
+        <el-table-column prop="ownerParty" label="所属主体机构 *" min-width="180" />
         <el-table-column prop="version" label="当前版本" width="90" class-name="mono" />
-        <el-table-column prop="lastEventTime" label="最近更新时间" width="160" />
-        <el-table-column label="状态" width="90">
+        <el-table-column prop="lastEventTime" label="最近更新时间 *" width="160" />
+        <el-table-column label="状态 *" width="90">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>
       </el-table>

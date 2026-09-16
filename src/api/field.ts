@@ -1,6 +1,7 @@
 import { request, apiCall } from './client';
 import { mockFieldBatches } from './mockData';
 import type { FieldCropBatch } from '@/types';
+import { submitSupplyChainEvent } from './supplyChain';
 
 /**
  * 田间种植协同接口 (Swagger: /api/tcmirp/field/*)
@@ -55,7 +56,11 @@ export const fieldApi = {
       stage: payload.stage || 'PLANTING'
     };
     return apiCall(
-      request.post('/field/batches', payload),
+      submitSupplyChainEvent('plantings', {
+        sourceBusinessKey: newRecord.batchNo,
+        occurredAt: new Date(newRecord.plantDate).toISOString(),
+        payload: newRecord
+      }).then(() => newRecord),
       newRecord,
       '创建种植建档批次'
     );
@@ -69,7 +74,10 @@ export const fieldApi = {
     operator?: string;
   }): Promise<{ success: boolean; eventId: string }> {
     return apiCall(
-      request.post('/field/events', payload),
+      submitSupplyChainEvent(
+        payload.eventType === 'INPUT_APPLIED' ? 'input-applications' : payload.eventType === 'HARVESTED' ? 'harvests' : 'farming-operations',
+        { sourceBusinessKey: `${payload.batchId}-${Date.now()}`, payload }
+      ).then(res => ({ success: true, eventId: String(res.eventId) })),
       { success: true, eventId: `EVT-FIELD-${Date.now()}` },
       '记录田间作业事件'
     );

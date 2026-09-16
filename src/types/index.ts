@@ -189,6 +189,8 @@ export interface TrustEvent {
   proofStatus: 'PENDING' | 'SUBMITTED' | 'CONFIRMED' | 'RETRYABLE';
   businessKey: string;
   payload: Record<string, any>;
+  schemaVersion?: string;
+  payloadDigest?: string;
   sensitiveLevel?: 'PUBLIC' | 'RESTRICTED' | 'STRICT_SENSITIVE';
 }
 
@@ -212,11 +214,18 @@ export interface ExchangeProjection {
   version: string;
   datasetName: string;
   asOfTime: string;
-  status: 'GENERATED' | 'REJECTED' | 'DELIVERING' | 'DELIVERED';
+  status: 'PENDING' | 'GENERATING' | 'GENERATED' | 'REJECTED' | 'DELIVERING' | 'DELIVERED' | string;
   recordCount: number;
   outputHash: string;
   errorCount: number;
   errorDetails?: Array<{ targetPath: string; sourcePath: string; reason: string }>;
+  profileVersionId?: string | number;
+  datasetCode?: string;
+  outputDigest?: string;
+  output?: any;
+  traceback?: any;
+  errors?: any;
+  supersedesProjectionId?: string | number;
 }
 
 export interface DeploymentNode {

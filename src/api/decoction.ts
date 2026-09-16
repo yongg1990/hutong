@@ -1,6 +1,7 @@
 import { request, apiCall } from './client';
 import { mockDecoctionOrders } from './mockData';
 import type { DecoctionOrder } from '@/types';
+import { submitSupplyChainEvent } from './supplyChain';
 
 /**
  * 处方代煎与配送协同接口 (Swagger: /api/tcmirp/decoction/*)
@@ -29,8 +30,12 @@ export const decoctionApi = {
 
   // 推进处方代煎环节状态 PUT /api/tcmirp/decoction/orders/{id}/stage
   async updateStage(id: string, stage: 'RECEIVED' | 'DECOCTING' | 'PACKAGING' | 'DELIVERING' | 'COMPLETED'): Promise<{ success: boolean; id: string; stage: string }> {
+    const endpoint = stage === 'RECEIVED' ? 'prescriptions' : stage === 'DECOCTING' || stage === 'PACKAGING' ? 'decoction-processes' : 'decoction-deliveries';
     return apiCall(
-      request.put(`/decoction/orders/${id}/stage`, { stage }),
+      submitSupplyChainEvent(endpoint, {
+        sourceBusinessKey: `${stage}-${id}-${Date.now()}`,
+        payload: { orderId: id, stage }
+      }).then(() => ({ success: true, id, stage })),
       { success: true, id, stage },
       '更新代煎环节状态'
     );
@@ -49,7 +54,11 @@ export const decoctionApi = {
       createdAt: new Date().toLocaleString()
     };
     return apiCall(
-      request.post('/decoction/prescriptions', payload),
+      submitSupplyChainEvent('prescriptions', {
+        schemaVersion: '1.1.0',
+        sourceBusinessKey: newOrder.prescriptionNoToken,
+        payload: newOrder
+      }).then(() => newOrder),
       newOrder,
       '接收医疗机构处方'
     );

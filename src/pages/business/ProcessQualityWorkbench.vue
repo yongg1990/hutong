@@ -90,18 +90,18 @@
           @row-click="selectPrimaryBatch"
           highlight-current-row
         >
-          <el-table-column prop="primaryBatchNo" label="初加工批次号" width="160" class-name="mono" />
-          <el-table-column prop="herbName" label="药材" width="80" />
-          <el-table-column prop="processMethod" label="初加工工艺" min-width="170" />
-          <el-table-column label="投料/产出(折干率)" width="170">
+          <el-table-column prop="primaryBatchNo" label="初加工批次号 *" width="160" class-name="mono" />
+          <el-table-column prop="herbName" label="药材 *" width="80" />
+          <el-table-column prop="processMethod" label="初加工工艺 *" min-width="170" />
+          <el-table-column label="投料/产出(折干率) *" width="170">
             <template #default="{ row }">
               {{ row.freshWeight }}kg 鲜 ➔ {{ row.driedWeight }}kg 干
               <br/>
               <span class="sub-text mono">折干率: {{ row.yieldRate }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="facilityName" label="初加工车间/主体" min-width="160" />
-          <el-table-column label="状态" width="100">
+          <el-table-column prop="facilityName" label="初加工车间/主体 *" min-width="160" />
+          <el-table-column label="状态 *" width="100">
             <template #default="{ row }">
               <StatusTag :code="row.status === 'INSPECTED' ? 'ACCEPTED' : (row.status === 'COMPLETED' ? 'COMPLETED' : 'PROCESSING')" />
             </template>
@@ -174,13 +174,13 @@
           <span class="count-text">共 {{ inspectEvents.length }} 份检验报告</span>
         </div>
         <el-table :data="inspectEvents">
-          <el-table-column prop="businessKey" label="报告单号" width="140" class-name="mono" />
-          <el-table-column label="关联批次" width="140" class-name="mono">
+          <el-table-column prop="businessKey" label="报告单号 *" width="140" class-name="mono" />
+          <el-table-column label="关联批次 *" width="140" class-name="mono">
             <template #default="{ row }">{{ row.payload?.batchNo || 'SQ-260731-08' }}</template>
           </el-table-column>
-          <el-table-column prop="occurredAt" label="检验时间" width="160" />
-          <el-table-column prop="sourceSystem" label="来源 LIMS" width="120" />
-          <el-table-column label="结论" width="100">
+          <el-table-column prop="occurredAt" label="检验时间 *" width="160" />
+          <el-table-column prop="sourceSystem" label="来源 LIMS *" width="120" />
+          <el-table-column label="结论 *" width="100">
             <template #default="{ row }">
               <StatusTag :code="row.payload?.conclusion || 'QUALIFIED'" />
             </template>

@@ -13,11 +13,11 @@
 
     <div class="panel">
       <el-table :data="schemas">
-        <el-table-column prop="eventType" label="事件类型" width="180" class-name="mono" />
-        <el-table-column prop="eventTypeName" label="事件中文名" min-width="160" />
-        <el-table-column prop="schemaVersion" label="Schema 版本" width="110" class-name="mono" />
-        <el-table-column prop="scenarioCode" label="归属场景" width="130" />
-        <el-table-column label="状态" width="110">
+        <el-table-column prop="eventType" label="事件类型 *" width="180" class-name="mono" />
+        <el-table-column prop="eventTypeName" label="事件中文名 *" min-width="160" />
+        <el-table-column prop="schemaVersion" label="Schema 版本 *" width="110" class-name="mono" />
+        <el-table-column prop="scenarioCode" label="归属场景 *" width="130" />
+        <el-table-column label="状态 *" width="110">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>
         <el-table-column label="操作" width="200">

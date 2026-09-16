@@ -1,4 +1,13 @@
 import { request, apiCall } from './client';
+import B from '@/utils/Secret/BigInt';
+import R from '@/utils/Secret/RSA';
+
+B.setMaxDigits(129);
+const userPasswordRsaKey = new R.RSAKeyPair(
+  '010001',
+  '',
+  'DBCC53814668BD44D2185B1195A00C5222DAB190AEF5397E6466918D560337ECA438CF8725BA35A2F38B79BC7C1A441ED610D361B990008A47B42633C23D6674DC8545032BF161B83FE0E1B7609D1A8DD72B23AEDC60830A1614D9A7D22A3419FC9616BA858FC9D2D4A390B6A4D3CE5488CAD6F4264A1412E5E30FF372C80515'
+);
 
 export interface TenantItem {
   id: string | number;
@@ -11,10 +20,17 @@ export interface TenantItem {
   adminAccount?: string;
   quotaUsers?: number;
   quotaStorageGb?: number;
-  status: 'ACTIVE' | 'SUSPENDED' | 'EXPIRED' | string;
+  status: 'ACTIVE' | 'INACTIVE' | string;
   createdAt: string;
   updatedAt?: string;
   description?: string;
+}
+
+export interface TenantPage {
+  records: TenantItem[];
+  total: number;
+  page: number;
+  size: number;
 }
 
 export interface UserItem {
@@ -29,9 +45,10 @@ export interface UserItem {
   roleIds?: (string | number)[];
   phone?: string;
   email?: string;
-  status: 'ACTIVE' | 'DISABLED' | string;
+  status: 'ACTIVE' | 'INACTIVE' | string;
   lastLoginAt?: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface RoleItem {
@@ -410,58 +427,73 @@ function setLocal<T>(key: string, val: T): void {
   }
 }
 
+function mapTenantResponse(item: any): TenantItem {
+  return {
+    id: item.tenantId ?? item.id,
+    tenantCode: item.tenantCode,
+    tenantName: item.tenantName,
+    tenantType: item.tenantType,
+    status: item.status,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt
+  };
+}
+
 /**
  * 租户与权限体系 API 服务 (Swagger: /tenant-access/*)
  */
 export const rbacApi = {
   // ================= 1. 租户管理 (GET /tenant-access/tenants) =================
-  async getTenants(params?: {
-    keyword?: string;
+  async getTenantPage(params?: {
     tenantName?: string;
-    status?: string;
     page?: number;
     size?: number;
-  }): Promise<TenantItem[]> {
+  }): Promise<TenantPage> {
     const stored = getLocal<TenantItem[]>('tcmirp_tenants_store', initialTenants);
     const query = new URLSearchParams();
-    if (params?.tenantName || params?.keyword) {
-      query.append('tenantName', params?.tenantName || params?.keyword || '');
+    if (params?.tenantName) {
+      query.append('tenantName', params.tenantName);
     }
     if (params?.page) query.append('page', String(params.page));
     if (params?.size) query.append('size', String(params.size));
 
     const fallbackFiltered = stored.filter(t => {
-      const q = (params?.tenantName || params?.keyword || '').trim().toLowerCase();
+      const q = (params?.tenantName || '').trim().toLowerCase();
       if (q) {
-        const matchCode = t.tenantCode.toLowerCase().includes(q);
         const matchName = t.tenantName.toLowerCase().includes(q);
-        const matchContact = (t.contactName || '').toLowerCase().includes(q);
-        if (!matchCode && !matchName && !matchContact) return false;
+        if (!matchName) return false;
       }
-      if (params?.status && t.status !== params.status) return false;
       return true;
     });
+    const page = params?.page || 1;
+    const size = params?.size || 20;
+    const fallbackPage: TenantPage = {
+      records: fallbackFiltered.slice((page - 1) * size, page * size),
+      total: fallbackFiltered.length,
+      page,
+      size
+    };
 
     return apiCall(
       request.get(`/tenant-access/tenants?${query.toString()}`).then((res: any) => {
-        // Backend returns PageResultTenantResponse { records, total, page, size }
         if (res && Array.isArray(res.records)) {
-          return res.records.map((item: any) => ({
-            id: item.tenantId || item.id,
-            tenantCode: item.tenantCode,
-            tenantName: item.tenantName,
-            tenantType: item.tenantType || 'ENTERPRISE',
-            status: item.status || 'ACTIVE',
-            createdAt: item.createdAt || new Date().toLocaleString(),
-            updatedAt: item.updatedAt
-          }));
+          return {
+            records: res.records.map(mapTenantResponse),
+            total: Number(res.total || 0),
+            page: Number(res.page || page),
+            size: Number(res.size || size)
+          };
         }
-        if (Array.isArray(res)) return res;
-        return fallbackFiltered;
+        return fallbackPage;
       }),
-      fallbackFiltered,
+      fallbackPage,
       '获取租户列表'
     );
+  },
+
+  async getTenants(params?: { tenantName?: string; page?: number; size?: number }): Promise<TenantItem[]> {
+    const result = await this.getTenantPage(params);
+    return result.records;
   },
 
   // GET /tenant-access/tenants/{id}
@@ -472,15 +504,7 @@ export const rbacApi = {
     return apiCall(
       request.get(`/tenant-access/tenants/${id}`).then((res: any) => {
         if (res && (res.tenantId || res.id)) {
-          return {
-            id: res.tenantId || res.id,
-            tenantCode: res.tenantCode,
-            tenantName: res.tenantName,
-            tenantType: res.tenantType,
-            status: res.status,
-            createdAt: res.createdAt,
-            updatedAt: res.updatedAt
-          };
+          return mapTenantResponse(res);
         }
         return fallback;
       }),
@@ -549,9 +573,9 @@ export const rbacApi = {
 
     return apiCall(
       request.post(`/tenant-access/tenants/${id}/update`, {
-        tenantName: data.tenantName,
-        tenantType: data.tenantType,
-        status: data.status
+        tenantName: data.tenantName || stored[idx]?.tenantName,
+        tenantType: data.tenantType || stored[idx]?.tenantType || 'ENTERPRISE',
+        status: data.status || stored[idx]?.status || 'ACTIVE'
       }),
       stored[idx] || ({} as any),
       '更新租户信息'
@@ -574,10 +598,7 @@ export const rbacApi = {
   // ================= 2. 用户管理 (Users) =================
   // GET /tenant-access/users?tenantId=...
   async getUsers(params?: {
-    keyword?: string;
     tenantId?: string | number;
-    role?: string;
-    status?: string;
   }): Promise<UserItem[]> {
     const stored = getLocal<UserItem[]>('tcmirp_users_store', initialUsers);
     const query = new URLSearchParams();
@@ -586,16 +607,7 @@ export const rbacApi = {
     }
 
     const fallbackFiltered = stored.filter(u => {
-      if (params?.keyword) {
-        const kw = params.keyword.trim().toLowerCase();
-        const matchUser = (u.username || '').toLowerCase().includes(kw);
-        const matchReal = (u.realName || '').toLowerCase().includes(kw);
-        const matchDisplay = (u.displayName || '').toLowerCase().includes(kw);
-        if (!matchUser && !matchReal && !matchDisplay) return false;
-      }
       if (params?.tenantId && String(u.tenantId) !== String(params.tenantId)) return false;
-      if (params?.role && (!Array.isArray(u.roles) || !u.roles.includes(params.role))) return false;
-      if (params?.status && u.status !== params.status) return false;
       return true;
     });
 
@@ -609,13 +621,11 @@ export const rbacApi = {
             realName: u.displayName || u.realName || u.username,
             displayName: u.displayName || u.realName,
             tenantId: u.tenantId,
-            roles: u.roles || ['ROLE_OPERATOR'],
-            roleIds: u.roleIds || [],
-            phone: u.phone || '13888888888',
-            email: u.email || `${u.username}@tcmirp.cn`,
+            roles: [],
+            roleIds: [],
             status: u.status || 'ACTIVE',
-            lastLoginAt: u.lastLoginAt || '2026-09-08 10:00:00',
-            createdAt: u.createdAt || new Date().toLocaleString()
+            createdAt: u.createdAt,
+            updatedAt: u.updatedAt
           }));
         }
         return fallbackFiltered;
@@ -654,7 +664,7 @@ export const rbacApi = {
         tenantId: Number(data.tenantId) || 1,
         username: data.username,
         displayName: data.displayName,
-        password: data.password || 'Tcm@2026!Admin'
+        password: R.encryptedString(userPasswordRsaKey, data.password || 'Tcm@2026!Admin')
       }).then((res: any) => {
         return {
           ...newUser,

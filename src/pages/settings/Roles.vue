@@ -68,28 +68,28 @@
       </div>
       <div class="panel-body">
         <el-table :data="filteredRoles" v-loading="loading" style="width: 100%" empty-text="暂无匹配的角色定义">
-          <el-table-column prop="roleCode" label="角色标识编码" min-width="170" class-name="mono">
+          <el-table-column prop="roleCode" label="角色标识编码 *" min-width="170" class-name="mono">
             <template #default="{ row }">
               <span class="role-code-text">{{ row.roleCode }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="roleName" label="角色名称" min-width="160">
+          <el-table-column prop="roleName" label="角色名称 *" min-width="160">
             <template #default="{ row }">
               <strong>{{ row.roleName }}</strong>
             </template>
           </el-table-column>
-          <el-table-column label="已授权功能点" width="130" align="center">
+          <el-table-column label="已授权功能点 *" width="130" align="center">
             <template #default="{ row }">
               <el-tag size="small" type="info">{{ row.permissions?.length || 0 }} 个权限点</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="userCount" label="关联用户数" width="110" align="center">
+          <el-table-column prop="userCount" label="关联用户数 *" width="110" align="center">
             <template #default="{ row }">
               <span class="mono">{{ row.userCount }} 人</span>
             </template>
           </el-table-column>
-          <el-table-column prop="description" label="职责与权能描述" min-width="260" show-overflow-tooltip />
-          <el-table-column label="状态" width="100">
+          <el-table-column prop="description" label="职责与权能描述 *" min-width="260" show-overflow-tooltip />
+          <el-table-column label="状态 *" width="100">
             <template #default="{ row }">
               <StatusTag :code="row.status" />
             </template>
@@ -145,7 +145,16 @@
           >
             <template #default="{ data }">
               <div class="custom-tree-node">
-                <span>{{ data.label }}</span>
+                <div class="tree-node-main">
+                  <span>{{ data.label }}</span>
+                  <span class="tree-node-detail mono">
+                    ID: {{ data.permissionId || data.id }} | 模块: {{ data.moduleCode || '-' }} |
+                    类型: {{ data.permissionType || '-' }} | 上级: {{ data.parentId || '-' }} | 状态: {{ data.status || '-' }}
+                  </span>
+                  <span v-if="data.apiMethod || data.apiPath" class="tree-node-detail mono">
+                    {{ data.apiMethod || '-' }} {{ data.apiPath || '-' }}
+                  </span>
+                </div>
                 <span class="tree-code-tag mono">{{ data.code }}</span>
               </div>
             </template>
@@ -190,7 +199,7 @@
         <el-form-item label="启用状态">
           <el-radio-group v-model="form.status">
             <el-radio label="ACTIVE">启用 (ACTIVE)</el-radio>
-            <el-radio label="DISABLED">停用 (DISABLED)</el-radio>
+            <el-radio label="INACTIVE">停用 (INACTIVE)</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -496,6 +505,20 @@ const confirmDelete = (row: RoleItem) => {
   width: 100%;
   padding-right: 12px;
   font-size: 13px;
+}
+
+.tree-node-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.tree-node-detail {
+  color: var(--color-muted);
+  font-size: 10px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .tree-code-tag {

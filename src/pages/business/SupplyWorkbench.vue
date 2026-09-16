@@ -69,27 +69,27 @@
         highlight-current-row
         empty-text="暂无该环节对应的交割订单"
       >
-        <el-table-column prop="orderNo" label="订单号" width="140" class-name="mono" />
-        <el-table-column label="饮片 / 批次" min-width="200">
+        <el-table-column prop="orderNo" label="订单号 *" width="140" class-name="mono" />
+        <el-table-column label="饮片 / 批次 *" min-width="200">
           <template #default="{ row }">
             <b>{{ row.pieceName }}</b> / <span class="mono">{{ row.batchNo }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="交易数量" width="120">
+        <el-table-column label="交易数量 *" width="120">
           <template #default="{ row }"><b>{{ row.quantity.toLocaleString() }}</b> {{ row.unit }}</template>
         </el-table-column>
-        <el-table-column prop="warehouse" label="存放仓库" min-width="170" />
-        <el-table-column label="库存状态" width="110">
+        <el-table-column prop="warehouse" label="存放仓库 *" min-width="170" />
+        <el-table-column label="库存状态 *" width="110">
           <template #default="{ row }"><StatusTag :code="row.stockStatus" /></template>
         </el-table-column>
-        <el-table-column label="履约环节" width="110">
+        <el-table-column label="履约环节 *" width="110">
           <template #default="{ row }">
             <el-tag size="small" :type="getStageTagType(row.stage)">
               {{ getStageTitle(row.stage) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="国家医保码" width="160" class-name="mono">
+        <el-table-column label="国家医保码 *" width="160" class-name="mono">
           <template #default="{ row }">
             <span style="font-size: 12px; color: #3f4e48;">{{ row.insuranceCode }}</span>
           </template>

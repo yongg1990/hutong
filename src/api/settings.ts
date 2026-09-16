@@ -7,7 +7,7 @@ export interface ProjectSpaceCreateRequest {
   businessScope?: {
     scenarioCodes?: string[];
     regionCodes?: string[];
-    partyIds?: number[];
+    partyIds?: string[];
     objectTypes?: string[];
   };
 }
@@ -44,24 +44,6 @@ export interface DeploymentInstanceResponse {
   version?: string;
   createdAt: string;
 }
-
-export interface EdgeNode {
-  nodeCode: string;
-  name: string;
-  ip: string;
-  ruleVersion: string;
-  lastHeartbeat: string;
-  status: 'ACTIVE' | 'SUSPENDED' | 'OFFLINE';
-  deploymentMode?: string;
-  environment?: string;
-  regionCode?: string;
-}
-
-const mockEdgeNodes: EdgeNode[] = [
-  { nodeCode: 'EDGE-KM-01', name: '昆明中心仓前置代理节点', ip: '192.168.10.45', ruleVersion: '1.4.0', lastHeartbeat: '2026-08-08 15:44:12', status: 'ACTIVE', deploymentMode: 'HYBRID', environment: 'PROD', regionCode: '530100' },
-  { nodeCode: 'EDGE-WS-02', name: '文山三七基地数据前置机', ip: '10.8.0.12', ruleVersion: '1.4.0', lastHeartbeat: '2026-08-08 15:43:50', status: 'ACTIVE', deploymentMode: 'EDGE_ONLY', environment: 'PROD', regionCode: '532600' },
-  { nodeCode: 'EDGE-YX-03', name: '玉溪代煎中心接入前置', ip: '172.16.2.8', ruleVersion: '1.3.9', lastHeartbeat: '2026-08-08 11:20:00', status: 'SUSPENDED', deploymentMode: 'DEDICATED', environment: 'STAGE', regionCode: '530400' }
-];
 
 export interface SubscriptionJob {
   jobId: string;
@@ -134,17 +116,6 @@ const mockProjectSpaces: ProjectSpaceResponse[] = [
  */
 export const settingsApi = {
   // ================= 1. 项目空间 (POST /admin/v1/project-spaces, GET /admin/v1/project-spaces/{id}) =================
-  async getProjectSpaces(): Promise<ProjectSpaceResponse[]> {
-    return apiCall(
-      request.get('/admin/v1/project-spaces').then((res: any) => {
-        if (Array.isArray(res)) return res;
-        return mockProjectSpaces;
-      }),
-      mockProjectSpaces,
-      '获取项目空间列表'
-    );
-  },
-
   async createProjectSpace(data: ProjectSpaceCreateRequest): Promise<ProjectSpaceResponse> {
     const newPrj: ProjectSpaceResponse = {
       projectSpaceId: Date.now(),
@@ -221,62 +192,7 @@ export const settingsApi = {
     );
   },
 
-  // ================= 3. 租户项目当前空间与节点 =================
-  async getTenantProject(): Promise<any> {
-    return apiCall(
-      request.get('/settings/tenant-project'),
-      {
-        tenantId: 'TENANT-YN-DEMO',
-        tenantName: '云南示范项目',
-        projectId: 'PRJ-YN-TCM-2026',
-        projectName: '云南中药全产业链追溯示范项目',
-        appId: 'TCMIRP-WEB-CONSOLE',
-        mode: 'PROD',
-        swaggerUrl: 'http://192.168.1.39:8900/api/tcmirp/swagger-ui/index.html#/'
-      },
-      '获取租户空间配置'
-    );
-  },
-
-  // 获取前置边缘节点列表 GET /api/tcmirp/settings/deployments
-  async getEdgeNodes(): Promise<EdgeNode[]> {
-    return apiCall(
-      request.get('/settings/deployments'),
-      mockEdgeNodes,
-      '获取前置边缘节点'
-    );
-  },
-
-  async getEdgeDeployments(): Promise<EdgeNode[]> {
-    return this.getEdgeNodes();
-  },
-
-  // 广播/推送最新 Schema 规则包 POST /api/tcmirp/settings/deployments/broadcast-rules
-  async broadcastRules(): Promise<{ success: boolean; pushedCount: number }> {
-    return apiCall(
-      request.post('/settings/deployments/broadcast-rules'),
-      { success: true, pushedCount: mockEdgeNodes.length },
-      '推送Schema规则包'
-    );
-  },
-
-  async pushRulePackage(version?: string): Promise<{ success: boolean; pushedCount: number }> {
-    return apiCall(
-      request.post('/settings/deployments/broadcast-rules', { version }),
-      { success: true, pushedCount: mockEdgeNodes.length },
-      '推送Schema规则包'
-    );
-  },
-
-  // 同步指定前置节点 POST /api/tcmirp/settings/deployments/{nodeCode}/sync
-  async syncNode(nodeCode: string): Promise<{ success: boolean; nodeCode: string }> {
-    return apiCall(
-      request.post(`/settings/deployments/${nodeCode}/sync`),
-      { success: true, nodeCode },
-      '同步前置节点'
-    );
-  },
-
+  // ================= 3. 本地运维演示数据 =================
   // 获取异步作业与订阅列表 GET /api/tcmirp/operations/jobs
   async getJobs(): Promise<SubscriptionJob[]> {
     return apiCall(

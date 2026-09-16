@@ -55,13 +55,8 @@
     </div>
 
     <FilterBar @search="handleSearch" @reset="handleReset">
-      <el-input v-model="batchNo" placeholder="接入批次号 (如 BATCH-KM-04)" style="width: 220px" clearable />
-      <el-select v-model="sourceSystem" placeholder="全部来源系统" style="width: 180px" clearable>
-        <el-option label="全部系统" value="" />
-        <el-option label="WMS-KM-01 (昆明仓储)" value="WMS-KM-01" />
-        <el-option label="LIMS-KM-02 (实验室)" value="LIMS-KM-02" />
-        <el-option label="ERP-WS-01 (产业ERP)" value="ERP-WS-01" />
-      </el-select>
+      <el-input v-model="batchId" placeholder="批量任务 ID" style="width: 220px" clearable />
+      <el-switch v-model="includeFailures" active-text="包含失败明细" />
     </FilterBar>
 
     <div class="panel">
@@ -76,7 +71,11 @@
               <span class="batch-id-text">{{ row.batchId }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="sourceSystem" label="来源系统" min-width="130" />
+          <el-table-column prop="sourceSystem" label="来源系统 *" min-width="130" />
+          <el-table-column prop="mappingProfileVersion" label="映射配置版本" width="140" class-name="mono" />
+          <el-table-column label="目标 Schema 版本" min-width="180" show-overflow-tooltip>
+            <template #default="{ row }">{{ JSON.stringify(row.targetSchemaVersions || {}) }}</template>
+          </el-table-column>
           <el-table-column prop="totalCount" label="记录总数" width="110" align="center" />
           <el-table-column label="处理成功 / 失败" min-width="160">
             <template #default="{ row }">
@@ -85,7 +84,8 @@
               <span class="text-danger mono">{{ row.failCount }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="startTime" label="作业开始时间" min-width="160" />
+          <el-table-column prop="startTime" label="作业开始时间 *" min-width="160" />
+          <el-table-column prop="processedAt" label="处理时间" min-width="170" />
           <el-table-column label="状态" width="110">
             <template #default="{ row }">
               <StatusTag :code="row.status" />
@@ -162,6 +162,14 @@
           <el-input v-model="batchForm.batchCode" placeholder="如: BATCH-KM-05" />
         </el-form-item>
         <div style="display: flex; gap: 12px;">
+          <el-form-item label="文件 ID (fileId)" style="flex: 1" required>
+            <el-input v-model="batchForm.fileId" placeholder="如: 1001" />
+          </el-form-item>
+          <el-form-item label="业务用途 (businessPurpose)" style="flex: 1" required>
+            <el-input v-model="batchForm.businessPurpose" placeholder="TRACE" />
+          </el-form-item>
+        </div>
+        <div style="display: flex; gap: 12px;">
           <el-form-item label="来源系统 ID" style="flex: 1" required>
             <el-input v-model="batchForm.sourceSystemId" placeholder="如: 1" />
           </el-form-item>
@@ -217,8 +225,8 @@ import StatusTag from '@/components/common/StatusTag.vue';
 import { governanceApi, type IngestBatch } from '@/api/governance';
 
 const router = useRouter();
-const batchNo = ref('');
-const sourceSystem = ref('');
+const batchId = ref('');
+const includeFailures = ref(true);
 const drawerVisible = ref(false);
 const createBatchVisible = ref(false);
 const creatingBatch = ref(false);
@@ -231,6 +239,8 @@ const batchForm = ref({
   mappingProfileCode: 'MP_WMS_TO_WAREHOUSED',
   mappingProfileVersion: '1.4.0',
   inputFormat: 'JSON',
+  fileId: 1001,
+  businessPurpose: 'TRACE',
   expectedRecordCount: 500,
   submitMode: 'ASYNC',
   onError: 'CONTINUE_ON_ERROR'
@@ -243,6 +253,8 @@ const openCreateBatchModal = () => {
     mappingProfileCode: 'MP_WMS_TO_WAREHOUSED',
     mappingProfileVersion: '1.4.0',
     inputFormat: 'JSON',
+    fileId: 1001,
+    businessPurpose: 'TRACE',
     expectedRecordCount: 500,
     submitMode: 'ASYNC',
     onError: 'CONTINUE_ON_ERROR'
@@ -309,8 +321,10 @@ const loadBatches = async () => {
   loading.value = true;
   try {
     batches.value = await governanceApi.getBatches({
-      batchNo: batchNo.value,
-      sourceSystem: sourceSystem.value
+      batchId: batchId.value || undefined,
+      includeFailures: includeFailures.value,
+      pageNo: 1,
+      pageSize: 20
     });
   } catch (err) {
     console.error('Failed to load batches', err);
@@ -329,8 +343,8 @@ const handleSearch = async () => {
 };
 
 const handleReset = async () => {
-  batchNo.value = '';
-  sourceSystem.value = '';
+  batchId.value = '';
+  includeFailures.value = true;
   await loadBatches();
 };
 

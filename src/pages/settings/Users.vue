@@ -53,12 +53,6 @@
 
     <!-- Filter Bar -->
     <FilterBar @search="handleSearch" @reset="handleReset">
-      <el-input
-        v-model="keyword"
-        placeholder="登录账号 / 真实姓名 / 联系电话"
-        style="width: 240px"
-        clearable
-      />
       <el-select v-model="tenantFilter" placeholder="所属租户机构" style="width: 220px" clearable>
         <el-option label="全部租户" value="" />
         <el-option
@@ -67,11 +61,6 @@
           :label="t.tenantName"
           :value="t.id"
         />
-      </el-select>
-      <el-select v-model="statusFilter" placeholder="账号状态" style="width: 140px" clearable>
-        <el-option label="全部状态" value="" />
-        <el-option label="正常 (ACTIVE)" value="ACTIVE" />
-        <el-option label="禁用 (DISABLED)" value="DISABLED" />
       </el-select>
     </FilterBar>
 
@@ -83,14 +72,16 @@
       </div>
       <div class="panel-body">
         <el-table :data="filteredUsers" v-loading="loading" style="width: 100%" empty-text="暂无匹配的用户账号">
+          <el-table-column prop="userId" label="用户 ID" width="110" class-name="mono" />
+          <el-table-column prop="tenantId" label="租户 ID" width="110" class-name="mono" />
           <el-table-column prop="username" label="登录账号" min-width="140" class-name="mono">
             <template #default="{ row }">
               <span class="username-cell">{{ row.username }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="realName" label="姓名 / 备注" min-width="150" />
-          <el-table-column prop="tenantName" label="所属租户机构" min-width="200" show-overflow-tooltip />
-          <el-table-column label="已分配业务角色" min-width="200">
+          <el-table-column prop="tenantName" label="所属租户机构 *" min-width="200" show-overflow-tooltip />
+          <el-table-column label="已分配业务角色 *" min-width="200">
             <template #default="{ row }">
               <div class="roles-wrap">
                 <el-tag
@@ -105,13 +96,15 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="phone" label="联系电话" width="130" class-name="mono" />
-          <el-table-column prop="lastLoginAt" label="最近一次登录" width="160" />
+          <el-table-column prop="phone" label="联系电话 *" width="130" class-name="mono" />
+          <el-table-column prop="lastLoginAt" label="最近一次登录 *" width="160" />
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
               <StatusTag :code="row.status" />
             </template>
           </el-table-column>
+          <el-table-column prop="createdAt" label="创建时间" width="170" />
+          <el-table-column prop="updatedAt" label="更新时间" width="170" />
           <el-table-column label="操作" width="230" fixed="right">
             <template #default="{ row }">
               <el-button size="small" type="primary" link @click="openEditDialog(row)">
@@ -193,7 +186,7 @@
         <el-form-item label="账号状态">
           <el-radio-group v-model="form.status">
             <el-radio label="ACTIVE">正常允许登录 (ACTIVE)</el-radio>
-            <el-radio label="DISABLED">冻结锁定 (DISABLED)</el-radio>
+            <el-radio label="INACTIVE">冻结锁定 (INACTIVE)</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -219,9 +212,7 @@ const roles = ref<RoleItem[]>([]);
 const loading = ref(false);
 const submitting = ref(false);
 
-const keyword = ref('');
 const tenantFilter = ref('');
-const statusFilter = ref('');
 
 const dialogVisible = ref(false);
 const isEditing = ref(false);
@@ -253,24 +244,7 @@ const boundRolesCount = computed(() => {
   return set.size;
 });
 
-const filteredUsers = computed(() => {
-  return users.value.filter(item => {
-    if (keyword.value) {
-      const q = keyword.value.trim().toLowerCase();
-      const m1 = (item.username || '').toLowerCase().includes(q);
-      const m2 = (item.realName || '').toLowerCase().includes(q);
-      const m3 = (item.phone || '').toLowerCase().includes(q);
-      if (!m1 && !m2 && !m3) return false;
-    }
-    if (tenantFilter.value && item.tenantId !== tenantFilter.value) {
-      return false;
-    }
-    if (statusFilter.value && item.status !== statusFilter.value) {
-      return false;
-    }
-    return true;
-  });
-});
+const filteredUsers = computed(() => users.value);
 
 const getRoleName = (code: string) => {
   const matched = roles.value.find(r => r.roleCode === code);
@@ -288,13 +262,17 @@ const loadData = async () => {
   loading.value = true;
   try {
     const [uList, tList, rList] = await Promise.all([
-      rbacApi.getUsers(),
-      rbacApi.getTenants(),
+      rbacApi.getUsers({ tenantId: tenantFilter.value || undefined }),
+      rbacApi.getTenants({ page: 1, size: 100 }),
       rbacApi.getRoles()
     ]);
     users.value = uList;
     tenants.value = tList;
     roles.value = rList;
+    users.value = uList.map(user => ({
+      ...user,
+      tenantName: tList.find(tenant => String(tenant.id) === String(user.tenantId))?.tenantName
+    }));
   } catch (err) {
     console.error('Failed to load user and rbac data', err);
   } finally {
@@ -311,13 +289,12 @@ onMounted(() => {
 });
 
 const handleSearch = () => {
-  // Query executed silently without toast popup
+  loadData();
 };
 
 const handleReset = () => {
-  keyword.value = '';
   tenantFilter.value = '';
-  statusFilter.value = '';
+  loadData();
 };
 
 const openCreateDialog = () => {
@@ -357,6 +334,10 @@ const submitForm = async () => {
           displayName: form.value.realName || form.value.username || '',
           roles: form.value.roles || []
         });
+        const selectedRoles = roles.value.filter(role => (form.value.roles || []).includes(role.roleCode));
+        await Promise.all(selectedRoles.map(role =>
+          rbacApi.bindUserRole(created.id, role.roleId || role.id, created.tenantId)
+        ));
         ElMessage.success(`用户 [${created.username}] 创建成功，初始默认密码为 Tcm@2026!Admin`);
       }
       dialogVisible.value = false;
@@ -389,7 +370,7 @@ const handleResetPassword = (row: UserItem) => {
 };
 
 const toggleStatus = async (row: UserItem) => {
-  const nextStatus = row.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
+  const nextStatus = row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
   const label = nextStatus === 'ACTIVE' ? '启用' : '锁定停用';
   await rbacApi.updateUser(row.id, { status: nextStatus });
   row.status = nextStatus;

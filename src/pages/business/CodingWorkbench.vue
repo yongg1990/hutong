@@ -23,10 +23,10 @@
           </el-button>
         </div>
         <el-table :data="herbPieces">
-          <el-table-column prop="speciesName" label="品种" width="85" />
-          <el-table-column prop="batchNo" label="批次号" width="130" class-name="mono" />
-          <el-table-column prop="medicalInsuranceCode" label="国家医保饮片编码 (16位)" min-width="170" class-name="mono" />
-          <el-table-column prop="traceCodeCount" label="赋码数" width="80" />
+          <el-table-column prop="speciesName" label="品种 *" width="85" />
+          <el-table-column prop="batchNo" label="批次号 *" width="130" class-name="mono" />
+          <el-table-column prop="medicalInsuranceCode" label="国家医保饮片编码 (16位) *" min-width="170" class-name="mono" />
+          <el-table-column prop="traceCodeCount" label="赋码数 *" width="80" />
           <el-table-column label="操作 / 协同流转" width="160" fixed="right">
             <template #default="{ row }">
               <el-button size="small" type="primary" link @click="router.push('/trust/lineage?batchNo=' + row.batchNo)">

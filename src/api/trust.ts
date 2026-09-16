@@ -1,21 +1,29 @@
 import { request, apiCall } from './client';
-import { mockProofRecords } from './mockData';
-import type { ProofRecord } from '@/types';
 
 export interface EvidenceItem {
   evidenceId: string;
-  name: string;
+  name?: string;
   type: string;
   fileHash: string;
-  uploadTime: string;
+  uploadTime?: string;
   fileSize?: string;
+  subjectType?: string;
+  subjectId?: string | number;
+  fileId?: string | number;
+  status?: string;
 }
 
-const mockEvidences: EvidenceItem[] = [
-  { evidenceId: 'EVD-202608-01', name: '云南中药质检检验报告-SQ260731.pdf', type: 'INSPECTION_REPORT', fileHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', uploadTime: '2026-08-08 14:12', fileSize: '1.8 MB' },
-  { evidenceId: 'EVD-202608-02', name: '昆明中心仓入库签收单.pdf', type: 'INBOUND_SLIP', fileHash: '8f4e3c2b1a9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f', uploadTime: '2026-08-08 15:40', fileSize: '640 KB' },
-  { evidenceId: 'EVD-202608-03', name: '三七供销购销合同-202608.pdf', type: 'CONTRACT', fileHash: '1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b', uploadTime: '2026-08-08 10:20', fileSize: '2.4 MB' }
-];
+export interface EvidenceBindRequest {
+  evidenceType: string;
+  subjectType: string;
+  subjectId: number;
+  fileId?: number;
+  externalUriRef?: string;
+  contentDigest?: string;
+  issuerPartyId?: number;
+  validFrom?: string;
+  validTo?: string;
+}
 
 export interface ProofMerkleItem {
   proofNo: string;
@@ -23,23 +31,44 @@ export interface ProofMerkleItem {
   eventCount: number;
   blockHeight: string;
   txHash: string;
-  status: 'ACCEPTED' | 'PENDING' | 'REJECTED';
+  status: string;
+  proofStatus?: string;
+  chainStatus?: string;
+  latestTransactionHash?: string;
+  subjectType?: string;
+  subjectId?: string | number;
+  chainRecordId?: string | number;
+  chainType?: string;
+  networkCode?: string;
+  confirmedAt?: string;
+  reconcileStatus?: string;
+  receiptPayload?: string;
 }
-
-const mockMerkleProofs: ProofMerkleItem[] = [
-  { proofNo: 'PF-202608-0912', merkleRoot: '0x9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b', eventCount: 128, blockHeight: '#18,294,021', txHash: '0x7f8a...3b21', status: 'ACCEPTED' },
-  { proofNo: 'PF-202608-0911', merkleRoot: '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b', eventCount: 256, blockHeight: '#18,293,890', txHash: '0x4e2d...9a12', status: 'ACCEPTED' }
-];
 
 /**
  * 可信血缘、证据与存证接口 (Swagger: /api/tcmirp/trust/*)
  */
 export const trustApi = {
   // 获取全流程血缘追溯关系图谱 GET /api/tcmirp/trust/lineage
-  async getLineageGraph(params: { traceCode?: string; depth?: number }): Promise<any> {
+  async getLineageGraph(params: {
+    rootType: string;
+    rootId: string | number;
+    projectSpaceId?: number;
+    purposeCode?: string;
+    maxDepth?: number;
+    maxNodes?: number;
+  }): Promise<any> {
     return apiCall(
-      request.get('/trust/lineage', { params }),
+      request.get(`/exchange-query/lineage/${params.rootType}/${params.rootId}`, {
+        params: {
+          projectSpaceId: params.projectSpaceId || Number(localStorage.getItem('tcmirp_project_space_id')) || 1,
+          purposeCode: params.purposeCode || localStorage.getItem('tcmirp_purpose_code') || 'TRACE',
+          maxDepth: params.maxDepth || 3,
+          maxNodes: params.maxNodes || 100
+        }
+      }),
       {
+        rootId: Number(params.rootId),
         nodes: [
           { id: 'CB-WS-2026-018', label: '文山三七种植', type: 'FIELD' },
           { id: 'PRIMARY-SQ-20260801', label: '产地趁鲜切制', type: 'PRIMARY' },
@@ -54,65 +83,121 @@ export const trustApi = {
           { source: 'SQ-260731-08', target: 'QJ-240808-01', label: '抽样质检' },
           { source: 'SQ-260731-08', target: 'IN-20260808-0021', label: '成品入仓' },
           { source: 'IN-20260808-0021', target: 'PRE-8892102', label: '配送调配' }
-        ]
+        ],
+        truncated: false,
+        sourceVersion: 'local-baseline'
       },
       '获取追溯图谱数据'
     );
   },
 
-  // 获取电子证据文件列表 GET /api/tcmirp/trust/evidence
-  async getEvidenceList(params?: { keyword?: string; evidenceType?: string }): Promise<EvidenceItem[]> {
-    return apiCall(
-      request.get('/trust/evidence', { params }),
-      mockEvidences.filter(e => {
-        if (params?.evidenceType && e.type !== params.evidenceType) return false;
-        if (params?.keyword) {
-          const kw = params.keyword.toLowerCase();
-          return (e.name || '').toLowerCase().includes(kw) ||
-            (e.fileHash || '').includes(kw) ||
-            (e.evidenceId || '').includes(kw);
-        }
-        return true;
-      }),
-      '获取电子证据列表'
-    );
+  // 当前文档仅支持按证据 ID 查询。
+  async getEvidenceList(params?: { evidenceId?: string | number }): Promise<EvidenceItem[]> {
+    if (params?.evidenceId) {
+      return apiCall(
+        request.get(`/openapi/v1/evidence/${params.evidenceId}`).then((item: any) => [{
+          evidenceId: String(item.id),
+          type: item.evidenceType,
+          subjectType: item.subjectType,
+          subjectId: item.subjectId,
+          fileId: item.fileId,
+          fileHash: item.contentDigest,
+          status: item.status
+        }])),
+        [],
+        '按ID查询证据'
+      );
+    }
+    return [];
   },
 
-  // 校验电子证据 SHA-256 哈希有效性 POST /api/tcmirp/trust/evidence/{evidenceId}/verify
-  async verifyEvidenceHash(evidenceId: string): Promise<{ success: boolean; hashMatched: boolean; evidenceId: string }> {
-    return apiCall(
-      request.post(`/trust/evidence/${evidenceId}/verify`),
-      { success: true, hashMatched: true, evidenceId },
-      '校验电子证据哈希'
-    );
+  async createEvidence(data: EvidenceBindRequest): Promise<EvidenceItem> {
+    const item: any = await request.post('/openapi/v1/evidence', data);
+    return {
+      evidenceId: String(item.id),
+      type: item.evidenceType,
+      subjectType: item.subjectType,
+      subjectId: item.subjectId,
+      fileId: item.fileId,
+      fileHash: item.contentDigest,
+      status: item.status
+    };
   },
 
-  // 获取存证记录列表 GET /api/tcmirp/trust/proofs
-  async getProofRecords(params?: { chainType?: string; proofStatus?: string }): Promise<ProofRecord[]> {
-    return apiCall(
-      request.get('/trust/proofs', { params }),
-      mockProofRecords.filter(p => {
-        if (params?.chainType && p.chainType !== params.chainType) return false;
-        if (params?.proofStatus && p.proofStatus !== params.proofStatus) return false;
-        return true;
-      }),
-      '获取存证记录列表'
-    );
+  async getProofStatus(subjectType: string, subjectId: string | number, params?: { chainType?: string; includeReceipts?: boolean }): Promise<any> {
+    return request.get(`/openapi/v1/proofs/${subjectType}/${subjectId}`, { params });
   },
 
-  // 获取存证单与 Merkle 根证明 GET /api/tcmirp/trust/merkle-proofs
-  async getMerkleProofs(): Promise<ProofMerkleItem[]> {
-    return apiCall(
-      request.get('/trust/merkle-proofs'),
-      mockMerkleProofs,
-      '获取Merkle存证根证明'
-    );
+  // POST /openapi/v1/proofs/verify
+  async verifyEvidenceHash(
+    evidenceId: string,
+    params: { fileId?: string | number; subjectType?: string; subjectId?: string | number; digest?: string }
+  ): Promise<{ success: boolean; hashMatched: boolean; evidenceId: string }> {
+    const subjectType = params.subjectType || (params.fileId ? 'FILE' : undefined);
+    const subjectId = Number(params.subjectId ?? params.fileId);
+    if (!subjectType || !Number.isFinite(subjectId)) {
+      throw new Error('缺少可验真的主体 ID');
+    }
+    const normalizedDigest = params.digest
+      ? (params.digest.startsWith('sha256:') ? params.digest : `sha256:${params.digest}`)
+      : undefined;
+    return request.post('/openapi/v1/proofs/verify', {
+        subjectType,
+        subjectId,
+        digest: normalizedDigest,
+        proofMode: 'DIGEST_ONLY'
+      }).then((res: any) => ({ success: true, hashMatched: Boolean(res?.matched), evidenceId }));
+  },
+
+  // GET /openapi/v1/proofs/{subjectType}/{subjectId}
+  async getMerkleProofs(params?: { subjectType?: string; subjectId?: string | number; chainType?: string; includeReceipts?: boolean }): Promise<ProofMerkleItem[]> {
+    if (params?.subjectType && params?.subjectId) {
+      return apiCall(
+        this.getProofStatus(params.subjectType, params.subjectId, {
+          chainType: params.chainType || undefined,
+          includeReceipts: params.includeReceipts ?? false
+        }).then((res: any) => {
+          const records = Array.isArray(res?.chainRecords) ? res.chainRecords : [];
+          if (!records.length) {
+            return [{
+              proofNo: String(res?.proofRecordId || ''), merkleRoot: '', eventCount: 0, blockHeight: '',
+              txHash: res?.latestTransactionHash || '', status: res?.proofStatus || 'PENDING',
+              proofStatus: res?.proofStatus, latestTransactionHash: res?.latestTransactionHash,
+              subjectType: res?.subjectType, subjectId: res?.subjectId
+            } as ProofMerkleItem];
+          }
+          return records.map((item: any) => ({
+            proofNo: String(res.proofRecordId), merkleRoot: '', eventCount: 0, blockHeight: String(item.blockHeight || ''),
+            txHash: item.transactionHash || '', status: res.proofStatus || item.status, proofStatus: res.proofStatus,
+            chainStatus: item.status, latestTransactionHash: res.latestTransactionHash,
+            subjectType: res.subjectType, subjectId: res.subjectId,
+            chainRecordId: item.chainRecordId, chainType: item.chainType, networkCode: item.networkCode,
+            confirmedAt: item.confirmedAt, reconcileStatus: item.reconcileStatus, receiptPayload: item.receiptPayload
+          }));
+        }),
+        [],
+        '查询存证状态'
+      );
+    }
+    return [];
+  },
+
+  async verifyProof(item: ProofMerkleItem): Promise<any> {
+    return request.post('/openapi/v1/proofs/verify', {
+      subjectType: item.subjectType,
+      subjectId: Number(item.subjectId),
+      chainType: item.chainType || undefined,
+      proofMode: 'DIGEST_ONLY'
+    });
   },
 
   // 存证失败手工重试 POST /api/tcmirp/trust/proofs/{proofId}/retry
   async retryProof(proofId: string): Promise<{ success: boolean; newTxHash: string }> {
     return apiCall(
-      request.post(`/trust/proofs/${proofId}/retry`),
+      request.post(`/openapi/v1/proofs/${proofId}/retry`).then((res: any) => ({
+        success: true,
+        newTxHash: String(res?.retryId || '')
+      })),
       { success: true, newTxHash: '0x' + Math.random().toString(16).substr(2, 32) },
       '重试存证提交'
     );

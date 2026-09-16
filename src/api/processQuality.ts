@@ -1,6 +1,7 @@
 import { request, apiCall } from './client';
 import { mockPrimaryProcessingBatches } from './mockData';
 import type { PrimaryProcessingBatch } from '@/types';
+import { submitSupplyChainEvent } from './supplyChain';
 
 export interface QualityInspection {
   id: string;
@@ -108,7 +109,11 @@ export const processQualityApi = {
       status: payload.status || 'PROCESSING'
     };
     return apiCall(
-      request.post('/process-quality/batches', payload),
+      submitSupplyChainEvent('primary-processes', {
+        sourceBusinessKey: newRecord.primaryBatchNo,
+        occurredAt: new Date(newRecord.processedAt).toISOString(),
+        payload: newRecord
+      }).then(() => newRecord),
       newRecord,
       '登记初加工批次'
     );
@@ -139,7 +144,12 @@ export const processQualityApi = {
       indicators: payload.indicators || []
     };
     return apiCall(
-      request.post('/process-quality/inspections', payload),
+      submitSupplyChainEvent('quality-inspections', {
+        schemaVersion: '1.2.0',
+        sourceBusinessKey: newInsp.reportNo,
+        occurredAt: new Date(newInsp.inspectDate).toISOString(),
+        payload: newInsp
+      }).then(() => newInsp),
       newInsp,
       '提交质检报告'
     );

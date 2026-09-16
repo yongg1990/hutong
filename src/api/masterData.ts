@@ -125,11 +125,11 @@ export const masterDataApi = {
         partyType: payload.partyType,
         partyName: payload.partyName,
         regionCode,
-        attributes: JSON.stringify({
+        attributes: {
           partyCode: newParty.partyCode,
           region: newParty.region,
           ...(payload.attributes || {})
-        })
+        }
       }).then((res: any) => {
         return {
           ...newParty,
@@ -232,12 +232,12 @@ export const masterDataApi = {
         projectSpaceId: Number(payload.projectSpaceId) || 1,
         objectType: payload.objectType,
         ownerPartyId: Number(payload.ownerPartyId) || 1,
-        attributes: JSON.stringify({
+        attributes: {
           objectCode: newObj.objectCode,
           displayName: newObj.displayName,
           ownerParty: newObj.ownerParty,
           ...(payload.attributes || {})
-        }),
+        },
         sourceBusinessKey: payload.sourceBusinessKey || newObj.objectCode
       }).then((res: any) => {
         return {

@@ -55,6 +55,15 @@ const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
   { method: 'POST', pattern: new RegExp('^/openapi/v1/event-fact/config/schemas/[^/]+/[^/]+/publish$') },
   { method: 'GET', pattern: new RegExp('^/openapi/v1/event-fact/schemas/[^/]+/[^/]+$') },
   { method: 'GET', pattern: new RegExp('^/openapi/v1/event-fact/events/[0-9]+$') },
+  { method: 'POST', pattern: /^\/supply-chain\/(warehouse-receipts|warehouse-issues|trace-code-assignments|supply-orders|supply-deliveries|quality-inspections|primary-processes|prescriptions|pledges|plantings|input-applications|harvests|farming-operations|decoction-processes|decoction-deliveries)$/ },
+  { method: 'POST', pattern: /^\/openapi\/v1\/(proofs|evidence|credentials)$/ },
+  { method: 'POST', pattern: /^\/openapi\/v1\/proofs\/(verify|\d+\/(process|retry|reconcile))$/ },
+  { method: 'POST', pattern: /^\/openapi\/v1\/(files\/upload-sessions|alerts\/[^/]+\/actions|callback-deliveries\/[^/]+\/replay)$/ },
+  { method: 'POST', pattern: /^\/openapi\/v1\/files\/upload-sessions\/[^/]+\/complete$/ },
+  { method: 'GET', pattern: /^\/openapi\/v1\/(proofs\/[^/]+\/[^/]+|files\/[^/]+|files\/upload-sessions\/[^/]+|evidence\/[^/]+|credentials\/[^/]+|callback-deliveries\/[^/]+|batches\/[^/]+)$/ },
+  { method: 'GET', pattern: /^\/exchange-query\/(profiles|profiles\/\d+\/versions|profile-versions\/\d+\/(datasets|conformance-cases)|datasets\/\d+\/field-rules|projects\/\d+\/bindings|projections\/\d+|objects\/\d+|events\/\d+(?:\/status)?|metadata\/profiles\/[^/]+|lineage\/[^/]+\/[^/]+)$/ },
+  { method: 'POST', pattern: /^\/exchange-query\/(profiles(?:\/\d+)?|profile-versions(?:\/\d+\/(?:test|publish))?|field-rules(?:\/\d+)?|datasets(?:\/\d+)?|conformance-cases(?:\/\d+)?|bindings(?:\/\d+)?|projections|projects\/\d+\/projections\/\d+\/process)$/ },
+  { method: 'POST', pattern: /^\/admin\/v1\/subscriptions$/ },
   { method: 'POST', pattern: new RegExp('^/admin/v1/(project-spaces|deployment-instances)$') },
   { method: 'GET', pattern: new RegExp('^/admin/v1/(project-spaces|deployment-instances)/[0-9]+$') }
 ];
@@ -70,13 +79,19 @@ request.interceptors.request.use((config) => {
   const token = localStorage.getItem('weappauthorization') || localStorage.getItem('tcmirp_token');
 
   // Inject multi-tenant, context and weappauthorization headers
-  const tenantId = localStorage.getItem('tcmirp_tenant_id') || 'TENANT-YN-DEMO';
-  const projectId = localStorage.getItem('tcmirp_project_id') || 'PRJ-YN-TCM-2026';
+  const storedTenantId = localStorage.getItem('tcmirp_tenant_id');
+  const storedProjectId = localStorage.getItem('tcmirp_project_space_id') || localStorage.getItem('tcmirp_project_id');
+  const storedSourceSystemId = localStorage.getItem('tcmirp_source_system_id');
+  const tenantId = storedTenantId && /^\d+$/.test(storedTenantId) ? storedTenantId : '1';
+  const projectId = storedProjectId && /^\d+$/.test(storedProjectId) ? storedProjectId : '1';
+  const sourceSystemId = storedSourceSystemId && /^\d+$/.test(storedSourceSystemId) ? storedSourceSystemId : '1';
 
   if (config.headers) {
     if (typeof (config.headers as any).set === 'function') {
       (config.headers as any).set('X-Tenant-Id', tenantId);
       (config.headers as any).set('X-Project-Id', projectId);
+      (config.headers as any).set('X-Project-Space-Id', projectId);
+      (config.headers as any).set('X-Source-System-Id', sourceSystemId);
       (config.headers as any).set('X-Request-Id', `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
       // 登录后如果有token，在请求头自动带上 weappauthorization
       if (token) {
@@ -87,6 +102,8 @@ request.interceptors.request.use((config) => {
     } else {
       (config.headers as any)['X-Tenant-Id'] = tenantId;
       (config.headers as any)['X-Project-Id'] = projectId;
+      (config.headers as any)['X-Project-Space-Id'] = projectId;
+      (config.headers as any)['X-Source-System-Id'] = sourceSystemId;
       (config.headers as any)['X-Request-Id'] = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
       if (token) {
         (config.headers as any)['weappauthorization'] = token;

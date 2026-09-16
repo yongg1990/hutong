@@ -30,11 +30,12 @@
 
     <div class="panel">
       <el-table :data="parties">
-        <el-table-column prop="partyCode" label="主体统一代码" width="150" class-name="mono" />
-        <el-table-column prop="partyName" label="机构名称" min-width="200" />
-        <el-table-column prop="partyType" label="主体类型" width="130" />
-        <el-table-column prop="region" label="所属行政区域" min-width="140" />
-        <el-table-column prop="externalCodeCount" label="关联外部编码" width="120" />
+        <el-table-column prop="id" label="主体 ID" width="120" class-name="mono" />
+        <el-table-column prop="partyCode" label="主体统一代码 *" width="150" class-name="mono" />
+        <el-table-column prop="partyName" label="机构名称 *" min-width="200" />
+        <el-table-column prop="partyType" label="主体类型 *" width="130" />
+        <el-table-column prop="region" label="所属行政区域 *" min-width="140" />
+        <el-table-column prop="externalCodeCount" label="关联外部编码 *" width="120" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>

@@ -1,6 +1,7 @@
 import { request, apiCall } from './client';
 import { mockSupplyOrders } from './mockData';
 import type { SupplyOrder } from '@/types';
+import { submitSupplyChainEvent } from './supplyChain';
 
 /**
  * 供销仓储交割接口 (Swagger: /api/tcmirp/supply/*)
@@ -47,7 +48,10 @@ export const supplyApi = {
     storageTemperature?: number;
   }): Promise<{ success: boolean; id: string }> {
     return apiCall(
-      request.post(`/supply/orders/${id}/inbound`, payload),
+      submitSupplyChainEvent('warehouse-receipts', {
+        sourceBusinessKey: payload.inboundNo || `WAREHOUSE-${id}`,
+        payload: { orderId: id, ...payload }
+      }).then(() => ({ success: true, id })),
       { success: true, id },
       '确认入仓交割'
     );
@@ -60,7 +64,10 @@ export const supplyApi = {
     remark?: string;
   }): Promise<{ success: boolean; id: string; pledgeAmount: number }> {
     return apiCall(
-      request.post(`/supply/orders/${id}/pledge`, payload),
+      submitSupplyChainEvent('pledges', {
+        sourceBusinessKey: `PLEDGE-${id}-${Date.now()}`,
+        payload: { orderId: id, ...payload }
+      }).then(() => ({ success: true, id, pledgeAmount: payload.pledgeAmount })),
       { success: true, id, pledgeAmount: payload.pledgeAmount },
       '申请仓单质押'
     );
@@ -68,8 +75,19 @@ export const supplyApi = {
 
   // 变更订单状态环节 PUT /api/tcmirp/supply/orders/{id}/stage
   async updateOrderStage(id: string, stage: string): Promise<{ success: boolean; id: string; stage: string }> {
+    const endpointByStage: Record<string, string> = {
+      CONFIRMED: 'supply-orders',
+      WAREHOUSED: 'warehouse-receipts',
+      OUT_BOUND: 'warehouse-issues',
+      DELIVERED: 'supply-deliveries',
+      PLEDGED: 'pledges'
+    };
+    const endpoint = endpointByStage[stage] || 'supply-orders';
     return apiCall(
-      request.put(`/supply/orders/${id}/stage`, { stage }),
+      submitSupplyChainEvent(endpoint, {
+        sourceBusinessKey: `${stage}-${id}-${Date.now()}`,
+        payload: { orderId: id, stage }
+      }).then(() => ({ success: true, id, stage })),
       { success: true, id, stage },
       '更新订单环节'
     );

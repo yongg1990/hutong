@@ -30,7 +30,50 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
-      { method: 'POST', path: '/openapi/v1/trace-codes', desc: '追溯码登记 (registerTraceCode)' }
+      { method: 'POST', path: '/openapi/v1/trace-codes', desc: '追溯码登记 (registerTraceCode)' },
+      { method: 'POST', path: '/supply-chain/trace-code-assignments', desc: '追溯赋码业务事件' }
+    ]
+  },
+
+  '/business/field': {
+    hasApi: true, moduleName: '田间种植业务事件', apiPath: '/supply-chain/plantings',
+    specDoc: 'OpenAPI 3.1.0 / APP-05 中药全产业链业务协同', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    endpoints: [
+      { method: 'POST', path: '/supply-chain/plantings', desc: '种植开始' },
+      { method: 'POST', path: '/supply-chain/farming-operations', desc: '农事作业' },
+      { method: 'POST', path: '/supply-chain/input-applications', desc: '投入品施用' },
+      { method: 'POST', path: '/supply-chain/harvests', desc: '采收' }
+    ]
+  },
+
+  '/business/process-quality': {
+    hasApi: true, moduleName: '初加工与质量检测', apiPath: '/supply-chain/primary-processes, /supply-chain/quality-inspections',
+    specDoc: 'OpenAPI 3.1.0 / APP-05 中药全产业链业务协同', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    endpoints: [
+      { method: 'POST', path: '/supply-chain/primary-processes', desc: '初加工' },
+      { method: 'POST', path: '/supply-chain/quality-inspections', desc: '质量检测' }
+    ]
+  },
+
+  '/business/supply': {
+    hasApi: true, moduleName: '供销仓储与交割', apiPath: '/supply-chain/*',
+    specDoc: 'OpenAPI 3.1.0 / APP-05 中药全产业链业务协同', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    endpoints: [
+      { method: 'POST', path: '/supply-chain/supply-orders', desc: '供销订单确认' },
+      { method: 'POST', path: '/supply-chain/warehouse-receipts', desc: '入仓' },
+      { method: 'POST', path: '/supply-chain/warehouse-issues', desc: '出库' },
+      { method: 'POST', path: '/supply-chain/supply-deliveries', desc: '供销交割' },
+      { method: 'POST', path: '/supply-chain/pledges', desc: '质押确认' }
+    ]
+  },
+
+  '/business/decoction': {
+    hasApi: true, moduleName: '处方代煎与配送', apiPath: '/supply-chain/prescriptions',
+    specDoc: 'OpenAPI 3.1.0 / APP-05 中药全产业链业务协同', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    endpoints: [
+      { method: 'POST', path: '/supply-chain/prescriptions', desc: '处方接收' },
+      { method: 'POST', path: '/supply-chain/decoction-processes', desc: '代煎过程' },
+      { method: 'POST', path: '/supply-chain/decoction-deliveries', desc: '煎剂配送' }
     ]
   },
 
@@ -209,6 +252,32 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
       { method: 'POST', path: '/admin/v1/deployment-instances', desc: '登记部署实例 (register)' },
       { method: 'GET', path: '/admin/v1/deployment-instances/{id}', desc: '查询部署实例 (find)' }
     ]
+  },
+
+  '/exchange/profiles': {
+    hasApi: true, moduleName: '互通规范包与字段规则', apiPath: '/exchange-query/profiles',
+    specDoc: 'OpenAPI 3.1.0 / 互通查询', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    endpoints: [
+      { method: 'GET', path: '/exchange-query/profiles', desc: '查询启用规范包' },
+      { method: 'GET', path: '/exchange-query/profiles/{id}/versions', desc: '查询规范版本' },
+      { method: 'GET', path: '/exchange-query/profile-versions/{id}/datasets', desc: '查询数据集' },
+      { method: 'GET', path: '/exchange-query/datasets/{id}/field-rules', desc: '查询字段规则' }
+    ]
+  },
+
+  '/exchange/projections': {
+    hasApi: true, moduleName: '互通投影', apiPath: '/exchange-query/projections',
+    specDoc: 'OpenAPI 3.1.0 / 互通查询', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    endpoints: [
+      { method: 'POST', path: '/exchange-query/projections', desc: '冻结输入并受理异步投影' },
+      { method: 'GET', path: '/exchange-query/projections/{id}', desc: '查询互通投影结果' }
+    ]
+  },
+
+  '/trust/lineage': {
+    hasApi: true, moduleName: '有界血缘查询', apiPath: '/exchange-query/lineage/{rootType}/{rootId}',
+    specDoc: 'OpenAPI 3.1.0 / 互通查询', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    endpoints: [{ method: 'GET', path: '/exchange-query/lineage/{rootType}/{rootId}', desc: '有界血缘查询' }]
   }
 };
 

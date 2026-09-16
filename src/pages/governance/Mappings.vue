@@ -39,10 +39,10 @@
           <table class="rule-table">
             <thead>
               <tr>
-                <th>来源路径</th>
-                <th>目标 Schema 路径</th>
-                <th>转换规则</th>
-                <th>预检结果</th>
+                <th>来源路径 *</th>
+                <th>目标 Schema 路径 *</th>
+                <th>转换规则 *</th>
+                <th>预检结果 *</th>
               </tr>
             </thead>
             <tbody>

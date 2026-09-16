@@ -24,16 +24,16 @@
         <strong>{{ eventDetail.eventType }}</strong>
       </div>
       <div class="info-card">
-        <span class="label">来源系统</span>
-        <strong>{{ eventDetail.sourceSystem }}</strong>
+        <span class="label">Schema 版本</span>
+        <strong class="mono">{{ eventDetail.schemaVersion || '-' }}</strong>
       </div>
       <div class="info-card">
-        <span class="label">存证类型</span>
-        <StatusTag :code="eventDetail.proofStatus" />
+        <span class="label">来源业务键</span>
+        <strong class="mono">{{ eventDetail.businessKey || '-' }}</strong>
       </div>
       <div class="info-card">
-        <span class="label">Merkle Root</span>
-        <span class="mono ellipsis">{{ eventDetail.merkleRoot }}</span>
+        <span class="label">处理状态</span>
+        <StatusTag :code="eventDetail.processStatus" />
       </div>
     </div>
 
@@ -50,63 +50,17 @@
 
       <div class="panel">
         <div class="panel-header">
-          <h2>存证信息与区块链哈希证明</h2>
+          <h2>事件快照信息</h2>
         </div>
         <div class="panel-body">
-          <div class="kv-row"><span>存证单号:</span> <b class="mono">PF-202608-0912</b></div>
-          <div class="kv-row"><span>区块高度:</span> <b>#18,294,021</b></div>
-          <div class="kv-row"><span>存证哈希:</span> <b class="mono">0x7f8a...3b21</b></div>
-          <div class="kv-row"><span>上链时间:</span> <b>2026-08-08 15:45:10</b></div>
-
-          <el-divider style="margin: 12px 0" />
-
-          <h3>关联证据文件附件</h3>
-          <div v-for="att in attachments" :key="att.id" class="att-item">
-            <span>📎 {{ att.name }} ({{ att.size }})</span>
-            <el-button size="small" type="primary" link @click="openEvidence">查看存证凭证</el-button>
-          </div>
+          <div class="kv-row"><span>事件 ID:</span> <b class="mono">{{ eventDetail.eventId }}</b></div>
+          <div class="kv-row"><span>事件类型:</span> <b class="mono">{{ eventDetail.eventType }}</b></div>
+          <div class="kv-row"><span>发生时间:</span> <b>{{ eventDetail.occurredAt }}</b></div>
+          <div class="kv-row"><span>Payload 摘要:</span> <b class="mono digest">{{ eventDetail.payloadDigest || '-' }}</b></div>
         </div>
       </div>
     </div>
 
-    <!-- Processing Records and Traceability Split Panels -->
-    <div class="grid-two mt-4">
-      <div class="panel">
-        <div class="panel-header">
-          <h2>处理记录 (Processing Timeline)</h2>
-        </div>
-        <div class="panel-body">
-          <el-timeline>
-            <el-timeline-item
-              v-for="(activity, index) in processingRecords"
-              :key="index"
-              :type="activity.status"
-              :timestamp="activity.time"
-            >
-              {{ activity.content }}
-            </el-timeline-item>
-          </el-timeline>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-header">
-          <h2>来源追溯 (Traceability Info)</h2>
-        </div>
-        <div class="panel-body">
-          <div class="kv-row" v-for="(info, idx) in traceabilityInfo" :key="idx">
-            <span>{{ info.label }}:</span>
-            <b>{{ info.value }}</b>
-          </div>
-          
-          <div class="mt-6">
-            <el-button type="default" style="width: 100%" @click="router.push('/trust/lineage?eventId=' + eventDetail.eventId)">
-              在血缘图谱中展开节点
-            </el-button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
   <div v-else class="trust-page" style="padding: 40px; text-align: center;">
     <el-empty description="正在加载事件存证详情或未找到对应事件..." />
@@ -116,7 +70,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { eventsApi } from '@/api/events';
@@ -125,23 +78,6 @@ const route = useRoute();
 const router = useRouter();
 
 const eventDetail = ref<any>(null);
-const attachments = ref([
-  { id: '1', name: '昆明中心仓入库单据扫描件.pdf', size: '1.2 MB' },
-  { id: '2', name: '环境温湿度连续采集日志.csv', size: '420 KB' }
-]);
-
-const processingRecords = ref([
-  { time: '2026-08-08 15:45:10', content: '上链存证成功 (PF-202608-0912)', status: 'success' as const },
-  { time: '2026-08-08 15:45:02', content: '规范化验证通过 (Schema V2)', status: 'success' as const },
-  { time: '2026-08-08 15:45:00', content: '接收网关推送 payload (来源: WMS)', status: 'primary' as const },
-]);
-
-const traceabilityInfo = ref([
-  { label: '原始报文ID', value: 'MSG-9812-7362' },
-  { label: '采集设备/网关', value: 'Gateway-Kunming-01' },
-  { label: '签名主体', value: '昆明中心仓操作员A (0x4a...c9)' },
-  { label: '上游批次', value: 'BATCH-2026-0808-KM' },
-]);
 
 onMounted(async () => {
   const id = route.params.eventId as string;
@@ -153,9 +89,6 @@ onMounted(async () => {
   }
 });
 
-const openEvidence = () => {
-  router.push('/trust/evidence');
-};
 </script>
 
 <style scoped>
@@ -275,21 +208,15 @@ const openEvidence = () => {
   color: var(--color-muted);
 }
 
-.att-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 10px;
-  background: #f7f9f8;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  margin-top: 8px;
-  font-size: 13px;
-}
-
 .ellipsis {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.digest {
+  max-width: 70%;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 </style>

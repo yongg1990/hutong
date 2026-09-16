@@ -13,11 +13,11 @@
 
     <div class="panel">
       <el-table :data="cases">
-        <el-table-column prop="caseNo" label="案卷编号" width="160" class-name="mono" />
-        <el-table-column prop="ruleCode" label="规则码" width="180" class-name="mono" />
-        <el-table-column prop="sourceSystem" label="来源系统" width="120" />
-        <el-table-column prop="errorDetail" label="错误描述与定位" min-width="220" />
-        <el-table-column label="状态" width="110">
+        <el-table-column prop="caseNo" label="案卷编号 *" width="160" class-name="mono" />
+        <el-table-column prop="ruleCode" label="规则码 *" width="180" class-name="mono" />
+        <el-table-column prop="sourceSystem" label="来源系统 *" width="120" />
+        <el-table-column prop="errorDetail" label="错误描述与定位 *" min-width="220" />
+        <el-table-column label="状态 *" width="110">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>
         <el-table-column label="操作 / 协同处置" width="210">

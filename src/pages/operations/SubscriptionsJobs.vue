@@ -7,12 +7,12 @@
 
     <div class="panel">
       <el-table :data="jobs">
-        <el-table-column prop="jobId" label="作业 ID" width="160" class-name="mono" />
-        <el-table-column prop="name" label="作业任务名称" min-width="200" />
-        <el-table-column prop="triggerType" label="触发机制" width="130" />
-        <el-table-column prop="cronExpr" label="Cron 表达式" width="140" class-name="mono" />
-        <el-table-column prop="lastRun" label="上次执行时间" width="160" />
-        <el-table-column label="作业状态" width="110">
+        <el-table-column prop="jobId" label="作业 ID *" width="160" class-name="mono" />
+        <el-table-column prop="name" label="作业任务名称 *" min-width="200" />
+        <el-table-column prop="triggerType" label="触发机制 *" width="130" />
+        <el-table-column prop="cronExpr" label="Cron 表达式 *" width="140" class-name="mono" />
+        <el-table-column prop="lastRun" label="上次执行时间 *" width="160" />
+        <el-table-column label="作业状态 *" width="110">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>
         <el-table-column label="操作" width="120">

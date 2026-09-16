@@ -3,8 +3,8 @@
     <div class="canvas-toolbar">
       <div class="toolbar-left">
         <span class="pulse-node"></span>
-        <span class="title">全链因果图谱引擎 (DAG Lineage Graphviz Canvas)</span>
-        <span class="spec-label">GB/T 31774 溯源因果闭环</span>
+        <span class="title">血缘关系图</span>
+        <span class="spec-label">{{ normalizedNodes.length }} 节点 / {{ normalizedEdges.length }} 条边</span>
       </div>
       <div class="tool-actions">
         <el-button size="small" @click="zoomIn">放大 (+)</el-button>
@@ -13,192 +13,96 @@
       </div>
     </div>
 
-    <div class="canvas-stage-wrapper">
-      <div class="canvas-stage" :style="{ transform: `scale(${zoomScale})` }">
-        <svg class="lineage-svg" width="100%" height="480" viewBox="0 0 1000 480">
+    <div v-if="normalizedNodes.length" class="canvas-stage-wrapper">
+      <div class="canvas-stage" :style="{ transform: `scale(${zoomScale})`, width: `${canvasWidth}px` }">
+        <svg class="lineage-svg" :width="canvasWidth" height="420" :viewBox="`0 0 ${canvasWidth} 420`">
           <defs>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <marker id="lineage-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 0 L 10 5 L 0 10 z" fill="#0e5f40" />
             </marker>
-            <filter id="card-shadow" x="-15%" y="-15%" width="130%" height="130%">
-              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.08" flood-color="#0e5f40" />
-            </filter>
-            <filter id="card-shadow-hover" x="-25%" y="-25%" width="150%" height="150%">
-              <feDropShadow dx="0" dy="3" stdDeviation="5" flood-opacity="0.22" flood-color="#0e5f40" />
-            </filter>
           </defs>
-
-          <!-- Connecting Edge Paths -->
-          <path d="M 145 180 L 255 180" stroke="#0e5f40" stroke-width="2" marker-end="url(#arrow)" />
-          <path d="M 385 180 L 495 180" stroke="#0e5f40" stroke-width="2" marker-end="url(#arrow)" />
-          <path d="M 625 180 L 735 180" stroke="#0e5f40" stroke-width="2" marker-end="url(#arrow)" />
-          <path d="M 560 220 L 560 340 L 735 340" stroke="#b26a00" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="4 3" />
-
-          <!-- Nodes -->
-          <!-- Node 1: Crop Batch -->
-          <g class="graph-node" transform="translate(20, 140)" @click="emitNode('CROP-WS-001', '作物批次: 文山三七', 'BATCH')">
-            <rect x="0" y="0" width="125" height="80" rx="8" fill="#ffffff" stroke="#0e5f40" stroke-width="1.8" />
-            <rect x="0" y="0" width="125" height="6" rx="3" fill="#0e5f40" />
-            <text x="62" y="28" text-anchor="middle" font-size="12" font-weight="bold" fill="#12211b" class="mono">CROP-WS-001</text>
-            <text x="62" y="46" text-anchor="middle" font-size="11" fill="#4a6155">文山三七基地</text>
-            <rect x="12" y="54" width="101" height="18" rx="4" fill="#edf6f1" />
-            <text x="62" y="67" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5f40">🌱 田间种植 · 已上链</text>
+          <g v-for="edge in renderedEdges" :key="edge.key">
+            <line :x1="edge.x1" :y1="edge.y1" :x2="edge.x2" :y2="edge.y2" stroke="#0e5f40" stroke-width="2" marker-end="url(#lineage-arrow)" />
+            <text v-if="edge.label" :x="(edge.x1 + edge.x2) / 2" :y="edge.y1 - 10" text-anchor="middle" font-size="11" fill="#4a6155">{{ edge.label }}</text>
           </g>
-
-          <!-- Node 2: Harvest Batch -->
-          <g class="graph-node" transform="translate(260, 140)" @click="emitNode('HARVEST-2026-08', '采收批次: 采收 1200kg', 'HARVEST')">
-            <rect x="0" y="0" width="125" height="80" rx="8" fill="#ffffff" stroke="#0e5f40" stroke-width="1.8" />
-            <rect x="0" y="0" width="125" height="6" rx="3" fill="#0e5f40" />
-            <text x="62" y="28" text-anchor="middle" font-size="12" font-weight="bold" fill="#12211b" class="mono">HARVEST-0801</text>
-            <text x="62" y="46" text-anchor="middle" font-size="11" fill="#4a6155">头状根切片鲜品</text>
-            <rect x="12" y="54" width="101" height="18" rx="4" fill="#edf6f1" />
-            <text x="62" y="67" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5f40">🌾 采收检验 · 已核验</text>
-          </g>
-
-          <!-- Node 3: Processed Piece Batch -->
-          <g class="graph-node" transform="translate(500, 140)" @click="emitNode('PIECE-SQ-260731', '饮片批次: 三七切片', 'PROCESS')">
-            <rect x="0" y="0" width="125" height="80" rx="8" fill="#ffffff" stroke="#0e5f40" stroke-width="1.8" />
-            <rect x="0" y="0" width="125" height="6" rx="3" fill="#0e5f40" />
-            <text x="62" y="28" text-anchor="middle" font-size="12" font-weight="bold" fill="#12211b" class="mono">SQ-260731-08</text>
-            <text x="62" y="46" text-anchor="middle" font-size="11" fill="#4a6155">三七饮片 10kg/箱</text>
-            <rect x="12" y="54" width="101" height="18" rx="4" fill="#edf6f1" />
-            <text x="62" y="67" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5f40">⚙️ 趁鲜质检 · 全检通过</text>
-          </g>
-
-          <!-- Node 4: Warehoused / Delivery -->
-          <g class="graph-node" transform="translate(740, 140)" @click="emitNode('WH-KM-001', '仓储交割: 昆明中心仓', 'WAREHOUSE')">
-            <rect x="0" y="0" width="125" height="80" rx="8" fill="#ffffff" stroke="#0e5f40" stroke-width="1.8" />
-            <rect x="0" y="0" width="125" height="6" rx="3" fill="#0e5f40" />
-            <text x="62" y="28" text-anchor="middle" font-size="12" font-weight="bold" fill="#12211b" class="mono">XS-202608-018</text>
-            <text x="62" y="46" text-anchor="middle" font-size="11" fill="#4a6155">昆明中心仓 A-02</text>
-            <rect x="12" y="54" width="101" height="18" rx="4" fill="#edf6f1" />
-            <text x="62" y="67" text-anchor="middle" font-size="9.5" font-weight="600" fill="#0e5f40">📦 供销交割 · 已入库</text>
-          </g>
-
-          <!-- Node 5: Decoction Order -->
-          <g class="graph-node" transform="translate(740, 300)" @click="emitNode('RX-TOKEN-8921', '代煎处方: 8691234567890123', 'DECOCTION')">
-            <rect x="0" y="0" width="125" height="80" rx="8" fill="#ffffff" stroke="#b26a00" stroke-width="1.8" />
-            <rect x="0" y="0" width="125" height="6" rx="3" fill="#b26a00" />
-            <text x="62" y="28" text-anchor="middle" font-size="12" font-weight="bold" fill="#12211b" class="mono">RX-86912345</text>
-            <text x="62" y="46" text-anchor="middle" font-size="11" fill="#4a6155">云南省中医院代煎</text>
-            <rect x="12" y="54" width="101" height="18" rx="4" fill="#fff4e5" />
-            <text x="62" y="67" text-anchor="middle" font-size="9.5" font-weight="600" fill="#b26a00">🍵 处方代煎 · 配送中</text>
+          <g
+            v-for="node in renderedNodes"
+            :key="node.id"
+            class="graph-node"
+            :transform="`translate(${node.x}, ${node.y})`"
+            @click="emit('node-click', { ...node.raw, id: node.id, label: node.label, type: node.type })"
+          >
+            <rect width="170" height="82" rx="6" fill="#ffffff" stroke="#0e5f40" stroke-width="1.8" />
+            <rect width="170" height="6" rx="3" fill="#0e5f40" />
+            <text x="85" y="31" text-anchor="middle" font-size="12" font-weight="700" fill="#12211b">{{ node.shortLabel }}</text>
+            <text x="85" y="52" text-anchor="middle" font-size="11" fill="#4a6155">{{ node.shortId }}</text>
+            <text x="85" y="70" text-anchor="middle" font-size="10" fill="#0e5f40">{{ node.type }}</text>
           </g>
         </svg>
       </div>
     </div>
+    <el-empty v-else description="查询后显示血缘节点与关系" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
-const emit = defineEmits(['node-click']);
+const props = withDefaults(defineProps<{ nodes?: any; edges?: any }>(), { nodes: () => [], edges: () => [] });
+const emit = defineEmits<{ (e: 'node-click', node: any): void }>();
+const zoomScale = ref(1);
 
-const zoomScale = ref(1.0);
-
-const zoomIn = () => {
-  if (zoomScale.value < 1.8) zoomScale.value += 0.2;
+const asArray = (value: any): any[] => {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.items)) return value.items;
+  if (value && typeof value === 'object') return Object.values(value);
+  return [];
 };
 
-const zoomOut = () => {
-  if (zoomScale.value > 0.6) zoomScale.value -= 0.2;
-};
+const normalizedNodes = computed(() => asArray(props.nodes).map((raw, index) => ({
+  raw,
+  id: String(raw.id ?? raw.nodeId ?? raw.subjectId ?? index + 1),
+  label: String(raw.label ?? raw.name ?? raw.subjectName ?? raw.id ?? raw.nodeId ?? `节点 ${index + 1}`),
+  type: String(raw.type ?? raw.nodeType ?? raw.subjectType ?? 'NODE')
+})));
 
-const resetZoom = () => {
-  zoomScale.value = 1.0;
-};
+const normalizedEdges = computed(() => asArray(props.edges).map((raw, index) => ({
+  key: String(raw.id ?? raw.edgeId ?? index),
+  source: String(raw.source ?? raw.sourceId ?? raw.from ?? raw.fromId ?? ''),
+  target: String(raw.target ?? raw.targetId ?? raw.to ?? raw.toId ?? ''),
+  label: String(raw.label ?? raw.type ?? raw.relationType ?? '')
+})));
 
-const emitNode = (id: string, label: string, type: string) => {
-  emit('node-click', { id, label, type });
-};
+const canvasWidth = computed(() => Math.max(900, normalizedNodes.value.length * 220 + 60));
+const renderedNodes = computed(() => normalizedNodes.value.map((node, index) => ({
+  ...node,
+  x: 30 + index * 220,
+  y: index % 2 === 0 ? 105 : 245,
+  shortLabel: node.label.length > 20 ? `${node.label.slice(0, 18)}...` : node.label,
+  shortId: node.id.length > 22 ? `${node.id.slice(0, 20)}...` : node.id
+})));
+
+const renderedEdges = computed(() => normalizedEdges.value.flatMap(edge => {
+  const source = renderedNodes.value.find(node => node.id === edge.source);
+  const target = renderedNodes.value.find(node => node.id === edge.target);
+  if (!source || !target) return [];
+  return [{ ...edge, x1: source.x + 170, y1: source.y + 41, x2: target.x, y2: target.y + 41 }];
+}));
+
+const zoomIn = () => { if (zoomScale.value < 1.8) zoomScale.value += 0.2; };
+const zoomOut = () => { if (zoomScale.value > 0.6) zoomScale.value -= 0.2; };
+const resetZoom = () => { zoomScale.value = 1; };
 </script>
 
 <style scoped>
-.graphviz-canvas-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.canvas-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 10px 16px;
-  background: #fbfdfc;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pulse-node {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--color-brand);
-  box-shadow: 0 0 0 2px rgba(14, 95, 64, 0.2);
-}
-
-.canvas-toolbar .title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-ink);
-}
-
-.spec-label {
-  font-size: 10.5px;
-  background: var(--color-brand-soft);
-  color: var(--color-brand);
-  border: 1px solid var(--color-brand-border);
-  padding: 1px 6px;
-  border-radius: 3px;
-  font-weight: 600;
-}
-
-.canvas-stage-wrapper {
-  flex: 1;
-  background-color: #fafcfb;
-  background-image: radial-gradient(#d5e2da 1px, transparent 1px);
-  background-size: 20px 20px;
-  overflow: auto;
-  position: relative;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.canvas-stage {
-  padding: 20px;
-  transform-origin: center top;
-  transition: transform 0.2s ease;
-}
-
-.graph-node {
-  cursor: pointer;
-  filter: url(#card-shadow);
-  transition: filter 0.2s ease;
-}
-
-.graph-node:hover {
-  filter: url(#card-shadow-hover);
-}
-
-.graph-node rect:first-of-type {
-  transition: stroke-width 0.2s ease, stroke 0.2s ease;
-}
-
-.graph-node:hover rect:first-of-type {
-  stroke-width: 2.2;
-}
+.graphviz-canvas-wrapper { display: flex; flex-direction: column; min-height: 520px; width: 100%; }
+.canvas-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 16px; background: #fbfdfc; border-bottom: 1px solid var(--color-border); }
+.toolbar-left, .tool-actions { display: flex; align-items: center; gap: 8px; }
+.pulse-node { width: 7px; height: 7px; border-radius: 50%; background: var(--color-brand); }
+.title { font-size: 13px; font-weight: 700; color: var(--color-ink); }
+.spec-label { font-size: 11px; background: var(--color-brand-soft); color: var(--color-brand); border: 1px solid var(--color-brand-border); padding: 2px 6px; border-radius: 3px; }
+.canvas-stage-wrapper { flex: 1; overflow: auto; background-color: #fafcfb; background-image: radial-gradient(#d5e2da 1px, transparent 1px); background-size: 20px 20px; }
+.canvas-stage { transform-origin: left top; transition: transform 0.2s ease; }
+.graph-node { cursor: pointer; }
+.graph-node:hover rect:first-child { stroke-width: 2.5; }
 </style>

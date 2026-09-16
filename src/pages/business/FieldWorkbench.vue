@@ -71,14 +71,14 @@
           highlight-current-row
           empty-text="暂无匹配该阶段或条件的作物批次"
         >
-          <el-table-column prop="batchNo" label="作物批次号" min-width="140" class-name="mono" />
-          <el-table-column label="基地 / 地块" min-width="160">
+          <el-table-column prop="batchNo" label="作物批次号 *" min-width="140" class-name="mono" />
+          <el-table-column label="基地 / 地块 *" min-width="160">
             <template #default="{ row }">{{ row.baseName }} / {{ row.plotName }}</template>
           </el-table-column>
-          <el-table-column prop="herbName" label="药材" width="90" />
-          <el-table-column prop="plantDate" label="种植日期" width="110" />
-          <el-table-column prop="lastEvent" label="最近农事/事件" min-width="170" />
-          <el-table-column label="状态" width="100">
+          <el-table-column prop="herbName" label="药材 *" width="90" />
+          <el-table-column prop="plantDate" label="种植日期 *" width="110" />
+          <el-table-column prop="lastEvent" label="最近农事/事件 *" min-width="170" />
+          <el-table-column label="状态 *" width="100">
             <template #default="{ row }"><StatusTag :code="row.status" /></template>
           </el-table-column>
           <el-table-column label="操作 / 协同" width="150" fixed="right">

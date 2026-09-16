@@ -7,7 +7,8 @@
       <template #actions>
         <el-button @click="router.push('/settings/tenants')">租户管理 ➔</el-button>
         <el-button @click="router.push('/settings/users')">用户管理 ➔</el-button>
-        <el-button type="primary" @click="router.push('/settings/roles')">角色与权限 ➔</el-button>
+        <el-button @click="router.push('/settings/roles')">角色与权限 ➔</el-button>
+        <el-button type="primary" @click="createDialogVisible = true">创建项目空间</el-button>
       </template>
     </PageHeader>
 
@@ -49,24 +50,29 @@
       </div>
     </div>
 
+    <FilterBar @search="loadProject" @reset="handleReset">
+      <el-input-number v-model="projectSpaceId" :min="1" placeholder="项目空间 ID" style="width: 220px" />
+    </FilterBar>
+
     <div class="grid-two">
       <div class="panel">
         <div class="panel-header">
           <h2>当前项目空间配置</h2>
         </div>
         <div class="panel-body">
-          <div class="kv-row"><span>租户代码:</span> <b class="mono">{{ contextStore.tenantId }}</b></div>
-          <div class="kv-row"><span>项目名称:</span> <b>{{ contextStore.projectName }}</b></div>
-          <div class="kv-row"><span>我的当前角色:</span> <b>{{ contextStore.userRole }}</b></div>
-          <div class="kv-row"><span>环境模式:</span> <b>PROD - 生产物理隔离集群</b></div>
-
-          <el-divider style="margin: 16px 0" />
-
-          <h3>切换快速协同项目空间</h3>
-          <el-radio-group v-model="selectedProject" @change="switchProject">
-            <el-radio label="PRJ-YN-TCM-2026">云南中药全产业链追溯示范项目</el-radio>
-            <el-radio label="PRJ-WS-SANQI-01">文山三七专线合规追溯项目</el-radio>
-          </el-radio-group>
+          <template v-if="projectSpace">
+            <div class="kv-row"><span>项目空间 ID:</span> <b class="mono">{{ projectSpace.projectSpaceId }}</b></div>
+            <div class="kv-row"><span>租户 ID:</span> <b class="mono">{{ projectSpace.tenantId }}</b></div>
+            <div class="kv-row"><span>项目代码:</span> <b class="mono">{{ projectSpace.projectCode }}</b></div>
+            <div class="kv-row"><span>项目名称:</span> <b>{{ projectSpace.projectName }}</b></div>
+            <div class="kv-row"><span>区域代码:</span> <b class="mono">{{ projectSpace.regionCode }}</b></div>
+            <div class="kv-row"><span>状态:</span> <StatusTag :code="projectSpace.status" /></div>
+            <div class="kv-row"><span>锁版本:</span> <b class="mono">{{ projectSpace.lockVersion }}</b></div>
+            <div class="kv-row"><span>创建时间:</span> <b>{{ projectSpace.createdAt }}</b></div>
+            <div class="kv-row"><span>业务范围:</span> <b class="mono scope-value">{{ JSON.stringify(projectSpace.businessScope || {}) }}</b></div>
+            <el-button type="primary" style="margin-top: 14px" @click="switchProject">设为当前项目空间</el-button>
+          </template>
+          <el-empty v-else description="请输入项目空间 ID 查询" />
         </div>
       </div>
 
@@ -78,23 +84,45 @@
           </el-button>
         </div>
         <div class="panel-body" style="padding: 0;">
-          <el-table :data="members" style="width: 100%">
-            <el-table-column prop="realName" label="姓名 / 账号" min-width="140">
+          <el-table :data="members" v-loading="loading" style="width: 100%">
+            <el-table-column prop="userId" label="用户 ID" width="100" class-name="mono" />
+            <el-table-column prop="tenantId" label="租户 ID" width="100" class-name="mono" />
+            <el-table-column prop="realName" label="姓名 / 账号" min-width="160">
               <template #default="{ row }">
                 <span>{{ row.realName }}</span>
                 <span class="sub-user-text mono">({{ row.username }})</span>
               </template>
             </el-table-column>
-            <el-table-column label="项目角色" min-width="140">
+            <el-table-column label="项目角色 *" min-width="140">
               <template #default="{ row }">
                 <el-tag size="small" type="success">{{ (row.roles && row.roles[0]) || '业务成员' }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="tenantName" label="所属机构" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="tenantName" label="所属机构 *" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="status" label="状态" width="100" />
+            <el-table-column prop="createdAt" label="创建时间" width="170" />
+            <el-table-column prop="updatedAt" label="更新时间" width="170" />
           </el-table>
         </div>
       </div>
     </div>
+
+    <el-dialog v-model="createDialogVisible" title="创建项目空间" width="600px">
+      <el-form :model="createForm" label-position="top">
+        <div class="form-grid">
+          <el-form-item label="项目代码" required><el-input v-model="createForm.projectCode" /></el-form-item>
+          <el-form-item label="项目名称" required><el-input v-model="createForm.projectName" /></el-form-item>
+          <el-form-item label="区域代码" required><el-input v-model="createForm.regionCode" /></el-form-item>
+        </div>
+        <el-form-item label="业务范围 JSON" required>
+          <el-input v-model="businessScopeText" type="textarea" :rows="7" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="createDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="creating" @click="createProject">创建</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -104,45 +132,90 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { useContextStore } from '@/stores/contextStore';
 import PageHeader from '@/components/common/PageHeader.vue';
-import { settingsApi } from '@/api/settings';
+import FilterBar from '@/components/common/FilterBar.vue';
+import StatusTag from '@/components/common/StatusTag.vue';
+import { settingsApi, type ProjectSpaceCreateRequest, type ProjectSpaceResponse } from '@/api/settings';
 import { rbacApi, type UserItem } from '@/api/rbac';
 
 const router = useRouter();
 const contextStore = useContextStore();
-const selectedProject = ref(contextStore.projectId);
+const projectSpaceId = ref<number | undefined>(Number(localStorage.getItem('tcmirp_project_space_id')) || 1);
+const projectSpace = ref<ProjectSpaceResponse | null>(null);
+const loading = ref(false);
+const creating = ref(false);
+const createDialogVisible = ref(false);
+const businessScopeText = ref('{\n  "scenarioCodes": [],\n  "regionCodes": [],\n  "partyIds": [],\n  "objectTypes": []\n}');
+const createForm = ref<Omit<ProjectSpaceCreateRequest, 'businessScope'>>({ projectCode: '', projectName: '', regionCode: '' });
 
 const tenantCount = ref(3);
 const userCount = ref(5);
 const roleCount = ref(5);
 const members = ref<UserItem[]>([]);
 
-onMounted(async () => {
-  try {
-    const [config, tList, uList, rList] = await Promise.all([
-      settingsApi.getTenantProject(),
-      rbacApi.getTenants(),
-      rbacApi.getUsers(),
-      rbacApi.getRoles()
-    ]);
-    if (config?.projectId && config?.projectName) {
-      selectedProject.value = config.projectId;
-    }
-    tenantCount.value = tList.length;
-    userCount.value = uList.length;
-    roleCount.value = rList.length;
-    members.value = uList.slice(0, 5);
-  } catch (err) {
-    console.error('Failed to load tenant project config', err);
+const loadProject = async () => {
+  if (!projectSpaceId.value) {
+    projectSpace.value = null;
+    members.value = [];
+    return;
   }
+  loading.value = true;
+  try {
+    const config = await settingsApi.getProjectSpaceById(projectSpaceId.value);
+    projectSpace.value = config;
+    const uList = await rbacApi.getUsers({ tenantId: config.tenantId });
+    members.value = uList;
+    userCount.value = uList.length;
+  } catch (err) {
+    console.error('Failed to load project space', err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(async () => {
+  loadProject();
+  const [tList, rList] = await Promise.all([rbacApi.getTenants(), rbacApi.getRoles()]);
+  tenantCount.value = tList.length;
+  roleCount.value = rList.length;
 });
 
-const switchProject = (val: any) => {
-  if (val === 'PRJ-WS-SANQI-01') {
-    contextStore.switchProject('PRJ-WS-SANQI-01', '文山三七专线合规追溯项目');
-  } else {
-    contextStore.switchProject('PRJ-YN-TCM-2026', '云南中药全产业链追溯示范项目');
-  }
+const handleReset = () => {
+  projectSpaceId.value = undefined;
+  projectSpace.value = null;
+  members.value = [];
+};
+
+const switchProject = () => {
+  if (!projectSpace.value) return;
+  contextStore.switchProject(String(projectSpace.value.projectSpaceId), projectSpace.value.projectName);
+  localStorage.setItem('tcmirp_project_space_id', String(projectSpace.value.projectSpaceId));
   ElMessage.success(`项目空间已切换为: ${contextStore.projectName}`);
+};
+
+const createProject = async () => {
+  if (!createForm.value.projectCode || !createForm.value.projectName || !createForm.value.regionCode) {
+    ElMessage.warning('请填写完整的项目空间信息');
+    return;
+  }
+  let businessScope: ProjectSpaceCreateRequest['businessScope'];
+  try {
+    businessScope = JSON.parse(businessScopeText.value);
+  } catch {
+    ElMessage.warning('业务范围必须是有效 JSON');
+    return;
+  }
+  creating.value = true;
+  try {
+    const created = await settingsApi.createProjectSpace({ ...createForm.value, businessScope });
+    projectSpace.value = created;
+    projectSpaceId.value = Number(created.projectSpaceId) || undefined;
+    createDialogVisible.value = false;
+    ElMessage.success('项目空间创建成功');
+  } catch {
+    ElMessage.error('项目空间创建失败');
+  } finally {
+    creating.value = false;
+  }
 };
 </script>
 
@@ -209,6 +282,18 @@ const switchProject = (val: any) => {
 
 .kv-row span {
   color: var(--color-muted);
+}
+
+.scope-value {
+  max-width: 65%;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
 }
 
 .sub-user-text {

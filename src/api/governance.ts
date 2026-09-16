@@ -11,6 +11,10 @@ export interface IngestBatch {
   startTime: string;
   status: 'COMPLETED' | 'PROCESSING' | 'FAILED';
   errorLogs?: string[];
+  mappingProfileVersion?: string;
+  targetSchemaVersions?: Record<string, string>;
+  processedAt?: string;
+  failedRecordDetails?: any[];
 }
 
 export interface SourceSystemRequest {
@@ -101,10 +105,10 @@ export interface BatchRequest {
   mappingProfileCode: string;
   mappingProfileVersion: string;
   inputFormat: string;
-  fileId?: string;
+  fileId: number | string;
   expectedRecordCount?: number;
   sourceBatchKey?: string;
-  businessPurpose?: string;
+  businessPurpose: string;
   onError?: 'STOP_ON_ERROR' | 'CONTINUE_ON_ERROR' | string;
   submitMode?: 'ASYNC' | 'SYNC' | string;
 }
@@ -124,9 +128,11 @@ export interface SourceSystem {
   protocol: string;
   endpointUrl: string;
   authType: string;
-  status: 'ONLINE' | 'OFFLINE' | 'ACTIVE' | 'SUSPENDED';
+  status: 'ONLINE' | 'OFFLINE' | 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   lastHeartbeat: string;
   ownerPartyId?: number | string;
+  version?: number | string;
+  registeredAt?: string;
 }
 
 const mockBatches: IngestBatch[] = [
@@ -191,7 +197,11 @@ export const governanceApi = {
       }).then((res: any) => {
         return {
           ...newSource,
-          id: String(res?.sourceSystemId || newSource.id)
+          id: String(res?.sourceSystemId || newSource.id),
+          systemCode: res?.sourceSystemCode || newSource.systemCode,
+          version: res?.version,
+          status: res?.status || newSource.status,
+          registeredAt: res?.registeredAt
         };
       }),
       newSource,
@@ -297,14 +307,35 @@ export const governanceApi = {
     );
   },
 
-  async getBatches(params?: { batchNo?: string; sourceSystem?: string }): Promise<IngestBatch[]> {
+  async getBatches(params?: { batchId?: string; includeFailures?: boolean; pageNo?: number; pageSize?: number }): Promise<IngestBatch[]> {
+    if (params?.batchId) {
+      return apiCall(
+        request.get(`/openapi/v1/batches/${params.batchId}`, {
+          params: {
+            includeFailures: params.includeFailures ?? true,
+            pageNo: params.pageNo || 1,
+            pageSize: params.pageSize || 20
+          }
+        }).then((item: any) => [{
+          batchId: item.batchId,
+          sourceSystem: '',
+          totalCount: Number(item.totalRecords || 0),
+          successCount: Number(item.successRecords || 0),
+          failCount: Number(item.failedRecords || 0),
+          startTime: '',
+          status: item.batchStatus,
+          mappingProfileVersion: item.mappingProfileVersion,
+          targetSchemaVersions: item.targetSchemaVersions,
+          processedAt: item.processedAt,
+          failedRecordDetails: item.failedRecordDetails
+        }])),
+        [],
+        '按ID查询接入批次'
+      );
+    }
     return apiCall(
       request.get('/governance/batches', { params }),
-      mockBatches.filter(b => {
-        if (params?.batchNo && !(b.batchId || '').includes(params.batchNo)) return false;
-        if (params?.sourceSystem && b.sourceSystem !== params.sourceSystem) return false;
-        return true;
-      }),
+      mockBatches,
       '获取接入批次列表'
     );
   },

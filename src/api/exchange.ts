@@ -2,151 +2,133 @@ import { request, apiCall } from './client';
 import { mockProjections } from './mockData';
 import type { ExchangeProjection } from '@/types';
 
-export interface ExchangeProfile {
-  id: string;
-  profileCode: string;
-  name: string;
-  version: string;
-  dataset: string;
-  status: 'ACTIVE' | 'DRAFT' | 'DEPRECATED';
-  rules?: any[];
+export interface ExchangeFieldRule {
+  id: string | number;
+  datasetId: string | number;
+  targetPath: string;
+  dataElement: string;
+  sourceSelector: string;
+  transform: string;
+  required: boolean;
+  requiredPolicy?: string;
+  missingStrategy: string;
+  valueDomain: string;
+  securityLevel: string;
+  ordinal?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-const mockProfiles: ExchangeProfile[] = [
-  {
-    id: 'PROF-01',
-    profileCode: 'SH-PIECE-TRACE',
-    name: '上海中药饮片互认追溯规范包',
-    version: '1.2.0',
-    dataset: 'PIECE_TRACE_DATASET',
-    status: 'ACTIVE',
-    rules: [
-      {
-        targetPath: '$.payload.batchNo',
-        dataElement: 'DE_BATCH_NO (饮片批次号)',
-        sourceSelector: 'batchNo',
-        transform: 'DIRECT_PASS',
-        required: true,
-        missingStrategy: 'REJECT',
-        valueDomain: 'GB/T 31774 批号规范',
-        securityLevel: 'L1 (公开)'
-      },
-      {
-        targetPath: '$.payload.insuranceCode',
-        dataElement: 'DE_NHSA_CODE (国家医保饮片码)',
-        sourceSelector: 'medicalInsurancePieceCode',
-        transform: 'FORMAT_16_DIGIT',
-        required: true,
-        missingStrategy: 'REJECT',
-        valueDomain: '16位国家医保代码',
-        securityLevel: 'L2 (受控共享)'
-      },
-      {
-        targetPath: '$.payload.traceCode',
-        dataElement: 'DE_TRACE_CODE (全链追溯码)',
-        sourceSelector: 'traceCode',
-        transform: 'PREFIX_TRIM',
-        required: false,
-        missingStrategy: 'FALLBACK_NULL',
-        valueDomain: 'GS1-128 / 69码',
-        securityLevel: 'L1 (公开)'
-      }
-    ]
-  },
-  {
-    id: 'PROF-02',
-    profileCode: 'NHSA-PIECE-CODE',
-    name: '国家医保饮片编码对账规范包',
-    version: '1.0.0',
-    dataset: 'NHSA_PIECE_DATASET',
-    status: 'ACTIVE',
-    rules: [
-      {
-        targetPath: '$.items.code',
-        dataElement: 'DE_NHSA_CODE (国家医保饮片码)',
-        sourceSelector: 'medicalInsuranceCode',
-        transform: '16_DIGIT_CHECK',
-        required: true,
-        missingStrategy: 'REJECT',
-        valueDomain: '16位国家医保代码',
-        securityLevel: 'L2 (受控共享)'
-      },
-      {
-        targetPath: '$.items.amount',
-        dataElement: 'DE_SETTLE_AMOUNT (医保结算金额)',
-        sourceSelector: 'totalAmount',
-        transform: 'DECIMAL_ROUND_2',
-        required: true,
-        missingStrategy: 'REJECT',
-        valueDomain: '货币金额(元)',
-        securityLevel: 'L3 (高危敏感)'
-      }
-    ]
-  }
-];
+export interface ExchangeProfile {
+  id: string | number;
+  profileCode: string;
+  name: string;
+  profileOwner: string;
+  scenarioCode: string;
+  status: 'ACTIVE' | 'INACTIVE' | string;
+  createdAt?: string;
+  updatedAt?: string;
+  version: string;
+  dataset: string;
+  rules: ExchangeFieldRule[];
+  datasets: any[];
+}
 
-/**
- * 互通输出与投影接口 (Swagger: /api/tcmirp/exchange/*)
- */
+const mockProfiles: ExchangeProfile[] = [{
+  id: 'PROF-01', profileCode: 'SH-PIECE-TRACE', name: '上海中药饮片互认追溯规范包',
+  profileOwner: '上海长三角中药饮片互认联盟', scenarioCode: 'PIECE_TRACE', version: '1.2.0',
+  dataset: 'PIECE_TRACE_DATASET', datasets: [], status: 'ACTIVE', createdAt: '2026-03-01 09:00:00', updatedAt: '2026-08-01 10:30:00',
+  rules: [
+    { id: 1, datasetId: 1, targetPath: '$.payload.batchNo', dataElement: 'DE_BATCH_NO', sourceSelector: 'batchNo', transform: 'DIRECT_PASS', required: true, missingStrategy: 'REJECT', valueDomain: 'GB/T 31774', securityLevel: 'PUBLIC' },
+    { id: 2, datasetId: 1, targetPath: '$.payload.insuranceCode', dataElement: 'DE_NHSA_CODE', sourceSelector: 'medicalInsurancePieceCode', transform: 'FORMAT_16_DIGIT', required: true, missingStrategy: 'REJECT', valueDomain: '16位国家医保代码', securityLevel: 'SENSITIVE' }
+  ]
+}];
+
+function mapRule(item: any): ExchangeFieldRule {
+  return {
+    id: item.id, datasetId: item.datasetId, targetPath: item.targetPath, dataElement: item.dataElementCode,
+    sourceSelector: item.sourceSelector,
+    transform: typeof item.transformJson === 'string' ? item.transformJson : JSON.stringify(item.transformJson || {}),
+    required: item.requiredPolicy === 'REQUIRED', requiredPolicy: item.requiredPolicy, missingStrategy: item.missingPolicy, valueDomain: item.valueSetCode,
+    securityLevel: item.securityClass, ordinal: item.ordinal, createdAt: item.createdAt, updatedAt: item.updatedAt
+  };
+}
+
+async function hydrateProfile(item: any): Promise<ExchangeProfile> {
+  const versionsResponse: any = await request.get(`/exchange-query/profiles/${item.id}/versions`);
+  const versions = Array.isArray(versionsResponse) ? versionsResponse : [];
+  const version = versions.find(v => v.status === 'PUBLISHED') || versions[0];
+  const datasetsResponse: any = version ? await request.get(`/exchange-query/profile-versions/${version.id}/datasets`) : [];
+  const datasets = Array.isArray(datasetsResponse) ? datasetsResponse : [];
+  const rulesByDataset = await Promise.all(datasets.map(async dataset => {
+    const response: any = await request.get(`/exchange-query/datasets/${dataset.id}/field-rules`);
+    return Array.isArray(response) ? response : [];
+  }));
+  const rules = rulesByDataset.flat();
+  return {
+    id: item.id, profileCode: item.profileCode, name: item.profileName, profileOwner: item.profileOwner,
+    scenarioCode: item.scenarioCode, status: item.status, createdAt: item.createdAt, updatedAt: item.updatedAt,
+    version: version?.version || '', dataset: datasets.map(item => item.datasetName || item.datasetCode).join(', '),
+    datasets, rules: Array.isArray(rules) ? rules.map(mapRule) : []
+  };
+}
+
 export const exchangeApi = {
-  // 获取互通规范包列表 GET /api/tcmirp/exchange/profiles
-  async getProfiles(): Promise<ExchangeProfile[]> {
+  async getProfiles(params?: { profileCode?: string; limit?: number }): Promise<ExchangeProfile[]> {
+    const fallback = mockProfiles.filter(item => !params?.profileCode || item.profileCode.includes(params.profileCode));
     return apiCall(
-      request.get('/exchange/profiles'),
-      mockProfiles,
-      '获取互通规范包列表'
+      request.get('/exchange-query/profiles', { params: { profileCode: params?.profileCode || undefined, limit: params?.limit || 20 } })
+        .then(async (res: any) => Array.isArray(res) ? Promise.all(res.map(hydrateProfile)) : fallback),
+      fallback,
+      '查询启用规范包'
     );
   },
 
-  // 获取投影生成记录列表 GET /api/tcmirp/exchange/projections
+  async createProfile(data: { profileCode: string; profileName: string; profileOwner: string; scenarioCode: string; status: string }): Promise<any> {
+    return request.post('/exchange-query/profiles', data);
+  },
+
+  async updateProfile(id: string | number, data: { profileCode: string; profileName: string; profileOwner: string; scenarioCode: string; status: string }): Promise<any> {
+    return request.post(`/exchange-query/profiles/${id}`, data);
+  },
+
+  async getProfileVersions(id: string | number): Promise<any[]> {
+    return request.get(`/exchange-query/profiles/${id}/versions`).then((response: any) => response as any[]);
+  },
+
   async getProjections(params?: { query?: string; profileCode?: string }): Promise<ExchangeProjection[]> {
-    return apiCall(
-      request.get('/exchange/projections', { params }),
-      mockProjections.filter(p => {
-        if (params?.profileCode && p.profileCode !== params.profileCode) return false;
-        if (params?.query) {
-          const q = params.query.toLowerCase();
-          return p.projectionNo.toLowerCase().includes(q) ||
-            p.profileName.toLowerCase().includes(q) ||
-            p.profileCode.toLowerCase().includes(q);
-        }
-        return true;
-      }),
-      '获取互通投影列表'
-    );
+    return mockProjections.filter(p => {
+      if (params?.profileCode && p.profileCode !== params.profileCode) return false;
+      if (!params?.query) return true;
+      const q = params.query.toLowerCase();
+      return p.projectionNo.toLowerCase().includes(q) || p.profileName.toLowerCase().includes(q) || p.profileCode.toLowerCase().includes(q);
+    });
   },
 
-  // 新建/触发投影生成任务 POST /api/tcmirp/exchange/projections
-  async generateProjection(payload: {
-    profileCode: string;
-    asOfTime?: string;
-  }): Promise<ExchangeProjection> {
-    const newProj: ExchangeProjection = {
-      id: `PRJ-${Date.now().toString().slice(-4)}`,
-      projectionNo: `PRJ-20260808-${Math.floor(Math.random() * 9000 + 1000)}`,
-      profileCode: payload.profileCode || 'SH-PIECE-TRACE',
-      profileName: payload.profileCode === 'NHSA-PIECE-CODE' ? '国家医保饮片编码对账数据集' : '上海中药饮片互认追溯数据集',
-      version: '1.2.0',
-      datasetName: 'PIECE_TRACE_DATASET',
-      asOfTime: payload.asOfTime || new Date().toISOString().replace('T', ' ').substring(0, 19),
-      status: 'GENERATED',
-      recordCount: 280,
-      outputHash: 'sha256:' + Math.random().toString(16).substr(2, 32),
-      errorCount: 0
-    };
-    return apiCall(
-      request.post('/exchange/projections', payload),
-      newProj,
-      '创建互通投影任务'
-    );
+  async createProjection(payload: {
+    projectSpaceId?: number;
+    profileCode: string; profileVersion?: string; subjectType?: string; subjectIds?: Array<number | string>;
+    datasetCodes?: string[]; asOfTime?: string; deliveryMode?: string;
+  }): Promise<any> {
+    const projectSpaceId = payload.projectSpaceId || Number(localStorage.getItem('tcmirp_project_space_id') || localStorage.getItem('tcmirp_project_id')) || 1;
+    return request.post('/exchange-query/projections', {
+      projectSpaceId, profileCode: payload.profileCode, profileVersion: payload.profileVersion || '1.0.0',
+      subjectType: payload.subjectType || 'BATCH', subjectIds: (payload.subjectIds || [1]).map(Number),
+      datasetCodes: payload.datasetCodes || [], asOfTime: payload.asOfTime || undefined,
+      deliveryMode: payload.deliveryMode || 'QUERY_ONLY'
+    }, { headers: {
+      'X-Idempotency-Key': `PROJECTION-${Date.now()}`,
+      'X-Purpose-Code': 'EXCHANGE_OUTPUT'
+    } });
   },
 
-  // 导出投影数据集 GET /api/tcmirp/exchange/projections/{id}/export
-  async exportDataset(id: string): Promise<{ success: boolean; downloadUrl: string }> {
-    return apiCall(
-      request.get(`/exchange/projections/${id}/export`),
-      { success: true, downloadUrl: `/api/tcmirp/exchange/projections/${id}/download.json` },
-      '导出互通投影数据集'
-    );
+  async getProjection(id: string | number, params: {
+    projectSpaceId?: number; purposeCode?: string; includeOutput?: boolean; includeValidationDetails?: boolean;
+  } = {}): Promise<any> {
+    return request.get(`/exchange-query/projections/${id}`, { params: {
+      projectSpaceId: params.projectSpaceId || Number(localStorage.getItem('tcmirp_project_space_id')) || 1,
+      purposeCode: params.purposeCode || localStorage.getItem('tcmirp_purpose_code') || 'TRACE',
+      includeOutput: params.includeOutput ?? true, includeValidationDetails: params.includeValidationDetails ?? true
+    } });
   }
 };

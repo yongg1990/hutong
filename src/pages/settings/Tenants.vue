@@ -55,15 +55,10 @@
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-input
         v-model="keyword"
-        placeholder="租户编码 / 机构全称 / 联系人"
+        placeholder="租户名称关键字"
         style="width: 260px"
         clearable
       />
-      <el-select v-model="statusFilter" placeholder="运行状态" style="width: 140px" clearable>
-        <el-option label="全部状态" value="" />
-        <el-option label="正常 (ACTIVE)" value="ACTIVE" />
-        <el-option label="冻结 (SUSPENDED)" value="SUSPENDED" />
-      </el-select>
     </FilterBar>
 
     <!-- Tenants Table Panel -->
@@ -74,20 +69,22 @@
       </div>
       <div class="panel-body">
         <el-table :data="filteredTenants" v-loading="loading" style="width: 100%" empty-text="暂无匹配的租户记录">
+          <el-table-column prop="id" label="租户 ID" width="110" class-name="mono" />
           <el-table-column prop="tenantCode" label="租户编码" min-width="140" class-name="mono">
             <template #default="{ row }">
               <span class="tenant-code-text">{{ row.tenantCode }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="tenantName" label="机构/企业全称" min-width="220" show-overflow-tooltip />
-          <el-table-column prop="creditCode" label="统一社会信用代码" min-width="190" class-name="mono" />
-          <el-table-column label="联系人 / 电话" min-width="160">
+          <el-table-column prop="tenantType" label="租户类型" width="130" />
+          <el-table-column prop="creditCode" label="统一社会信用代码 *" min-width="190" class-name="mono" />
+          <el-table-column label="联系人 / 电话 *" min-width="160">
             <template #default="{ row }">
               <span>{{ row.contactName }} ({{ row.contactPhone }})</span>
             </template>
           </el-table-column>
-          <el-table-column prop="adminAccount" label="主管理员" width="130" class-name="mono" />
-          <el-table-column label="配额分配" width="140">
+          <el-table-column prop="adminAccount" label="主管理员 *" width="130" class-name="mono" />
+          <el-table-column label="配额分配 *" width="140">
             <template #default="{ row }">
               <span class="mono">{{ row.quotaUsers }}人 / {{ row.quotaStorageGb }}GB</span>
             </template>
@@ -97,6 +94,8 @@
               <StatusTag :code="row.status" />
             </template>
           </el-table-column>
+          <el-table-column prop="createdAt" label="创建时间" width="170" />
+          <el-table-column prop="updatedAt" label="更新时间" width="170" />
           <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
               <el-button size="small" type="primary" link @click="openEditDialog(row)">
@@ -119,6 +118,17 @@
             </template>
           </el-table-column>
         </el-table>
+        <div class="pagination-row">
+          <el-pagination
+            v-model:current-page="page"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="total"
+            layout="total, sizes, prev, pager, next"
+            @current-change="loadTenants"
+            @size-change="handleSizeChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -165,7 +175,7 @@
           <el-form-item label="初始运行状态" style="flex: 1">
             <el-select v-model="form.status">
               <el-option label="正常运行 (ACTIVE)" value="ACTIVE" />
-              <el-option label="暂停冻结 (SUSPENDED)" value="SUSPENDED" />
+              <el-option label="停用 (INACTIVE)" value="INACTIVE" />
             </el-select>
           </el-form-item>
         </div>
@@ -250,7 +260,9 @@ const tenants = ref<TenantItem[]>([]);
 const loading = ref(false);
 const submitting = ref(false);
 const keyword = ref('');
-const statusFilter = ref('');
+const page = ref(1);
+const pageSize = ref(20);
+const total = ref(0);
 
 const dialogVisible = ref(false);
 const drawerVisible = ref(false);
@@ -283,31 +295,20 @@ const activeTenantsCount = computed(() => tenants.value.filter(t => t.status ===
 const totalUserQuota = computed(() => tenants.value.reduce((acc, cur) => acc + (cur.quotaUsers || 0), 0));
 const totalStorageQuota = computed(() => tenants.value.reduce((acc, cur) => acc + (cur.quotaStorageGb || 0), 0));
 
-const filteredTenants = computed(() => {
-  return tenants.value.filter(item => {
-    if (keyword.value) {
-      const q = keyword.value.trim().toLowerCase();
-      const m1 = (item.tenantCode || '').toLowerCase().includes(q);
-      const m2 = (item.tenantName || '').toLowerCase().includes(q);
-      const m3 = (item.contactName || '').toLowerCase().includes(q);
-      if (!m1 && !m2 && !m3) return false;
-    }
-    if (statusFilter.value && item.status !== statusFilter.value) {
-      return false;
-    }
-    return true;
-  });
-});
+const filteredTenants = computed(() => tenants.value);
 
 const loadTenants = async () => {
   loading.value = true;
   try {
-    tenants.value = await rbacApi.getTenants({
+    const result = await rbacApi.getTenantPage({
       tenantName: keyword.value,
-      status: statusFilter.value,
-      page: 1,
-      size: 100
+      page: page.value,
+      size: pageSize.value
     });
+    tenants.value = result.records;
+    total.value = result.total;
+    page.value = result.page;
+    pageSize.value = result.size;
   } catch (err) {
     console.error('Failed to load tenants', err);
   } finally {
@@ -320,12 +321,18 @@ onMounted(() => {
 });
 
 const handleSearch = () => {
+  page.value = 1;
   loadTenants();
 };
 
 const handleReset = () => {
   keyword.value = '';
-  statusFilter.value = '';
+  page.value = 1;
+  loadTenants();
+};
+
+const handleSizeChange = () => {
+  page.value = 1;
   loadTenants();
 };
 
@@ -391,7 +398,7 @@ const submitForm = async () => {
 };
 
 const toggleStatus = async (row: TenantItem) => {
-  const nextStatus = row.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+  const nextStatus = row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
   const label = nextStatus === 'ACTIVE' ? '启用' : '冻结';
   await rbacApi.updateTenant(row.id, { status: nextStatus });
   row.status = nextStatus;
@@ -452,6 +459,12 @@ const confirmDelete = (row: TenantItem) => {
 .form-row-two {
   display: flex;
   gap: 16px;
+}
+
+.pagination-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 0 2px;
 }
 
 .drawer-detail {

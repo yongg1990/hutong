@@ -1,41 +1,58 @@
 import { request, apiCall } from './client';
-import { mockTrustEvents } from './mockData';
 import type { TrustEvent } from '@/types';
+import { submitSupplyChainEvent } from './supplyChain';
 
 /**
- * 可信事件上报与查询接口 (Swagger: /api/tcmirp/events/* & /api/tcmirp/trust/events/*)
+ * 可信事件上报与查询接口
  */
 export const eventsApi = {
-  // 查询可信事件列表 GET /api/tcmirp/trust/events
+  // 当前文档仅支持按事件 ID 查询。
   async queryTrustEvents(params?: {
+    eventId?: string | number;
     businessKey?: string;
     eventType?: string;
     processStatus?: string;
     proofStatus?: string;
   }): Promise<TrustEvent[]> {
-    return apiCall(
-      request.get('/trust/events', { params }),
-      mockTrustEvents.filter(e => {
-        if (params?.eventType && e.eventType !== params.eventType) return false;
-        if (params?.processStatus && e.processStatus !== params.processStatus) return false;
-        if (params?.proofStatus && e.proofStatus !== params.proofStatus) return false;
-        if (params?.businessKey) {
-          const kw = params.businessKey.toLowerCase();
-          return (e.businessKey || '').toLowerCase().includes(kw) ||
-            (e.eventId || '').toLowerCase().includes(kw) ||
-            (e.eventTypeName || '').toLowerCase().includes(kw);
-        }
-        return true;
-      }),
-      '查询可信事件列表'
-    );
+    if (params?.eventId) {
+      return apiCall(
+        request.get(`/openapi/v1/event-fact/events/${params.eventId}`).then((item: any) => [{
+          eventId: String(item.id),
+          eventType: item.eventType,
+          eventTypeName: item.eventType,
+          occurredAt: item.occurredAt,
+          sourceSystem: '',
+          processStatus: item.processingStatus,
+          proofStatus: 'PENDING',
+          businessKey: item.sourceBusinessKey,
+          payload: typeof item.payloadJson === 'string' ? JSON.parse(item.payloadJson || '{}') : item.payloadJson,
+          schemaVersion: item.schemaVersion,
+          payloadDigest: item.payloadDigest
+        }])),
+        [],
+        '按ID查询可信事件'
+      );
+    }
+    return [];
   },
 
-  // 获取单个事件详情 (含敏感脱敏字段与存证凭据) GET /api/tcmirp/trust/events/{eventId}
+  // GET /openapi/v1/event-fact/events/{id}
   async getTrustEventDetail(eventId: string): Promise<TrustEvent | null> {
     return apiCall(
-      request.get(`/trust/events/${eventId}`),
-      mockTrustEvents.find(e => e.eventId === eventId) || mockTrustEvents[0],
+      request.get(`/openapi/v1/event-fact/events/${eventId}`).then((item: any) => ({
+        eventId: String(item.id),
+        eventType: item.eventType,
+        eventTypeName: item.eventType,
+        occurredAt: item.occurredAt,
+        sourceSystem: '',
+        processStatus: item.processingStatus,
+        proofStatus: 'PENDING',
+        businessKey: item.sourceBusinessKey,
+        payload: typeof item.payloadJson === 'string' ? JSON.parse(item.payloadJson || '{}') : item.payloadJson,
+        schemaVersion: item.schemaVersion,
+        payloadDigest: item.payloadDigest
+      })),
+      null,
       '获取可信事件详情'
     );
   },
@@ -47,17 +64,53 @@ export const eventsApi = {
     evidenceIds?: string[];
   }): Promise<{ success: boolean; eventId: string; txHash?: string }> {
     const generatedId = '01J7EVENT' + Math.floor(Math.random() * 899999 + 100000);
-    const projectSpaceId = Number(localStorage.getItem('tcmirp_project_id')) || 1;
+    const projectSpaceId = Number(
+      localStorage.getItem('tcmirp_project_space_id') || localStorage.getItem('tcmirp_project_id')
+    ) || 1;
     const sourceSystemId = Number(localStorage.getItem('tcmirp_source_system_id')) || 1;
     const schemaVersion = payload.eventType === 'QUALITY_INSPECTED' ? '1.2.0' : payload.eventType === 'PRESCRIPTION_RECEIVED' ? '1.1.0' : '1.0.0';
+    const sourceBusinessKey = String(
+      payload.payload?.sourceBusinessKey || payload.payload?.businessKey || payload.payload?.batchNo ||
+      payload.payload?.cropBatchNo || payload.payload?.reportNo || payload.payload?.prescriptionNoToken || generatedId
+    );
+    const occurredAt = String(payload.payload?.occurredAt || new Date().toISOString());
+    const supplyChainPaths: Record<string, string> = {
+      WAREHOUSED: 'warehouse-receipts',
+      OUTBOUND_COMPLETED: 'warehouse-issues',
+      TRACE_CODE_ASSIGNED: 'trace-code-assignments',
+      ORDER_CONFIRMED: 'supply-orders',
+      DELIVERY_COMPLETED: 'supply-deliveries',
+      QUALITY_INSPECTED: 'quality-inspections',
+      PRIMARY_PROCESSED: 'primary-processes',
+      PRESCRIPTION_RECEIVED: 'prescriptions',
+      PLEDGE_CONFIRMED: 'pledges',
+      PLANTED: 'plantings',
+      INPUT_APPLIED: 'input-applications',
+      HARVESTED: 'harvests',
+      FARMING_OPERATION: 'farming-operations',
+      DECOCTION_PROCESSED: 'decoction-processes',
+      DECOCTION_DELIVERED: 'decoction-deliveries'
+    };
+    const supplyPath = supplyChainPaths[payload.eventType];
+    if (supplyPath) {
+      return apiCall(
+        submitSupplyChainEvent(supplyPath, { schemaVersion, sourceBusinessKey, occurredAt, payload: payload.payload }).then((res: any) => ({
+          success: true,
+          eventId: String(res?.eventId || generatedId),
+          txHash: res?.payloadDigest
+        })),
+        { success: true, eventId: generatedId },
+        `提交${payload.eventType}业务事件`
+      );
+    }
     return apiCall(
       request.post('/openapi/v1/event-fact/events', {
         projectSpaceId,
         sourceSystemId,
         eventType: payload.eventType,
         schemaVersion,
-        sourceBusinessKey: String(payload.payload?.businessKey || payload.payload?.batchNo || generatedId),
-        occurredAt: String(payload.payload?.occurredAt || new Date().toISOString().slice(0, 19).replace('T', ' ')),
+        sourceBusinessKey,
+        occurredAt,
         payloadJson: JSON.stringify(payload.payload),
         rawRecordId: payload.evidenceIds?.[0] ? Number(payload.evidenceIds[0]) || undefined : undefined
       }).then((res: any) => ({ success: true, eventId: String(res?.eventId || generatedId), txHash: res?.payloadDigest })),

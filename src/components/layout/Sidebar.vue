@@ -132,8 +132,8 @@ const menuGroups = [
     icon: Tools,
     items: [
       { title: '租户管理', path: '/settings/tenants', hasApi: true, apiPath: '/tenant-access/tenants' },
-      { title: '用户管理', path: '/settings/users', hasApi: true, apiPath: '/tenant-access/users' },
       { title: '角色与权限', path: '/settings/roles', hasApi: true, apiPath: '/tenant-access/roles, /permissions' },
+      { title: '用户管理', path: '/settings/users', hasApi: true, apiPath: '/tenant-access/users' },
       { title: '项目协同空间', path: '/settings/tenant-project', hasApi: true, apiPath: '/admin/v1/project-spaces' },
       { title: '前置节点部署', path: '/settings/deployments-edge', hasApi: true, apiPath: '/admin/v1/deployment-instances' },
       { title: '订阅与异步任务', path: '/operations/subscriptions-jobs', hasApi: false, apiPath: '' },

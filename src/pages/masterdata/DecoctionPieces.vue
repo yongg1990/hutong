@@ -17,11 +17,12 @@
           <h2>中药饮片品种批次清单</h2>
         </div>
         <el-table :data="herbPieces">
-          <el-table-column prop="speciesName" label="品种" width="90" />
-          <el-table-column prop="processMethod" label="炮制方法/规格" min-width="120" />
-          <el-table-column prop="medicalInsuranceCode" label="医保饮片编码 (16位)" min-width="170" class-name="mono" />
-          <el-table-column prop="nmpaCode" label="药监饮片码" width="130" class-name="mono" />
-          <el-table-column prop="batchNo" label="批次号" width="130" class-name="mono" />
+          <el-table-column prop="id" label="产品 ID" width="120" class-name="mono" />
+          <el-table-column prop="speciesName" label="品种 *" width="90" />
+          <el-table-column prop="processMethod" label="炮制方法/规格 *" min-width="120" />
+          <el-table-column prop="medicalInsuranceCode" label="医保饮片编码 (16位) *" min-width="170" class-name="mono" />
+          <el-table-column prop="nmpaCode" label="药监饮片码 *" width="130" class-name="mono" />
+          <el-table-column prop="batchNo" label="批次号 *" width="130" class-name="mono" />
         </el-table>
       </div>
 

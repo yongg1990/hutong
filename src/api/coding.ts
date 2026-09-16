@@ -1,6 +1,7 @@
 import { request, apiCall } from './client';
 import { mockHerbPieces } from './mockData';
 import type { HerbPiece } from '@/types';
+import { submitSupplyChainEvent } from './supplyChain';
 
 export interface TraceCodeRequest {
   schemeCode: string;
@@ -64,7 +65,10 @@ export const codingApi = {
   // 绑定多级追溯码层次 POST /coding/hierarchy/bind
   async bindHierarchy(payload: TraceCodeHierarchy): Promise<{ success: boolean; boundCount: number }> {
     return apiCall(
-      request.post('/coding/hierarchy/bind', payload),
+      submitSupplyChainEvent('trace-code-assignments', {
+        sourceBusinessKey: payload.parentCode || payload.childCodes[0] || `TRACE-${Date.now()}`,
+        payload
+      }).then(() => ({ success: true, boundCount: payload.childCodes.length })),
       { success: true, boundCount: payload.childCodes.length },
       '绑定追溯码层次'
     );

@@ -35,10 +35,10 @@
           @current-change="handleSelectElement"
           style="width: 100%"
         >
-          <el-table-column prop="code" label="数据元编码" width="180" class-name="mono" />
-          <el-table-column prop="name" label="中文名称" min-width="140" />
-          <el-table-column prop="type" label="类型" width="80" />
-          <el-table-column prop="valueSet" label="关联值域" min-width="150" class-name="mono" />
+          <el-table-column prop="code" label="数据元编码 *" width="180" class-name="mono" />
+          <el-table-column prop="name" label="中文名称 *" min-width="140" />
+          <el-table-column prop="type" label="类型 *" width="80" />
+          <el-table-column prop="valueSet" label="关联值域 *" min-width="150" class-name="mono" />
         </el-table>
       </div>
 
@@ -51,10 +51,10 @@
           <el-tag size="small" type="success">{{ activeValueSetItems.length }} 个代码项</el-tag>
         </div>
         <el-table :data="activeValueSetItems">
-          <el-table-column prop="code" label="代码 (Code)" width="140" class-name="mono" />
-          <el-table-column prop="name" label="名称 (Name)" min-width="140" />
-          <el-table-column prop="valueSet" label="所属值域" width="160" class-name="mono" />
-          <el-table-column label="状态" width="90">
+          <el-table-column prop="code" label="代码 (Code) *" width="140" class-name="mono" />
+          <el-table-column prop="name" label="名称 (Name) *" min-width="140" />
+          <el-table-column prop="valueSet" label="所属值域 *" width="160" class-name="mono" />
+          <el-table-column label="状态 *" width="90">
             <template #default="{ row }"><StatusTag :code="row.status" /></template>
           </el-table-column>
         </el-table>

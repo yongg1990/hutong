@@ -7,16 +7,16 @@
 
     <div class="panel">
       <el-table :data="alerts">
-        <el-table-column prop="alertId" label="预警 ID" width="160" class-name="mono" />
-        <el-table-column prop="level" label="严重级别" width="100">
+        <el-table-column prop="alertId" label="预警 ID *" width="160" class-name="mono" />
+        <el-table-column prop="level" label="严重级别 *" width="100">
           <template #default="{ row }">
             <StatusTag :code="row.level === 'HIGH' ? 'FAILED' : 'WARN'" />
           </template>
         </el-table-column>
-        <el-table-column prop="title" label="预警标题" min-width="200" />
-        <el-table-column prop="detail" label="详细描述" min-width="240" />
-        <el-table-column prop="occurredAt" label="触发时间" width="160" />
-        <el-table-column label="处理状态" width="110">
+        <el-table-column prop="title" label="预警标题 *" min-width="200" />
+        <el-table-column prop="detail" label="详细描述 *" min-width="240" />
+        <el-table-column prop="occurredAt" label="触发时间 *" width="160" />
+        <el-table-column label="处理状态 *" width="110">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>
       </el-table>

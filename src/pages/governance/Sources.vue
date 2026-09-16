@@ -20,10 +20,13 @@
 
     <div class="panel">
       <el-table :data="filteredSources" v-loading="loading">
+        <el-table-column prop="id" label="来源系统 ID" width="130" class-name="mono" />
         <el-table-column prop="code" label="系统标识" width="140" class-name="mono" />
-        <el-table-column prop="name" label="系统名称" min-width="180" />
-        <el-table-column prop="type" label="接入方式" width="130" />
-        <el-table-column prop="scenarios" label="允许协同场景" min-width="200" />
+        <el-table-column prop="name" label="系统名称 *" min-width="180" />
+        <el-table-column prop="type" label="接入方式 *" width="130" />
+        <el-table-column prop="scenarios" label="允许协同场景 *" min-width="200" />
+        <el-table-column prop="version" label="配置版本" width="110" class-name="mono" />
+        <el-table-column prop="registeredAt" label="注册时间" width="170" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>
@@ -140,11 +143,14 @@ const loadSources = async () => {
   try {
     const res = await governanceApi.getSources();
     sources.value = res.map(s => ({
+      id: s.id,
       code: s.systemCode,
       name: s.systemName,
       type: s.protocol,
       scenarios: 'FIELD, PROCESS, QUALITY, SUPPLY',
-      status: s.status === 'ONLINE' ? 'ACTIVE' : 'SUSPENDED'
+      status: s.status === 'ONLINE' ? 'ACTIVE' : s.status,
+      version: s.version,
+      registeredAt: s.registeredAt
     }));
   } catch (err) {
     console.error('Failed to load sources', err);
@@ -184,13 +190,16 @@ const confirmRegister = async () => {
   }
   saving.value = true;
   try {
-    await governanceApi.createSource(regForm.value);
+    const created = await governanceApi.createSource(regForm.value);
     sources.value.unshift({
-      code: regForm.value.systemCode,
+      id: created.id,
+      code: created.systemCode,
       name: regForm.value.systemName,
       type: regForm.value.protocol,
       scenarios: 'FIELD, PROCESS, QUALITY, SUPPLY',
-      status: 'ACTIVE'
+      status: created.status === 'ONLINE' ? 'ACTIVE' : created.status,
+      version: created.version,
+      registeredAt: created.registeredAt
     });
     dialogVisible.value = false;
     ElMessage.success('新来源系统注册成功！已自动分配密钥凭证与通信证书。');
