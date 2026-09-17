@@ -155,7 +155,7 @@ request.interceptors.response.use((response: AxiosResponse) => {
 }, (error) => {
   apiStatus.checkedAt = new Date().toLocaleTimeString();
   apiStatus.lastError = error.message || '网络连接超时或无法触达后端服务';
-  
+
   // Handle HTTP 401 / 403
   if (error?.response?.status === 401 || error?.response?.status === 403) {
     localStorage.removeItem('weappauthorization');
@@ -209,6 +209,7 @@ export async function apiCall<T>(
     if (err?.response || err?.businessMessage) {
       ElMessage.error(apiErrorMessage(err, actionName ? `${actionName}失败` : '请求失败'));
     }
+
     // Log friendly guidance if intranet IP is unreachable
     console.warn(`[TCMIRP API] 接口调用未能直连后端 (${apiStatus.baseUrl}${actionName ? ` - ${actionName}` : ''})，已自动使用基准数据保障系统持续运行。`, err);
     return fallbackData;
