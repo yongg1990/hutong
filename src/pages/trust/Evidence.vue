@@ -67,6 +67,7 @@ import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import { trustApi, type EvidenceBindRequest, type EvidenceItem } from '@/api/trust';
+import { apiErrorMessage } from '@/api/client';
 
 const evidenceId = ref<number | undefined>();
 const loading = ref(false);
@@ -108,8 +109,8 @@ const createEvidence = async () => {
     evidenceId.value = Number(created.evidenceId) || undefined;
     createDialogVisible.value = false;
     ElMessage.success('证据登记成功');
-  } catch {
-    ElMessage.error('证据登记失败');
+  } catch (err) {
+    ElMessage.error(apiErrorMessage(err, '证据登记失败'));
   } finally {
     creating.value = false;
   }
@@ -126,7 +127,7 @@ const verifyHash = async (row: any) => {
       ElMessage.error(`证据 [${row.evidenceId}] 哈希比对不一致！`);
     }
   } catch (err) {
-    ElMessage.error(`证据 [${row.evidenceId}] 验真请求失败`);
+    ElMessage.error(apiErrorMessage(err, `证据 [${row.evidenceId}] 验真请求失败`));
   }
 };
 </script>

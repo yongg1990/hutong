@@ -2,7 +2,7 @@
   <div class="settings-page">
     <PageHeader
       title="用户与账号管理"
-      subtitle="多租户统一身份认证、成员账号分配、手机/邮箱绑定及跨角色权限映射"
+      subtitle="租户用户账号创建与角色绑定"
     >
       <template #actions>
         <el-button @click="loadUsers">刷新用户</el-button>
@@ -15,12 +15,11 @@
     <!-- Top KPI Row -->
     <div class="kpi-grid">
       <div class="kpi-card">
-        <span class="label">平台注册用户总数</span>
+        <span class="label">当前列表用户数</span>
         <div class="value">
           <strong class="mono">{{ users.length }}</strong>
           <span class="unit">人</span>
         </div>
-        <span class="sub">统一支持 JWT 与 OAuth 凭证认证</span>
       </div>
 
       <div class="kpi-card">
@@ -29,7 +28,6 @@
           <strong class="mono brand-color">{{ activeUsersCount }}</strong>
           <span class="unit">人激活</span>
         </div>
-        <span class="sub">无异常登录与风控锁定</span>
       </div>
 
       <div class="kpi-card">
@@ -38,16 +36,6 @@
           <strong class="mono">{{ distinctTenantsCount }}</strong>
           <span class="unit">家机构</span>
         </div>
-        <span class="sub">账号按租户组织物理隔离</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">已绑定业务角色</span>
-        <div class="value">
-          <strong class="mono">{{ boundRolesCount }}</strong>
-          <span class="unit">个岗位</span>
-        </div>
-        <span class="sub">支持单用户多角色权限继承</span>
       </div>
     </div>
 
@@ -68,7 +56,6 @@
     <div class="panel">
       <div class="panel-header">
         <h2>用户账号列表 ({{ filteredUsers.length }})</h2>
-        <span class="sub-text">支持对用户进行权限角色授权、重置默认密码及锁定启停</span>
       </div>
       <div class="panel-body">
         <el-table :data="filteredUsers" v-loading="loading" style="width: 100%" empty-text="暂无匹配的用户账号">
@@ -79,51 +66,19 @@
               <span class="username-cell">{{ row.username }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="realName" label="姓名 / 备注" min-width="150" />
+          <el-table-column prop="displayName" label="显示名称" min-width="150" />
           <el-table-column prop="tenantName" label="所属租户机构 *" min-width="200" show-overflow-tooltip />
-          <el-table-column label="已分配业务角色 *" min-width="200">
-            <template #default="{ row }">
-              <div class="roles-wrap">
-                <el-tag
-                  v-for="role in row.roles"
-                  :key="role"
-                  size="small"
-                  type="success"
-                  class="role-tag"
-                >
-                  {{ getRoleName(role) }}
-                </el-tag>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="phone" label="联系电话 *" width="130" class-name="mono" />
-          <el-table-column prop="lastLoginAt" label="最近一次登录 *" width="160" />
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
-              <StatusTag :code="row.status" />
+              <StatusTag :code="row.status" :label="row.status === 'ACTIVE' ? '启用' : '停用'" />
             </template>
           </el-table-column>
           <el-table-column prop="createdAt" label="创建时间" width="170" />
           <el-table-column prop="updatedAt" label="更新时间" width="170" />
-          <el-table-column label="操作" width="230" fixed="right">
+          <el-table-column label="操作" width="180" fixed="right">
             <template #default="{ row }">
-              <el-button size="small" type="primary" link @click="openEditDialog(row)">
-                编辑
-              </el-button>
-              <el-button size="small" type="warning" link @click="handleResetPassword(row)">
-                重置密码
-              </el-button>
-              <el-button
-                size="small"
-                :type="row.status === 'ACTIVE' ? 'warning' : 'success'"
-                link
-                @click="toggleStatus(row)"
-              >
-                {{ row.status === 'ACTIVE' ? '停用' : '启用' }}
-              </el-button>
-              <el-button size="small" type="danger" link @click="confirmDelete(row)">
-                删除
-              </el-button>
+              <el-button size="small" type="primary" link @click="openRoleDialog(row, 'bind')">绑定角色</el-button>
+              <el-button size="small" link @click="openRoleDialog(row, 'unbind')">解除角色</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -133,22 +88,22 @@
     <!-- Create / Edit Dialog -->
     <el-dialog
       v-model="dialogVisible"
-      :title="isEditing ? '编辑用户账号与角色' : '新增业务用户账号'"
+      title="新增业务用户账号"
       width="600px"
       destroy-on-close
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px" label-position="right">
         <div class="form-row-two">
           <el-form-item label="登录账号" prop="username" style="flex: 1">
-            <el-input v-model="form.username" placeholder="如 zhang_san (英文字符)" :disabled="isEditing" />
+            <el-input v-model="form.username" placeholder="如 zhang_san (英文字符)" />
           </el-form-item>
-          <el-form-item label="真实姓名" prop="realName" style="flex: 1">
-            <el-input v-model="form.realName" placeholder="如 张建国" />
+          <el-form-item label="显示名称" prop="displayName" style="flex: 1">
+            <el-input v-model="form.displayName" placeholder="如 张建国" />
           </el-form-item>
         </div>
 
         <el-form-item label="所属租户" prop="tenantId">
-          <el-select v-model="form.tenantId" placeholder="选择所属租户" style="width: 100%" @change="onTenantChange">
+          <el-select v-model="form.tenantId" placeholder="选择所属租户" style="width: 100%" @change="selectedRoleIds = []">
             <el-option
               v-for="t in tenants"
               :key="t.id"
@@ -158,41 +113,41 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="分配角色" prop="roles">
+        <el-form-item label="初始密码">
+          <el-input v-model="password" type="password" show-password autocomplete="new-password" />
+        </el-form-item>
+        <el-form-item label="分配角色">
           <el-select
-            v-model="form.roles"
+            v-model="selectedRoleIds"
             multiple
-            placeholder="请选择赋予该用户的业务角色 (支持多选)"
+            placeholder="可选，创建后绑定"
             style="width: 100%"
           >
             <el-option
-              v-for="r in roles"
-              :key="r.roleCode"
+              v-for="r in availableRoles"
+              :key="r.id"
               :label="r.roleName + ' (' + r.roleCode + ')'"
-              :value="r.roleCode"
+              :value="r.id"
             />
           </el-select>
         </el-form-item>
 
-        <div class="form-row-two">
-          <el-form-item label="联系电话" prop="phone" style="flex: 1">
-            <el-input v-model="form.phone" placeholder="11位手机号码" />
-          </el-form-item>
-          <el-form-item label="电子邮箱" prop="email" style="flex: 1">
-            <el-input v-model="form.email" placeholder="工作邮箱" />
-          </el-form-item>
-        </div>
-
-        <el-form-item label="账号状态">
-          <el-radio-group v-model="form.status">
-            <el-radio label="ACTIVE">正常允许登录 (ACTIVE)</el-radio>
-            <el-radio label="INACTIVE">冻结锁定 (INACTIVE)</el-radio>
-          </el-radio-group>
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="submitForm">保存提交</el-button>
+      </template>
+    </el-dialog>
+    <el-dialog v-model="roleDialogVisible" :title="roleAction === 'bind' ? '绑定角色' : '解除角色'" width="480px">
+      <el-select v-if="roleAction === 'bind'" v-model="bindingRoleIds" multiple placeholder="选择角色" style="width: 100%" :loading="loadingDialogRoles">
+        <el-option v-for="r in dialogRoles" :key="r.id" :label="r.roleName + ' (' + r.roleCode + ')'" :value="r.id" />
+      </el-select>
+      <el-select v-else v-model="selectedRoleId" placeholder="选择角色" style="width: 100%" :loading="loadingDialogRoles">
+        <el-option v-for="r in dialogRoles" :key="r.id" :label="r.roleName + ' (' + r.roleCode + ')'" :value="r.id" />
+      </el-select>
+      <template #footer>
+        <el-button @click="roleDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" :disabled="loadingDialogRoles || (roleAction === 'bind' ? !bindingRoleIds.length : !selectedRoleId)" @click="submitRoleAction">确认</el-button>
       </template>
     </el-dialog>
   </div>
@@ -200,11 +155,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus';
+import { ElMessage, type FormInstance } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { rbacApi, type UserItem, type TenantItem, type RoleItem } from '@/api/rbac';
+import { apiErrorMessage } from '@/api/client';
 
 const users = ref<UserItem[]>([]);
 const tenants = ref<TenantItem[]>([]);
@@ -212,51 +168,40 @@ const roles = ref<RoleItem[]>([]);
 const loading = ref(false);
 const submitting = ref(false);
 
-const tenantFilter = ref('');
+const tenantFilter = ref<string | number>('');
 
 const dialogVisible = ref(false);
-const isEditing = ref(false);
+const password = ref('');
+const selectedRoleIds = ref<(string | number)[]>([]);
+const roleDialogVisible = ref(false);
+const dialogRoles = ref<RoleItem[]>([]);
+const loadingDialogRoles = ref(false);
+const bindingRoleIds = ref<(string | number)[]>([]);
+const selectedRoleId = ref<string | number>('');
+const roleAction = ref<'bind' | 'unbind'>('bind');
+const selectedUser = ref<UserItem | null>(null);
 
 const formRef = ref<FormInstance>();
 const form = ref<Partial<UserItem>>({
   username: '',
-  realName: '',
+  displayName: '',
   tenantId: '',
-  tenantName: '',
-  roles: [],
-  phone: '',
-  email: '',
   status: 'ACTIVE'
 });
 
 const rules = {
   username: [{ required: true, message: '请输入登录账号', trigger: 'blur' }],
-  realName: [{ required: true, message: '请输入真实姓名', trigger: 'blur' }],
-  tenantId: [{ required: true, message: '请选择所属租户', trigger: 'change' }],
-  roles: [{ required: true, message: '请至少分配一个角色', trigger: 'change' }]
+  displayName: [{ required: true, message: '请输入显示名称', trigger: 'blur' }],
+  tenantId: [{ required: true, message: '请选择所属租户', trigger: 'change' }]
 };
 
 const activeUsersCount = computed(() => users.value.filter(u => u.status === 'ACTIVE').length);
 const distinctTenantsCount = computed(() => new Set(users.value.map(u => u.tenantId)).size);
-const boundRolesCount = computed(() => {
-  const set = new Set<string>();
-  users.value.forEach(u => (u.roles || []).forEach(r => set.add(r)));
-  return set.size;
-});
-
 const filteredUsers = computed(() => users.value);
-
-const getRoleName = (code: string) => {
-  const matched = roles.value.find(r => r.roleCode === code);
-  return matched ? matched.roleName : code;
-};
-
-const onTenantChange = (tid: string) => {
-  const matched = tenants.value.find(t => t.id === tid);
-  if (matched) {
-    form.value.tenantName = matched.tenantName;
-  }
-};
+const availableRoles = computed(() => roles.value.filter(r =>
+  form.value.tenantId == null || form.value.tenantId === '' ||
+  r.tenantId == null || String(r.tenantId) === String(form.value.tenantId)
+));
 
 const loadData = async () => {
   loading.value = true;
@@ -266,7 +211,6 @@ const loadData = async () => {
       rbacApi.getTenants({ page: 1, size: 100 }),
       rbacApi.getRoles()
     ]);
-    users.value = uList;
     tenants.value = tList;
     roles.value = rList;
     users.value = uList.map(user => ({
@@ -274,7 +218,8 @@ const loadData = async () => {
       tenantName: tList.find(tenant => String(tenant.id) === String(user.tenantId))?.tenantName
     }));
   } catch (err) {
-    console.error('Failed to load user and rbac data', err);
+    users.value = [];
+    ElMessage.error(apiErrorMessage(err, '用户与角色数据加载失败'));
   } finally {
     loading.value = false;
   }
@@ -298,99 +243,98 @@ const handleReset = () => {
 };
 
 const openCreateDialog = () => {
-  isEditing.value = false;
   form.value = {
     username: '',
-    realName: '',
+    displayName: '',
     tenantId: tenants.value[0]?.id || '',
-    tenantName: tenants.value[0]?.tenantName || '',
-    roles: [],
-    phone: '',
-    email: '',
     status: 'ACTIVE'
   };
-  dialogVisible.value = true;
-};
-
-const openEditDialog = (row: UserItem) => {
-  isEditing.value = true;
-  form.value = { ...row, roles: [...(row.roles || [])] };
+  password.value = '';
+  selectedRoleIds.value = [];
   dialogVisible.value = true;
 };
 
 const submitForm = async () => {
   if (!formRef.value) return;
+  if (!password.value) {
+    ElMessage.error('请输入初始密码');
+    return;
+  }
   await formRef.value.validate(async (valid) => {
     if (!valid) return;
     submitting.value = true;
     try {
-      if (isEditing.value && form.value.id) {
-        await rbacApi.updateUser(form.value.id, form.value);
-        ElMessage.success(`用户 [${form.value.username}] 信息与角色更新成功！`);
-      } else {
-        const created = await rbacApi.createUser({
-          tenantId: form.value.tenantId,
-          username: form.value.username || '',
-          displayName: form.value.realName || form.value.username || '',
-          roles: form.value.roles || []
-        });
-        const selectedRoles = roles.value.filter(role => (form.value.roles || []).includes(role.roleCode));
-        await Promise.all(selectedRoles.map(role =>
-          rbacApi.bindUserRole(created.id, role.roleId || role.id, created.tenantId)
-        ));
-        ElMessage.success(`用户 [${created.username}] 创建成功，初始默认密码为 Tcm@2026!Admin`);
-      }
+      const created = await rbacApi.createUser({
+        tenantId: form.value.tenantId,
+        username: form.value.username!,
+        displayName: form.value.displayName!,
+        password: password.value
+      });
       dialogVisible.value = false;
+      if (selectedRoleIds.value.length) {
+        try {
+          await rbacApi.bindUserRoles(created.userId ?? created.id, selectedRoleIds.value, form.value.tenantId);
+          ElMessage.success(`用户 [${created.username}] 创建并绑定角色成功`);
+        } catch (err) {
+          ElMessage.warning(`用户已创建，${apiErrorMessage(err, '角色绑定失败，请在列表中重试')}`);
+        }
+      } else {
+        ElMessage.success(`用户 [${created.username}] 创建成功`);
+      }
       await loadData();
     } catch (err) {
-      ElMessage.error('保存用户失败，请检查输入');
+      ElMessage.error(apiErrorMessage(err, '保存用户失败，请检查输入'));
     } finally {
       submitting.value = false;
     }
   });
 };
 
-const handleResetPassword = (row: UserItem) => {
-  ElMessageBox.confirm(
-    `确定要将用户【${row.realName} (${row.username})】的密码重置为系统默认安全口令吗？`,
-    '重置用户密码',
-    {
-      confirmButtonText: '确认重置',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(async () => {
-    const res = await rbacApi.resetPassword(row.id);
-    ElMessageBox.alert(
-      `用户 [${row.username}] 密码已成功重置为临时口令：<strong style="color: #0e5f40; font-family: monospace; font-size: 15px;">${res.tempPass}</strong><br>请通知该用户首次登录后立即修改口令。`,
-      '密码重置成功',
-      { dangerouslyUseHTMLString: true }
+const openRoleDialog = async (row: UserItem, action: 'bind' | 'unbind') => {
+  selectedUser.value = row;
+  roleAction.value = action;
+  selectedRoleId.value = '';
+  bindingRoleIds.value = [];
+  dialogRoles.value = [];
+  roleDialogVisible.value = true;
+  loadingDialogRoles.value = true;
+  try {
+    const roleList = await rbacApi.getRoles();
+    dialogRoles.value = roleList.filter(role =>
+      row.tenantId == null || row.tenantId === '' || role.tenantId == null || String(role.tenantId) === String(row.tenantId)
     );
-  }).catch(() => {});
+  } catch (err) {
+    ElMessage.error(apiErrorMessage(err, '角色列表加载失败'));
+  } finally {
+    loadingDialogRoles.value = false;
+  }
 };
 
-const toggleStatus = async (row: UserItem) => {
-  const nextStatus = row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-  const label = nextStatus === 'ACTIVE' ? '启用' : '锁定停用';
-  await rbacApi.updateUser(row.id, { status: nextStatus });
-  row.status = nextStatus;
-  ElMessage.success(`用户 [${row.username}] 状态已设置为: ${label}`);
-};
-
-const confirmDelete = (row: UserItem) => {
-  ElMessageBox.confirm(
-    `确定删除用户账号【${row.realName} (${row.username})】吗？删除后此账号无法再次登录系统。`,
-    '确认删除用户',
-    {
-      confirmButtonText: '确认删除',
-      cancelButtonText: '取消',
-      type: 'warning'
+const submitRoleAction = async () => {
+  if (!selectedUser.value || (roleAction.value === 'bind' ? !bindingRoleIds.value.length : !selectedRoleId.value)) return;
+  const { userId, tenantId } = selectedUser.value;
+  if (userId == null) {
+    ElMessage.error('用户 ID 缺失');
+    return;
+  }
+  submitting.value = true;
+  try {
+    if (roleAction.value === 'bind') {
+      await rbacApi.bindUserRoles(userId, bindingRoleIds.value, tenantId);
+    } else {
+      if (tenantId == null || tenantId === '') {
+        ElMessage.error('租户 ID 缺失');
+        return;
+      }
+      await rbacApi.unbindUserRole(userId, selectedRoleId.value, tenantId);
     }
-  ).then(async () => {
-    await rbacApi.deleteUser(row.id);
-    ElMessage.success(`用户 [${row.username}] 已删除`);
-    await loadData();
-  }).catch(() => {});
+    ElMessage.success(roleAction.value === 'bind' ? '角色绑定成功' : '角色解除成功');
+    roleDialogVisible.value = false;
+  } catch (err) {
+    ElMessage.error(apiErrorMessage(err, '角色操作失败'));
+  } finally {
+    submitting.value = false;
+  }
 };
 </script>
 

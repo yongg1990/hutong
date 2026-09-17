@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import AppLayout from '@/components/layout/AppLayout.vue';
 import Login from '@/pages/auth/Login.vue';
 import Workspace from '@/pages/workspace/Workspace.vue';
+import PageLoadError from '@/pages/PageLoadError.vue';
 import { useAuthStore } from '@/stores/authStore';
 
 const router = createRouter({
@@ -22,6 +23,11 @@ const router = createRouter({
           path: 'workspace',
           name: 'Workspace',
           component: Workspace
+        },
+        {
+          path: 'page-load-error',
+          name: 'PageLoadError',
+          component: PageLoadError
         },
         // Business Scenarios
         {
@@ -201,7 +207,7 @@ router.beforeEach((to) => {
   return true;
 });
 
-// Auto-recovery for dynamic module import errors (e.g., during network hiccup or container reload)
+// A failed lazy import must not leave the router view blank.
 router.onError((error, to) => {
   const isChunkError =
     error?.message?.includes('Failed to fetch dynamically imported module') ||
@@ -209,15 +215,9 @@ router.onError((error, to) => {
     error?.message?.includes('error loading dynamically imported module');
 
   if (isChunkError && to?.fullPath) {
-    const key = `chunk_reload_${to.fullPath}`;
-    const alreadyReloaded = sessionStorage.getItem(key);
-    if (!alreadyReloaded) {
-      sessionStorage.setItem(key, '1');
-      console.warn('Recovering from dynamic chunk import failure, reloading to:', to.fullPath);
-      window.location.href = to.fullPath;
-    } else {
-      console.error('Repeated dynamic import failure detected for:', to.fullPath, error);
-      sessionStorage.removeItem(key);
+    console.error('Page module failed to load:', to.fullPath, error);
+    if (to.name !== 'PageLoadError') {
+      void router.replace({ name: 'PageLoadError', query: { redirect: to.fullPath } });
     }
   }
 });

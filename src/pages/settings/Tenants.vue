@@ -2,7 +2,7 @@
   <div class="settings-page">
     <PageHeader
       title="多租户管理"
-      subtitle="中药产业链各参与方（种植基地、加工药企、质检机构、商贸中心）多租户隔离与资源配额管控"
+      subtitle="中药产业链参与方的租户信息与生命周期管理"
     >
       <template #actions>
         <el-button @click="loadTenants">刷新列表</el-button>
@@ -17,37 +17,17 @@
       <div class="kpi-card">
         <span class="label">入驻租户机构总数</span>
         <div class="value">
-          <strong class="mono">{{ tenants.length }}</strong>
+          <strong class="mono">{{ total }}</strong>
           <span class="unit">家</span>
         </div>
-        <span class="sub">均通过企业统一信用代码实名验真</span>
       </div>
 
       <div class="kpi-card">
-        <span class="label">正常运行租户</span>
+        <span class="label">本页正常运行租户</span>
         <div class="value">
           <strong class="mono brand-color">{{ activeTenantsCount }}</strong>
           <span class="unit">家活跃</span>
         </div>
-        <span class="sub">数据隔离级别：逻辑集群与SCHEMA隔离</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">已下发账号配额总数</span>
-        <div class="value">
-          <strong class="mono">{{ totalUserQuota }}</strong>
-          <span class="unit">个席位</span>
-        </div>
-        <span class="sub">支持动态扩容与多级分发</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">全域存储配额</span>
-        <div class="value">
-          <strong class="mono">{{ totalStorageQuota }}</strong>
-          <span class="unit">GB</span>
-        </div>
-        <span class="sub">含电子存证、附件与质检大文件</span>
       </div>
     </div>
 
@@ -64,11 +44,10 @@
     <!-- Tenants Table Panel -->
     <div class="panel">
       <div class="panel-header">
-        <h2>协同租户列表 ({{ filteredTenants.length }})</h2>
-        <span class="sub-text">支持对租户进行生命周期启停、配额分配及管理员重置</span>
+        <h2>协同租户列表 ({{ total }})</h2>
       </div>
       <div class="panel-body">
-        <el-table :data="filteredTenants" v-loading="loading" style="width: 100%" empty-text="暂无匹配的租户记录">
+        <el-table :data="tenants" v-loading="loading" style="width: 100%" empty-text="暂无匹配的租户记录">
           <el-table-column prop="id" label="租户 ID" width="110" class-name="mono" />
           <el-table-column prop="tenantCode" label="租户编码" min-width="140" class-name="mono">
             <template #default="{ row }">
@@ -77,21 +56,9 @@
           </el-table-column>
           <el-table-column prop="tenantName" label="机构/企业全称" min-width="220" show-overflow-tooltip />
           <el-table-column prop="tenantType" label="租户类型" width="130" />
-          <el-table-column prop="creditCode" label="统一社会信用代码 *" min-width="190" class-name="mono" />
-          <el-table-column label="联系人 / 电话 *" min-width="160">
-            <template #default="{ row }">
-              <span>{{ row.contactName }} ({{ row.contactPhone }})</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="adminAccount" label="主管理员 *" width="130" class-name="mono" />
-          <el-table-column label="配额分配 *" width="140">
-            <template #default="{ row }">
-              <span class="mono">{{ row.quotaUsers }}人 / {{ row.quotaStorageGb }}GB</span>
-            </template>
-          </el-table-column>
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
-              <StatusTag :code="row.status" />
+              <StatusTag :code="row.status" :label="row.status === 'ACTIVE' ? '启用' : row.status === 'INACTIVE' ? '停用' : row.status" />
             </template>
           </el-table-column>
           <el-table-column prop="createdAt" label="创建时间" width="170" />
@@ -110,7 +77,7 @@
                 link
                 @click="toggleStatus(row)"
               >
-                {{ row.status === 'ACTIVE' ? '冻结' : '启用' }}
+                {{ row.status === 'ACTIVE' ? '停用' : '启用' }}
               </el-button>
               <el-button size="small" type="danger" link @click="confirmDelete(row)">
                 删除
@@ -141,13 +108,12 @@
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="130px" label-position="right">
         <el-form-item label="租户编码" prop="tenantCode">
-          <el-input v-model="form.tenantCode" placeholder="如 YN_TCM_COOP (唯一大写标识)" :disabled="isEditing" />
+          <el-input v-model="form.tenantCode" placeholder="可选，留空由服务端生成" :disabled="isEditing" />
         </el-form-item>
         <el-form-item label="机构/企业全称" prop="tenantName">
           <el-input v-model="form.tenantName" placeholder="如 云南中药产业发展有限公司" />
         </el-form-item>
-        <div class="form-row-two">
-          <el-form-item label="机构类型" prop="tenantType" style="flex: 1">
+        <el-form-item label="机构类型" prop="tenantType">
             <el-select v-model="form.tenantType" placeholder="请选择机构业务类型">
               <el-option label="示范联盟/平台 (PLATFORM)" value="PLATFORM" />
               <el-option label="中药材种植加工生产方 (PRODUCER)" value="PRODUCER" />
@@ -155,45 +121,12 @@
               <el-option label="第三方检验检测中心 (INSPECTION)" value="INSPECTION" />
               <el-option label="医疗机构/处方调剂方 (HOSPITAL)" value="HOSPITAL" />
             </el-select>
-          </el-form-item>
-          <el-form-item label="统一社会信用代码" prop="creditCode" style="flex: 1">
-            <el-input v-model="form.creditCode" placeholder="18位企业法人代码" maxlength="18" />
-          </el-form-item>
-        </div>
-        <div class="form-row-two">
-          <el-form-item label="联系人姓名" prop="contactName" style="flex: 1">
-            <el-input v-model="form.contactName" placeholder="负责人姓名" />
-          </el-form-item>
-          <el-form-item label="联系人电话" prop="contactPhone" style="flex: 1">
-            <el-input v-model="form.contactPhone" placeholder="手机号码" />
-          </el-form-item>
-        </div>
-        <div class="form-row-two">
-          <el-form-item label="主管理员账号" prop="adminAccount" style="flex: 1">
-            <el-input v-model="form.adminAccount" placeholder="初始管理登录账号" :disabled="isEditing" />
-          </el-form-item>
-          <el-form-item label="初始运行状态" style="flex: 1">
+        </el-form-item>
+        <el-form-item v-if="isEditing" label="运行状态">
             <el-select v-model="form.status">
               <el-option label="正常运行 (ACTIVE)" value="ACTIVE" />
               <el-option label="停用 (INACTIVE)" value="INACTIVE" />
             </el-select>
-          </el-form-item>
-        </div>
-        <div class="form-row-two">
-          <el-form-item label="账号上限 (人)" prop="quotaUsers" style="flex: 1">
-            <el-input-number v-model="form.quotaUsers" :min="1" :max="5000" style="width: 100%" />
-          </el-form-item>
-          <el-form-item label="存储空间 (GB)" prop="quotaStorageGb" style="flex: 1">
-            <el-input-number v-model="form.quotaStorageGb" :min="10" :max="50000" style="width: 100%" />
-          </el-form-item>
-        </div>
-        <el-form-item label="机构简介与备注">
-          <el-input
-            v-model="form.description"
-            type="textarea"
-            :rows="3"
-            placeholder="涵盖业务职能（如GAP种植、饮片炮制、第三方质检、仓储冷链物流等）"
-          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -203,7 +136,7 @@
     </el-dialog>
 
     <!-- Detail Drawer -->
-    <el-drawer v-model="drawerVisible" title="租户详细信息与资源配额" size="520px">
+    <el-drawer v-model="drawerVisible" title="租户详细信息" size="520px">
       <div v-if="activeTenant" class="drawer-detail">
         <div class="detail-header-card">
           <div class="tenant-title">{{ activeTenant.tenantName }}</div>
@@ -211,28 +144,19 @@
         </div>
 
         <div class="detail-sec">
-          <h4>企业资质与负责人</h4>
+          <h4>租户信息</h4>
           <div class="kv-list">
-            <div class="kv-item"><span>统一社会信用代码:</span> <strong class="mono">{{ activeTenant.creditCode }}</strong></div>
-            <div class="kv-item"><span>负责人姓名:</span> <strong>{{ activeTenant.contactName }}</strong></div>
-            <div class="kv-item"><span>联系方式:</span> <strong>{{ activeTenant.contactPhone }}</strong></div>
-            <div class="kv-item"><span>主管理员账号:</span> <strong class="mono">{{ activeTenant.adminAccount }}</strong></div>
+            <div class="kv-item"><span>租户类型:</span> <strong>{{ activeTenant.tenantType }}</strong></div>
+            <div class="kv-item"><span>当前状态:</span> <StatusTag :code="activeTenant.status" :label="activeTenant.status === 'ACTIVE' ? '启用' : '停用'" /></div>
           </div>
         </div>
 
         <div class="detail-sec">
-          <h4>资源配额与服务状态</h4>
+          <h4>时间信息</h4>
           <div class="kv-list">
-            <div class="kv-item"><span>当前运行状态:</span> <StatusTag :code="activeTenant.status" /></div>
-            <div class="kv-item"><span>用户席位配额:</span> <strong>{{ activeTenant.quotaUsers }} 人</strong></div>
-            <div class="kv-item"><span>专属文件存储空间:</span> <strong>{{ activeTenant.quotaStorageGb }} GB</strong></div>
-            <div class="kv-item"><span>入驻接入时间:</span> <span class="mono">{{ activeTenant.createdAt }}</span></div>
+            <div class="kv-item"><span>创建时间:</span> <span class="mono">{{ activeTenant.createdAt }}</span></div>
+            <div class="kv-item"><span>更新时间:</span> <span class="mono">{{ activeTenant.updatedAt || '-' }}</span></div>
           </div>
-        </div>
-
-        <div class="detail-sec">
-          <h4>机构业务描述</h4>
-          <div class="desc-box">{{ activeTenant.description || '暂无详细描述' }}</div>
         </div>
 
         <div style="margin-top: 24px; display: flex; gap: 10px;">
@@ -255,6 +179,7 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { rbacApi, type TenantItem } from '@/api/rbac';
+import { apiErrorMessage } from '@/api/client';
 
 const tenants = ref<TenantItem[]>([]);
 const loading = ref(false);
@@ -273,30 +198,16 @@ const formRef = ref<FormInstance>();
 const form = ref<Partial<TenantItem>>({
   tenantCode: '',
   tenantName: '',
-  creditCode: '',
-  contactName: '',
-  contactPhone: '',
-  adminAccount: '',
-  quotaUsers: 50,
-  quotaStorageGb: 500,
-  status: 'ACTIVE',
-  description: ''
+  tenantType: 'PRODUCER',
+  status: 'ACTIVE'
 });
 
 const rules = {
-  tenantCode: [{ required: true, message: '请输入租户编码', trigger: 'blur' }],
   tenantName: [{ required: true, message: '请输入机构/企业全称', trigger: 'blur' }],
-  creditCode: [{ required: true, message: '请输入统一社会信用代码', trigger: 'blur' }],
-  contactName: [{ required: true, message: '请输入联系人姓名', trigger: 'blur' }],
-  adminAccount: [{ required: true, message: '请输入主管理员账号', trigger: 'blur' }]
+  tenantType: [{ required: true, message: '请选择机构类型', trigger: 'change' }]
 };
 
 const activeTenantsCount = computed(() => tenants.value.filter(t => t.status === 'ACTIVE').length);
-const totalUserQuota = computed(() => tenants.value.reduce((acc, cur) => acc + (cur.quotaUsers || 0), 0));
-const totalStorageQuota = computed(() => tenants.value.reduce((acc, cur) => acc + (cur.quotaStorageGb || 0), 0));
-
-const filteredTenants = computed(() => tenants.value);
-
 const loadTenants = async () => {
   loading.value = true;
   try {
@@ -310,7 +221,9 @@ const loadTenants = async () => {
     page.value = result.page;
     pageSize.value = result.size;
   } catch (err) {
-    console.error('Failed to load tenants', err);
+    tenants.value = [];
+    total.value = 0;
+    ElMessage.error(apiErrorMessage(err, '租户列表加载失败'));
   } finally {
     loading.value = false;
   }
@@ -342,14 +255,7 @@ const openCreateDialog = () => {
     tenantCode: '',
     tenantName: '',
     tenantType: 'PRODUCER',
-    creditCode: '',
-    contactName: '',
-    contactPhone: '',
-    adminAccount: '',
-    quotaUsers: 50,
-    quotaStorageGb: 500,
-    status: 'ACTIVE',
-    description: ''
+    status: 'ACTIVE'
   };
   dialogVisible.value = true;
 };
@@ -370,7 +276,7 @@ const viewDetail = async (row: TenantItem) => {
       activeTenant.value = { ...row, ...detail };
     }
   } catch (e) {
-    console.warn('Fallback to local detail', e);
+    ElMessage.error(apiErrorMessage(e, '租户详情加载失败'));
   }
 };
 
@@ -380,17 +286,18 @@ const submitForm = async () => {
     if (!valid) return;
     submitting.value = true;
     try {
-      if (isEditing.value && form.value.id) {
-        await rbacApi.updateTenant(form.value.id, form.value);
+      const data = { tenantName: form.value.tenantName!, tenantType: form.value.tenantType! };
+      if (isEditing.value && form.value.id != null) {
+        await rbacApi.updateTenant(form.value.id, { ...data, status: form.value.status });
         ElMessage.success(`租户 [${form.value.tenantName}] 信息更新成功！`);
       } else {
-        await rbacApi.createTenant(form.value as any);
-        ElMessage.success(`新租户 [${form.value.tenantName}] 创建成功并已分配独立空间！`);
+        await rbacApi.createTenant({ ...data, tenantCode: form.value.tenantCode || '' });
+        ElMessage.success(`新租户 [${form.value.tenantName}] 创建成功！`);
       }
       dialogVisible.value = false;
       await loadTenants();
     } catch (err) {
-      ElMessage.error('保存失败，请检查填写内容');
+      ElMessage.error(apiErrorMessage(err, '保存失败，请检查填写内容'));
     } finally {
       submitting.value = false;
     }
@@ -399,10 +306,14 @@ const submitForm = async () => {
 
 const toggleStatus = async (row: TenantItem) => {
   const nextStatus = row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-  const label = nextStatus === 'ACTIVE' ? '启用' : '冻结';
-  await rbacApi.updateTenant(row.id, { status: nextStatus });
-  row.status = nextStatus;
-  ElMessage.success(`租户 [${row.tenantName}] 状态已调整为: ${label}`);
+  const label = nextStatus === 'ACTIVE' ? '启用' : '停用';
+  try {
+    await rbacApi.updateTenant(row.id, { tenantName: row.tenantName, tenantType: row.tenantType || '', status: nextStatus });
+    ElMessage.success(`租户 [${row.tenantName}] 已${label}`);
+    await loadTenants();
+  } catch (err) {
+    ElMessage.error(apiErrorMessage(err, `租户${label}失败`));
+  }
 };
 
 const confirmDelete = (row: TenantItem) => {
@@ -415,9 +326,13 @@ const confirmDelete = (row: TenantItem) => {
       type: 'warning'
     }
   ).then(async () => {
-    await rbacApi.deleteTenant(row.id);
-    ElMessage.success(`租户 [${row.tenantName}] 已彻底删除`);
-    await loadTenants();
+    try {
+      await rbacApi.deleteTenant(row.id);
+      ElMessage.success(`租户 [${row.tenantName}] 已删除`);
+      await loadTenants();
+    } catch (err) {
+      ElMessage.error(apiErrorMessage(err, '删除租户失败'));
+    }
   }).catch(() => {});
 };
 </script>

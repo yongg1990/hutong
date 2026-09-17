@@ -69,6 +69,7 @@ import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import PackagingTreeInspector from '@/components/specialized/PackagingTreeInspector.vue';
 import { masterDataApi } from '@/api/masterData';
+import { apiErrorMessage } from '@/api/client';
 import type { HerbPiece } from '@/types';
 
 const herbPieces = ref<HerbPiece[]>([]);
@@ -107,7 +108,7 @@ const confirmCreatePiece = async () => {
     createModalVisible.value = false;
     ElMessage.success(`饮片品种 [${res.speciesName}] 及其双轨编码成功登记！`);
   } catch (err) {
-    ElMessage.error('登记失败，请稍后重试');
+    ElMessage.error(apiErrorMessage(err, '登记失败，请稍后重试'));
   } finally {
     saving.value = false;
   }

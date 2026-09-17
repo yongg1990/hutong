@@ -130,6 +130,7 @@ import { RefreshRight } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { exchangeApi } from '@/api/exchange';
+import { apiErrorMessage } from '@/api/client';
 import type { ExchangeProjection } from '@/types';
 
 const projections = ref<ExchangeProjection[]>([]);
@@ -199,7 +200,7 @@ const generateNew = async () => {
     }
     ElMessage.success('投影任务已受理');
   } catch (err) {
-    ElMessage.error('投影任务提交失败');
+    ElMessage.error(apiErrorMessage(err, '投影任务提交失败'));
   } finally {
     creating.value = false;
   }

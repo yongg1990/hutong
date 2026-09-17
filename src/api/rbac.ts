@@ -62,6 +62,7 @@ export interface RoleItem {
   status: 'ACTIVE' | 'DISABLED' | string;
   description?: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PermissionNode {
@@ -78,6 +79,7 @@ export interface PermissionNode {
   parentId?: number | string | null;
   status?: string;
   description?: string;
+  granted?: boolean;
   children?: PermissionNode[];
 }
 
@@ -439,6 +441,9 @@ function mapTenantResponse(item: any): TenantItem {
   };
 }
 
+type TenantCreateRequest = { tenantName: string; tenantType: string; tenantCode?: string };
+type TenantUpdateRequest = { tenantName: string; tenantType: string; status?: string };
+
 /**
  * 租户与权限体系 API 服务 (Swagger: /tenant-access/*)
  */
@@ -449,7 +454,6 @@ export const rbacApi = {
     page?: number;
     size?: number;
   }): Promise<TenantPage> {
-    const stored = getLocal<TenantItem[]>('tcmirp_tenants_store', initialTenants);
     const query = new URLSearchParams();
     if (params?.tenantName) {
       query.append('tenantName', params.tenantName);
@@ -457,38 +461,15 @@ export const rbacApi = {
     if (params?.page) query.append('page', String(params.page));
     if (params?.size) query.append('size', String(params.size));
 
-    const fallbackFiltered = stored.filter(t => {
-      const q = (params?.tenantName || '').trim().toLowerCase();
-      if (q) {
-        const matchName = t.tenantName.toLowerCase().includes(q);
-        if (!matchName) return false;
-      }
-      return true;
-    });
     const page = params?.page || 1;
     const size = params?.size || 20;
-    const fallbackPage: TenantPage = {
-      records: fallbackFiltered.slice((page - 1) * size, page * size),
-      total: fallbackFiltered.length,
-      page,
-      size
+    const res: any = await request.get(`/tenant-access/tenants?${query.toString()}`);
+    return {
+      records: (res.records || []).map(mapTenantResponse),
+      total: Number(res.total ?? 0),
+      page: Number(res.page ?? page),
+      size: Number(res.size ?? size)
     };
-
-    return apiCall(
-      request.get(`/tenant-access/tenants?${query.toString()}`).then((res: any) => {
-        if (res && Array.isArray(res.records)) {
-          return {
-            records: res.records.map(mapTenantResponse),
-            total: Number(res.total || 0),
-            page: Number(res.page || page),
-            size: Number(res.size || size)
-          };
-        }
-        return fallbackPage;
-      }),
-      fallbackPage,
-      '获取租户列表'
-    );
   },
 
   async getTenants(params?: { tenantName?: string; page?: number; size?: number }): Promise<TenantItem[]> {
@@ -498,101 +479,36 @@ export const rbacApi = {
 
   // GET /tenant-access/tenants/{id}
   async getTenantById(id: string | number): Promise<TenantItem> {
-    const stored = getLocal<TenantItem[]>('tcmirp_tenants_store', initialTenants);
-    const fallback = stored.find(t => String(t.id) === String(id)) || stored[0];
-
-    return apiCall(
-      request.get(`/tenant-access/tenants/${id}`).then((res: any) => {
-        if (res && (res.tenantId || res.id)) {
-          return mapTenantResponse(res);
-        }
-        return fallback;
-      }),
-      fallback,
-      '获取租户详情'
-    );
+    const res = await request.get(`/tenant-access/tenants/${id}`);
+    return mapTenantResponse(res);
   },
 
   // POST /tenant-access/tenants
-  async createTenant(data: {
-    tenantName: string;
-    tenantType?: string;
-    tenantCode?: string;
-    contactName?: string;
-    contactPhone?: string;
-    description?: string;
-  }): Promise<TenantItem> {
-    const newTenant: TenantItem = {
-      id: Date.now(),
-      tenantCode: data.tenantCode || `TENANT_${Date.now().toString(36).toUpperCase()}`,
+  async createTenant(data: TenantCreateRequest): Promise<TenantItem> {
+    const res = await request.post('/tenant-access/tenants', {
       tenantName: data.tenantName,
-      tenantType: data.tenantType || 'ENTERPRISE',
-      contactName: data.contactName || '管理员',
-      contactPhone: data.contactPhone || '13800000000',
-      status: 'ACTIVE',
-      createdAt: new Date().toLocaleString(),
-      description: data.description || ''
-    };
-
-    const stored = getLocal<TenantItem[]>('tcmirp_tenants_store', initialTenants);
-    stored.unshift(newTenant);
-    setLocal('tcmirp_tenants_store', stored);
-
-    return apiCall(
-      request.post('/tenant-access/tenants', {
-        tenantName: data.tenantName,
-        tenantType: data.tenantType || 'ENTERPRISE',
-        tenantCode: data.tenantCode || newTenant.tenantCode
-      }).then((res: any) => {
-        return {
-          ...newTenant,
-          id: res?.tenantId || newTenant.id
-        };
-      }),
-      newTenant,
-      '创建新租户'
-    );
+      tenantType: data.tenantType,
+      ...(data.tenantCode ? { tenantCode: data.tenantCode } : {})
+    });
+    return mapTenantResponse(res);
   },
 
   // POST /tenant-access/tenants/{id}/update
   async updateTenant(
     id: string | number,
-    data: {
-      tenantName?: string;
-      tenantType?: string;
-      status?: string;
-      description?: string;
-    }
+    data: TenantUpdateRequest
   ): Promise<TenantItem> {
-    const stored = getLocal<TenantItem[]>('tcmirp_tenants_store', initialTenants);
-    const idx = stored.findIndex(t => String(t.id) === String(id));
-    if (idx !== -1) {
-      stored[idx] = { ...stored[idx], ...data, updatedAt: new Date().toLocaleString() };
-      setLocal('tcmirp_tenants_store', stored);
-    }
-
-    return apiCall(
-      request.post(`/tenant-access/tenants/${id}/update`, {
-        tenantName: data.tenantName || stored[idx]?.tenantName,
-        tenantType: data.tenantType || stored[idx]?.tenantType || 'ENTERPRISE',
-        status: data.status || stored[idx]?.status || 'ACTIVE'
-      }),
-      stored[idx] || ({} as any),
-      '更新租户信息'
-    );
+    const res = await request.post(`/tenant-access/tenants/${id}/update`, {
+      tenantName: data.tenantName,
+      tenantType: data.tenantType,
+      status: data.status
+    });
+    return mapTenantResponse(res);
   },
 
   // GET /tenant-access/tenants/{id}/delete
-  async deleteTenant(id: string | number): Promise<{ success: boolean }> {
-    const stored = getLocal<TenantItem[]>('tcmirp_tenants_store', initialTenants);
-    const next = stored.filter(t => String(t.id) !== String(id));
-    setLocal('tcmirp_tenants_store', next);
-
-    return apiCall(
-      request.get(`/tenant-access/tenants/${id}/delete`),
-      { success: true },
-      '删除租户'
-    );
+  async deleteTenant(id: string | number): Promise<void> {
+    await request.get(`/tenant-access/tenants/${id}/delete`);
   },
 
   // ================= 2. 用户管理 (Users) =================
@@ -600,39 +516,23 @@ export const rbacApi = {
   async getUsers(params?: {
     tenantId?: string | number;
   }): Promise<UserItem[]> {
-    const stored = getLocal<UserItem[]>('tcmirp_users_store', initialUsers);
     const query = new URLSearchParams();
-    if (params?.tenantId && !isNaN(Number(params.tenantId))) {
+    if (params?.tenantId != null && params.tenantId !== '' && Number.isFinite(Number(params.tenantId))) {
       query.append('tenantId', String(params.tenantId));
     }
-
-    const fallbackFiltered = stored.filter(u => {
-      if (params?.tenantId && String(u.tenantId) !== String(params.tenantId)) return false;
-      return true;
-    });
-
-    return apiCall(
-      request.get(`/tenant-access/users?${query.toString()}`).then((res: any) => {
-        if (Array.isArray(res)) {
-          return res.map((u: any) => ({
-            id: u.userId || u.id,
-            userId: u.userId || u.id,
-            username: u.username,
-            realName: u.displayName || u.realName || u.username,
-            displayName: u.displayName || u.realName,
-            tenantId: u.tenantId,
-            roles: [],
-            roleIds: [],
-            status: u.status || 'ACTIVE',
-            createdAt: u.createdAt,
-            updatedAt: u.updatedAt
-          }));
-        }
-        return fallbackFiltered;
-      }),
-      fallbackFiltered,
-      '获取用户列表'
-    );
+    const res: any = await request.get(`/tenant-access/users?${query.toString()}`);
+    return res.map((u: any) => ({
+      id: u.userId,
+      userId: u.userId,
+      username: u.username,
+      realName: u.displayName,
+      displayName: u.displayName,
+      tenantId: u.tenantId,
+      roles: [],
+      status: u.status,
+      createdAt: u.createdAt,
+      updatedAt: u.updatedAt
+    }));
   },
 
   // POST /tenant-access/users
@@ -641,68 +541,35 @@ export const rbacApi = {
     username: string;
     displayName: string;
     password?: string;
-    roles?: string[];
   }): Promise<UserItem> {
-    const newUser: UserItem = {
-      id: Date.now(),
-      userId: Date.now(),
+    const res: any = await request.post('/tenant-access/users', {
+      tenantId: data.tenantId ? Number(data.tenantId) : undefined,
       username: data.username,
-      realName: data.displayName,
       displayName: data.displayName,
-      tenantId: data.tenantId || 1,
-      roles: data.roles || ['ROLE_OPERATOR'],
-      status: 'ACTIVE',
-      createdAt: new Date().toLocaleString()
-    };
-
-    const stored = getLocal<UserItem[]>('tcmirp_users_store', initialUsers);
-    stored.unshift(newUser);
-    setLocal('tcmirp_users_store', stored);
-
-    return apiCall(
-      request.post('/tenant-access/users', {
-        tenantId: Number(data.tenantId) || 1,
-        username: data.username,
-        displayName: data.displayName,
-        password: R.encryptedString(userPasswordRsaKey, data.password || 'Tcm@2026!Admin')
-      }).then((res: any) => {
-        return {
-          ...newUser,
-          id: res?.userId || newUser.id,
-          userId: res?.userId || newUser.userId
-        };
-      }),
-      newUser,
-      '创建新用户'
-    );
+      password: R.encryptedString(userPasswordRsaKey, data.password || 'Tcm@2026!Admin')
+    });
+    return { id: res.userId, userId: res.userId, username: res.username,
+      realName: res.displayName, displayName: res.displayName, tenantId: res.tenantId,
+      roles: [], status: res.status, createdAt: res.createdAt, updatedAt: res.updatedAt };
   },
 
   // POST /tenant-access/users/{userId}/roles?tenantId=...
-  async bindUserRole(
+  async bindUserRoles(
     userId: number | string,
-    roleId: number | string,
-    tenantId: number | string = 1
-  ): Promise<{ success: boolean; message?: string }> {
-    return apiCall(
-      request.post(`/tenant-access/users/${userId}/roles?tenantId=${tenantId}`, {
-        roleId: Number(roleId)
-      }),
-      { success: true, message: '绑定角色成功' },
-      '用户绑定角色'
-    );
+    roleIds: (number | string)[],
+    tenantId?: number | string | null
+  ): Promise<void> {
+    const query = tenantId == null || tenantId === '' ? '' : `?tenantId=${encodeURIComponent(String(tenantId))}`;
+    await request.post(`/tenant-access/users/${userId}/roles${query}`, { roleId: roleIds.map(Number) });
   },
 
   // GET /tenant-access/users/{userId}/roles/{roleId}/delete?tenantId=...
   async unbindUserRole(
     userId: number | string,
     roleId: number | string,
-    tenantId: number | string = 1
-  ): Promise<{ success: boolean; message?: string }> {
-    return apiCall(
-      request.get(`/tenant-access/users/${userId}/roles/${roleId}/delete?tenantId=${tenantId}`),
-      { success: true, message: '解除角色成功' },
-      '用户解除角色'
-    );
+    tenantId: number | string
+  ): Promise<void> {
+    await request.get(`/tenant-access/users/${userId}/roles/${roleId}/delete?tenantId=${tenantId}`);
   },
 
   async updateUser(id: string | number, data: Partial<UserItem>): Promise<UserItem> {
@@ -731,81 +598,50 @@ export const rbacApi = {
 
   // ================= 3. 角色与权限管理 (Roles & Permissions) =================
   async getRoles(params?: { keyword?: string; tenantId?: string | number }): Promise<RoleItem[]> {
-    const stored = getLocal<RoleItem[]>('tcmirp_roles_store', initialRoles);
-    return apiCall(
-      request.get('/tenant-access/roles'),
-      stored.filter(r => {
-        if (params?.keyword) {
-          const kw = params.keyword.trim().toLowerCase();
-          const matchCode = r.roleCode.toLowerCase().includes(kw);
-          const matchName = r.roleName.toLowerCase().includes(kw);
-          if (!matchCode && !matchName) return false;
-        }
-        if (params?.tenantId && String(r.tenantId) !== String(params.tenantId)) return false;
-        return true;
-      }),
-      '获取角色列表'
-    );
+    const query = new URLSearchParams();
+    if (params?.tenantId != null && params.tenantId !== '') query.set('tenantId', String(params.tenantId));
+    const keyword = params?.keyword?.trim().toLowerCase();
+    const res: any = await request.get(`/tenant-access/roles?${query}`);
+    return res.map((r: any) => ({
+      id: r.roleId, roleId: r.roleId, tenantId: r.tenantId,
+      roleCode: r.roleCode, roleName: r.roleName, description: r.description,
+      status: r.status, createdAt: r.createdAt, updatedAt: r.updatedAt,
+      permissions: []
+    })).filter((r: RoleItem) => !keyword ||
+      (r.roleCode || '').toLowerCase().includes(keyword) ||
+      (r.roleName || '').toLowerCase().includes(keyword));
   },
 
   // POST /tenant-access/roles/tenant?tenantId=...
   async createRole(
     data: { roleCode: string; roleName: string; description?: string; permissions?: string[] },
-    tenantId: number | string = 1
+    tenantId?: number | string
   ): Promise<RoleItem> {
-    const newRole: RoleItem = {
-      id: Date.now(),
-      roleId: Date.now(),
-      roleCode: data.roleCode,
-      roleName: data.roleName,
-      tenantId,
-      permissions: data.permissions || ['workspace:view'],
-      userCount: 0,
-      status: 'ACTIVE',
-      description: data.description || '',
-      createdAt: new Date().toLocaleString()
-    };
+    const query = tenantId == null ? '' : `?tenantId=${tenantId}`;
+    const res: any = await request.post(`/tenant-access/roles/tenant${query}`, {
+      roleCode: data.roleCode, roleName: data.roleName, description: data.description || ''
+    });
+    return { id: res.roleId, roleId: res.roleId, tenantId: res.tenantId,
+      roleCode: res.roleCode, roleName: res.roleName, description: res.description,
+      permissions: [], status: res.status, createdAt: res.createdAt, updatedAt: res.updatedAt };
+  },
 
-    const stored = getLocal<RoleItem[]>('tcmirp_roles_store', initialRoles);
-    stored.unshift(newRole);
-    setLocal('tcmirp_roles_store', stored);
-
-    return apiCall(
-      request.post(`/tenant-access/roles/tenant?tenantId=${tenantId}`, {
-        roleCode: data.roleCode,
-        roleName: data.roleName,
-        description: data.description || ''
-      }).then((res: any) => {
-        return {
-          ...newRole,
-          id: res?.roleId || newRole.id,
-          roleId: res?.roleId || newRole.roleId
-        };
-      }),
-      newRole,
-      '创建新角色'
-    );
+  async getRolePermissions(roleId: string | number): Promise<PermissionNode[]> {
+    const res: any = await request.get(`/tenant-access/roles/${roleId}/permissions`);
+    return res.map((p: any) => ({
+      id: p.permissionId, permissionId: p.permissionId, code: p.permissionCode,
+      label: p.permissionName, permissionName: p.permissionName, moduleCode: p.moduleCode,
+      apiMethod: p.apiMethod, apiPath: p.apiPath, parentId: p.parentId,
+      permissionType: p.permissionType, status: p.status, granted: p.granted
+    }));
   },
 
   // POST /tenant-access/roles/{roleId}/permissions
   async assignRolePermissions(
     roleId: number | string,
     permissionCodes: string[]
-  ): Promise<{ success: boolean; message?: string }> {
-    const stored = getLocal<RoleItem[]>('tcmirp_roles_store', initialRoles);
-    const r = stored.find(item => String(item.id) === String(roleId) || String(item.roleId) === String(roleId));
-    if (r) {
-      r.permissions = permissionCodes;
-      setLocal('tcmirp_roles_store', stored);
-    }
-
-    return apiCall(
-      request.post(`/tenant-access/roles/${roleId}/permissions`, {
-        permissionCodes
-      }),
-      { success: true, message: '授权成功' },
-      '角色分配权限'
-    );
+  ): Promise<void> {
+    await request.post(`/tenant-access/roles/${roleId}/permissions`, { permissionCodes });
   },
 
   async updateRole(id: string | number, data: Partial<RoleItem>): Promise<RoleItem> {
@@ -836,10 +672,8 @@ export const rbacApi = {
   // ================= 4. 权限点定义管理 (Permissions) =================
   // GET /tenant-access/permissions
   async getPermissions(): Promise<PermissionNode[]> {
-    return apiCall(
-      request.get('/tenant-access/permissions').then((res: any) => {
-        if (Array.isArray(res) && res.length > 0) {
-          return res.map((p: any) => ({
+    const res: any = await request.get('/tenant-access/permissions');
+    return res.map((p: any) => ({
             id: p.permissionId,
             permissionId: p.permissionId,
             label: p.permissionName,
@@ -853,12 +687,6 @@ export const rbacApi = {
             parentId: p.parentId,
             status: p.status
           }));
-        }
-        return standardPermissionTree;
-      }),
-      standardPermissionTree,
-      '获取权限点列表'
-    );
   },
 
   // POST /tenant-access/permissions

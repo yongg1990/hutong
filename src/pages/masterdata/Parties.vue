@@ -161,6 +161,7 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { masterDataApi } from '@/api/masterData';
+import { apiErrorMessage } from '@/api/client';
 import type { MasterParty } from '@/types';
 
 const keyword = ref('');
@@ -199,7 +200,7 @@ const handleResolve = async () => {
     resolveResult.value = res;
     ElMessage.success('外部标识解析成功！');
   } catch (e) {
-    ElMessage.error('解析请求异常');
+    ElMessage.error(apiErrorMessage(e, '解析请求失败'));
   } finally {
     resolving.value = false;
   }
@@ -222,7 +223,7 @@ const handleBindIdentifier = async () => {
     });
     ElMessage.success(`标识绑定登记成功 (BindingId: ${res.bindingId})！已写入全局标识映射表`);
   } catch (e) {
-    ElMessage.error('绑定登记失败');
+    ElMessage.error(apiErrorMessage(e, '绑定登记失败'));
   } finally {
     binding.value = false;
   }
@@ -264,7 +265,7 @@ const confirmCreateParty = async () => {
     createModalVisible.value = false;
     ElMessage.success(`成功登记主体机构 [${res.partyName}]`);
   } catch (err) {
-    ElMessage.error('登记失败，请重试');
+    ElMessage.error(apiErrorMessage(err, '登记失败，请重试'));
   } finally {
     creating.value = false;
   }

@@ -136,6 +136,7 @@ import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { settingsApi, type ProjectSpaceCreateRequest, type ProjectSpaceResponse } from '@/api/settings';
 import { rbacApi, type UserItem } from '@/api/rbac';
+import { apiErrorMessage } from '@/api/client';
 
 const router = useRouter();
 const contextStore = useContextStore();
@@ -211,8 +212,8 @@ const createProject = async () => {
     projectSpaceId.value = Number(created.projectSpaceId) || undefined;
     createDialogVisible.value = false;
     ElMessage.success('项目空间创建成功');
-  } catch {
-    ElMessage.error('项目空间创建失败');
+  } catch (err) {
+    ElMessage.error(apiErrorMessage(err, '项目空间创建失败'));
   } finally {
     creating.value = false;
   }

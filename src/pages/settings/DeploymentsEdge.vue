@@ -62,6 +62,7 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { settingsApi, type DeploymentInstanceCreateRequest, type DeploymentInstanceResponse } from '@/api/settings';
+import { apiErrorMessage } from '@/api/client';
 
 const instanceId = ref<number | undefined>(1);
 const instances = ref<DeploymentInstanceResponse[]>([]);
@@ -117,7 +118,7 @@ const createInstance = async () => {
     dialogVisible.value = false;
     ElMessage.success('部署实例登记成功');
   } catch (err) {
-    ElMessage.error('部署实例登记失败');
+    ElMessage.error(apiErrorMessage(err, '部署实例登记失败'));
   } finally {
     saving.value = false;
   }

@@ -100,6 +100,7 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     status: 'CONNECTED',
     endpoints: [
       { method: 'POST', path: '/openapi/v1/batches', desc: '创建批量接入任务 (createBatch)' },
+      { method: 'GET', path: '/openapi/v1/batches/{batchId}', desc: '按 ID 查询批量任务 (APP-08)' },
       { method: 'POST', path: '/openapi/v1/raw-records', desc: '保存不可变原始记录 (preserve)' },
       { method: 'POST', path: '/openapi/v1/raw-records/{rawRecordId}/replays', desc: '重放治理记录 (replay)' }
     ]
@@ -217,7 +218,9 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
+      { method: 'GET', path: '/tenant-access/roles', desc: '查询角色列表 (list)' },
       { method: 'POST', path: '/tenant-access/roles/tenant', desc: '创建角色 (create)' },
+      { method: 'GET', path: '/tenant-access/roles/{roleId}/permissions', desc: '查询角色权限赋权状态 (find)' },
       { method: 'POST', path: '/tenant-access/roles/{roleId}/permissions', desc: '替换角色权限 (replace)' },
       { method: 'GET', path: '/tenant-access/permissions', desc: '查询权限列表 (list)' },
       { method: 'POST', path: '/tenant-access/permissions', desc: '创建权限 (create)' },

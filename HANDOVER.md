@@ -2,8 +2,8 @@
 
 ## 1. 文档信息
 
-- 文档版本：v1.2.0
-- 交接日期：2026-09-16
+- 文档版本：v1.4.0
+- 交接日期：2026-09-17
 - 项目目录：[96mF:\codex\gitHub\hutong[0m
 - 接口文档：[96mC:\Users\全栈架构师\Desktop\jk.txt[0m
 
@@ -159,7 +159,73 @@ X-Purpose-Code: EXCHANGE_OUTPUT
 
 本轮完成了接口代码与页面字段、查询条件的对接，但按照任务约束未执行构建、打包、测试、lint 或项目启动命令。因此本文档不声明上述检查已通过，后续需要验证时应根据项目现有脚本单独执行。
 
-## 11. 后续接手建议
+## 11. 2026-09-17 接口对接更新
+
+当前 Swagger：http://192.168.1.39/api/tcmirp/swagger-ui/index.html#/ 。本节以当前代码为准，补充前文交接后的租户、用户、角色与权限页面。主要文件：`src/api/rbac.ts`、`src/api/client.ts`、`src/pages/settings/Tenants.vue`、`src/pages/settings/Users.vue`、`src/pages/settings/Roles.vue`。默认 API 基础路径为 `/api/tcmirp`，开发代理指向 `http://192.168.1.39`；浏览器 `tcmirp_api_base` 可覆盖默认路径。
+
+### 11.1 租户管理（`/settings/tenants`）
+
+| 页面时机 | 接口 | 说明 |
+| --- | --- | --- |
+| 进入、刷新、查询、重置、翻页 | `GET /tenant-access/tenants` | 服务端分页，仅传 `tenantName`、`page`、`size` |
+| 详情 | `GET /tenant-access/tenants/{id}` | 按 ID 查询 |
+| 新增 | `POST /tenant-access/tenants` | 名称、类型、可选编码 |
+| 编辑、启用或停用 | `POST /tenant-access/tenants/{id}/update` | 名称、类型、状态 |
+| 删除 | `GET /tenant-access/tenants/{id}/delete` | 成功后刷新列表 |
+
+租户页不再以本地样例代替正式接口错误；联系人、资质、管理员、配额不在当前接口模型中，已从页面移除。行操作“冻结”已改为“停用”。
+
+### 11.2 角色与权限（`/settings/roles`）
+
+| 页面时机 | 接口 | 说明 |
+| --- | --- | --- |
+| 进入、刷新、创建角色或保存授权后 | `GET /tenant-access/roles`、`GET /tenant-access/permissions` | 列表与权限字典数量 |
+| 查询、重置 | 无新增请求 | 角色编码/名称在已加载列表中本地筛选，重置恢复全部 |
+| 创建角色 | `POST /tenant-access/roles/tenant` | 可选 `tenantId` query |
+| 打开配置功能权限 | `GET /tenant-access/roles/{roleId}/permissions` | 根据 `granted` 初始化勾选 |
+| 保存权限配置 | `POST /tenant-access/roles/{roleId}/permissions` | 提交最终 `permissionCodes` 数组 |
+
+权限项创建、修改、删除接口虽在 API 模块和页面注册配置中列出，当前页面没有入口，也不会调用。当前 Swagger 无角色编辑、删除接口，页面未展示相应操作。
+
+### 11.3 用户管理（`/settings/users`）
+
+| 页面时机 | 接口 | 说明 |
+| --- | --- | --- |
+| 进入、刷新、按租户查询、重置 | `GET /tenant-access/users`、`GET /tenant-access/tenants`、`GET /tenant-access/roles` | 用户查询仅支持 `tenantId`，其余提供选择项 |
+| 创建用户 | `POST /tenant-access/users` | 租户 ID、账号、显示名称、RSA 加密密码 |
+| 创建后绑定初始角色 | `POST /tenant-access/users/{userId}/roles` | 独立于用户创建请求 |
+| 打开绑定或解除弹框 | `GET /tenant-access/roles` | 每次重新获取；有租户 ID 时显示同租户及平台角色，空租户时显示全部 |
+| 确认绑定 | `POST /tenant-access/users/{userId}/roles` | 多选，当前请求体为 `{ roleId: number[] }`；非空租户 ID 作为 query |
+| 确认解除 | `GET /tenant-access/users/{userId}/roles/{roleId}/delete` | 单角色，当前页面要求非空租户 ID |
+
+用户编辑、删除、重置密码及状态切换没有正式接口，页面未展示入口。接口没有提供用户已绑定角色列表，解除弹框目前无法只展示已绑定项。
+
+### 11.4 契约差异与风险
+
+- 当前 Swagger 的 `UserRoleBindRequest` 定义 `roleId` 为单个 `int64`，且 `tenantId` query 必填；前端按后续需求提交数组，空租户时省略 query。后端支持情况尚未确认，联调前需同步契约。
+- 后端 `int64` ID 以 JSON 数字返回，可能超过 JavaScript 安全整数范围。Axios 仍默认解析 JSON；此前 `json-bigint` 修复已按要求撤回。显示、路径参数及 `Number(roleId)` 转换可能失真，需后端以字符串序列化 ID 或统一采用无损解析。
+- `rbac.ts` 仍有部分未被页面调用的本地演示方法，不代表正式接口已接通。本轮只更新文档；未执行打包、测试、lint、项目启动或页面联调。
+
+### 11.5 接入与治理（APP-03）
+
+依据当前 Swagger 的 `APP-03 来源接入与数据治理` 调整了 `src/api/governance.ts`、`src/pages/governance/Sources.vue`、`Batches.vue`、`Mappings.vue`、`Cases.vue`、`Standards.vue` 及 `src/config/pageApiRegistry.ts`。该分组目前只有以下五个写接口；批次按 ID 查询属于 APP-08，但接入批次页一并使用。
+
+| 页面与操作 | 接口 | 当前行为 |
+| --- | --- | --- |
+| 来源系统注册 | `POST /openapi/v1/source-systems` | 提交来源代码、名称、类型、主体 ID、接入方式、签名配置、信任级别、用途代码和状态；注册成功后把返回 ID 写入 `tcmirp_source_system_id` |
+| 创建接入批次 | `POST /openapi/v1/batches` | 提交批次编码、来源系统 ID、映射配置、文件 ID、业务用途和处理策略；受理后用返回的 `batchId` 查询 |
+| 查询接入批次 | `GET /openapi/v1/batches/{batchId}`（APP-08） | 仅按 ID 查询；`includeFailures`、`pageNo`、`pageSize` 为查询参数，失败明细显示接口返回的 `lineNo`、`code`、`fieldPath`、`ruleCode`、`message` |
+| 留存原始记录 | `POST /openapi/v1/raw-records` | 提交项目空间 ID、来源系统 ID、来源业务键、内容类型及原始内容或文件片段引用；返回 `rawRecordId` 可用于重放 |
+| 重放原始记录 | `POST /openapi/v1/raw-records/{rawRecordId}/replays` | `mappingVersion` 和 `reason` 作为必填 query 参数；不能用批次 ID 代替原始记录 ID |
+| 字段映射预检 | `POST /openapi/v1/mappings/test` | 页面输入映射代码/版本、来源系统 ID、目标事件/Schema 版本及 JSON 对象样例，固定 `dryRun: true`，展示映射响应和 `issues` |
+
+来源系统接口没有列表、详情、启停接口；页面只显示当前页面注册成功的结果，刷新后不会保留。批次接口没有列表能力，未填写任务 ID 时不请求也不显示示例批次。正式 APP-03 写请求不走 `apiCall` 的模拟成功 fallback，错误由页面反馈。
+
+治理异常案卷、数据元与值域在 APP-03 没有查询或管理接口；页面明确标注本地参考数据，移除了会宣称保存、处置或重放成功的操作。事件与 Schema 配置页面属于 APP-04，不是本次 APP-03 对接范围。`src/api/client.ts` 已识别上述正式路径；后端增加列表或管理接口时需同步更新接口白名单与页面。
+
+本次仅核对 Swagger 和代码并更新页面、接口及本文档，未执行打包、测试、lint、启动或页面联调；实际业务参数、鉴权及响应仍待环境联调。
+
+## 12. 后续接手建议
 
 1. 联调前先确认租户 ID、项目空间 ID、来源系统 ID 已正确写入本地上下文。
 2. 逐页核对真实响应，重点检查列表响应外层结构、分页字段和枚举值。

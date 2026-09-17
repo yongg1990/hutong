@@ -28,7 +28,7 @@ export const eventsApi = {
           payload: typeof item.payloadJson === 'string' ? JSON.parse(item.payloadJson || '{}') : item.payloadJson,
           schemaVersion: item.schemaVersion,
           payloadDigest: item.payloadDigest
-        }])),
+        }]),
         [],
         '按ID查询可信事件'
       );

@@ -71,6 +71,7 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { masterDataApi } from '@/api/masterData';
+import { apiErrorMessage } from '@/api/client';
 import type { MasterObject } from '@/types';
 
 const objectCode = ref('');
@@ -110,7 +111,7 @@ const confirmCreateObject = async () => {
     createModalVisible.value = false;
     ElMessage.success(`业务对象 [${res.displayName}] 创建成功！`);
   } catch (err) {
-    ElMessage.error('创建失败，请稍后重试');
+    ElMessage.error(apiErrorMessage(err, '创建失败，请稍后重试'));
   } finally {
     saving.value = false;
   }

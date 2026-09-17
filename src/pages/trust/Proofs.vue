@@ -182,6 +182,7 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { trustApi, type ProofMerkleItem } from '@/api/trust';
+import { apiErrorMessage } from '@/api/client';
 
 const proofs = ref<ProofMerkleItem[]>([]);
 const loading = ref(false);
@@ -236,8 +237,8 @@ const verifyProof = async (row: ProofMerkleItem) => {
     const result = await trustApi.verifyProof(row);
     if (result?.matched || result?.verified) ElMessage.success(`存证记录 [${row.proofNo}] 验真通过`);
     else ElMessage.warning(`验真结果: ${result?.result || '未匹配'}`);
-  } catch {
-    ElMessage.error('验真请求失败');
+  } catch (err) {
+    ElMessage.error(apiErrorMessage(err, '验真请求失败'));
   }
 };
 

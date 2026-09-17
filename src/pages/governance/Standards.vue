@@ -4,11 +4,8 @@
       title="数据元与值域标准"
       subtitle="全平台统一中药追溯数据字典、国家中药标准规范集与 Code/Name 代码表管理"
     >
-      <template #actions>
-        <el-button type="primary" @click="openDataElementModal">新增数据元</el-button>
-        <el-button @click="openValueSetItemModal">新增代码值</el-button>
-      </template>
     </PageHeader>
+    <el-alert type="info" :closable="false" title="APP-03 未提供数据元和值域管理接口，当前内容为本地参考数据。" style="margin-bottom: 12px" />
 
     <!-- Standards Overview Cards -->
     <div class="standards-banner">

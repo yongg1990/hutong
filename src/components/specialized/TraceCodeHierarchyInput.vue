@@ -43,6 +43,7 @@
 import { ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { codingApi } from '@/api/coding';
+import { apiErrorMessage } from '@/api/client';
 
 const currentCode = ref('693000260731080001');
 const parentCode = ref('69300026073108BOX01');
@@ -66,7 +67,7 @@ const submitTraceCode = async () => {
     });
     ElMessage.success(`追溯码登记成功 (记录ID: ${res.traceCodeRecordId})！已完成多级拓扑绑定`);
   } catch (err) {
-    ElMessage.error('登记失败，请重试');
+    ElMessage.error(apiErrorMessage(err, '登记失败，请重试'));
   } finally {
     submitting.value = false;
   }

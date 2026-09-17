@@ -1,9 +1,9 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
-import { ElNotification } from 'element-plus';
+import { ElMessage } from 'element-plus';
 
-// Default Swagger base endpoint provided: http://192.168.1.39:8900/api/tcmirp
+// Default requests use the local proxy for the documented intranet API.
 export const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/tcmirp';
-export const SWAGGER_DOC_URL = 'http://192.168.1.39:8900/api/tcmirp/swagger-ui/index.html#/';
+export const SWAGGER_DOC_URL = 'http://192.168.1.39/api/tcmirp/swagger-ui/index.html#/';
 
 // Local state for backend connection status
 export interface ApiStatus {
@@ -40,6 +40,8 @@ export const request = axios.create({
 const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
   { method: 'POST', pattern: /^\/tenant-access\/auth\/(login|logout)$/ },
   { method: 'GET', pattern: /^\/tenant-access\/(tenants|users|permissions)$/ },
+  { method: 'GET', pattern: /^\/tenant-access\/roles$/ },
+  { method: 'GET', pattern: /^\/tenant-access\/roles\/\d+\/permissions$/ },
   { method: 'POST', pattern: /^\/tenant-access\/(tenants|users|permissions)$/ },
   { method: 'GET', pattern: /^\/tenant-access\/tenants\/\d+$/ },
   { method: 'POST', pattern: /^\/tenant-access\/tenants\/\d+\/update$/ },
@@ -138,7 +140,8 @@ request.interceptors.response.use((response: AxiosResponse) => {
         window.location.href = `/login?redirect=${redirectUrl}`;
       }
       const authError = Object.assign(new Error(res.message || '登录令牌已失效，请重新登录'), {
-        response: { status: Number(res.code) }
+        response: { status: Number(res.code) },
+        businessMessage: res.message
       });
       return Promise.reject(authError);
     }
@@ -146,14 +149,7 @@ request.interceptors.response.use((response: AxiosResponse) => {
     if (res.code === 200 || res.code === 0 || res.code === '0' || res.code === '200') {
       return res.data !== undefined ? res.data : res;
     }
-    // Business error returned by backend
-    ElNotification({
-      title: '接口业务提示',
-      message: res.message || '请求处理异常',
-      type: 'warning',
-      duration: 4000
-    });
-    return Promise.reject(new Error(res.message || 'API Error'));
+    return Promise.reject(Object.assign(new Error(res.message || 'API Error'), { businessMessage: res.message }));
   }
   return res;
 }, (error) => {
@@ -175,6 +171,17 @@ request.interceptors.response.use((response: AxiosResponse) => {
   // Do not crash the app, bubble error for caller fallback
   return Promise.reject(error);
 });
+
+export function apiErrorMessage(error: unknown, fallback: string): string {
+  const err = error as { response?: { data?: unknown }; businessMessage?: unknown } | null;
+  const data = err?.response?.data;
+  const body = typeof data === 'string' ? (() => {
+    try { return JSON.parse(data); } catch { return null; }
+  })() : data;
+  const message = (body && typeof body === 'object' && 'message' in body ? body.message : undefined)
+    ?? err?.businessMessage;
+  return typeof message === 'string' && message.trim() ? message.trim() : fallback;
+}
 
 // Safe API Call with Automatic Mock Fallback for Intranet/Offline Dev environments
 export async function apiCall<T>(
@@ -199,6 +206,9 @@ export async function apiCall<T>(
     }
 
     apiStatus.isOnline = false;
+    if (err?.response || err?.businessMessage) {
+      ElMessage.error(apiErrorMessage(err, actionName ? `${actionName}失败` : '请求失败'));
+    }
     // Log friendly guidance if intranet IP is unreachable
     console.warn(`[TCMIRP API] 接口调用未能直连后端 (${apiStatus.baseUrl}${actionName ? ` - ${actionName}` : ''})，已自动使用基准数据保障系统持续运行。`, err);
     return fallbackData;

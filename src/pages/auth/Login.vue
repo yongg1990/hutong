@@ -167,6 +167,7 @@ import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus';
 import { User, Lock } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/authStore';
 import { rbacApi, type TenantItem } from '@/api/rbac';
+import { apiErrorMessage } from '@/api/client';
 
 const router = useRouter();
 const route = useRoute();
@@ -224,7 +225,7 @@ const handleLogin = async () => {
       const redirect = (route.query.redirect as string) || '/workspace';
       router.push(redirect);
     } catch (err: any) {
-      ElMessage.error(err.message || '登录失败，请核对账号密码');
+      ElMessage.error(apiErrorMessage(err, '登录失败，请核对账号密码'));
     } finally {
       loading.value = false;
     }

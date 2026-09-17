@@ -172,6 +172,7 @@ import InspectionIndicatorGrid from '@/components/specialized/InspectionIndicato
 import PrescriptionItemGrid from '@/components/specialized/PrescriptionItemGrid.vue';
 import TraceCodeHierarchyInput from '@/components/specialized/TraceCodeHierarchyInput.vue';
 import { eventsApi } from '@/api/events';
+import { apiErrorMessage } from '@/api/client';
 
 const props = defineProps<{
   eventType: string;
@@ -244,7 +245,7 @@ const handleSubmit = async () => {
     submittedResult.value = res;
     successModalVisible.value = true;
   } catch (err: any) {
-    ElMessage.error(`提交失败: ${err?.message || '网络异常'}`);
+    ElMessage.error(apiErrorMessage(err, '提交失败，请稍后重试'));
   } finally {
     isSubmitting.value = false;
   }
