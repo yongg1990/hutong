@@ -2,14 +2,15 @@
 
 ## 1. 文档信息
 
-- 文档版本：v1.4.0
-- 交接日期：2026-09-17
+- 文档版本：v1.5.0
+- 交接日期：2026-09-18
 - 项目目录：[96mF:\codex\gitHub\hutong[0m
-- 接口文档：[96mC:\Users\全栈架构师\Desktop\jk.txt[0m
+- 接口文档：线上 Swagger（实时 OpenAPI）http://192.168.1.39/api/tcmirp/swagger-ui/index.html#/
+- OpenAPI JSON：http://192.168.1.39/api/tcmirp/v3/api-docs
 
 ## 2. 本次交接范围
 
-本次工作依据 [96mjk.txt[0m 中的 OpenAPI 定义，完成相关页面和业务接口的对接与调整。登录接口此前已验证可用，本次未修改 [96msrc/api/auth.ts[0m。
+本次工作依据线上 Swagger 的实时 OpenAPI 定义完成相关页面和业务接口的对接与调整。不要再使用本地 jk.txt 作为接口契约；接口变更必须重新读取 /api/tcmirp/v3/api-docs。登录接口此前已验证可用，本次未修改 src/api/auth.ts。
 
 主要完成内容：
 
@@ -41,7 +42,7 @@
 
 ### 4.1 上下文请求头
 
-当前业务请求使用数字型上下文 ID，主要请求头如下：
+当前业务请求头仍携带数字格式的上下文 ID；业务请求体和响应中的大整数 ID 按线上 Swagger 定义使用数字字符串，主要请求头如下：
 
 `http
 X-Tenant-Id: <tenantId>
@@ -203,12 +204,12 @@ X-Purpose-Code: EXCHANGE_OUTPUT
 ### 11.4 契约差异与风险
 
 - 当前 Swagger 的 `UserRoleBindRequest` 定义 `roleId` 为单个 `int64`，且 `tenantId` query 必填；前端按后续需求提交数组，空租户时省略 query。后端支持情况尚未确认，联调前需同步契约。
-- 后端 `int64` ID 以 JSON 数字返回，可能超过 JavaScript 安全整数范围。Axios 仍默认解析 JSON；此前 `json-bigint` 修复已按要求撤回。显示、路径参数及 `Number(roleId)` 转换可能失真，需后端以字符串序列化 ID 或统一采用无损解析。
+- 2026-09-18 实时 Swagger 已将多数大整数 ID 定义为数字字符串；相关页面按字符串接收、显示和传参，避免 JavaScript 安全整数精度损失。仍定义为 JSON 数字的旧接口需逐项核对。
 - `rbac.ts` 仍有部分未被页面调用的本地演示方法，不代表正式接口已接通。本轮只更新文档；未执行打包、测试、lint、项目启动或页面联调。
 
 ### 11.5 接入与治理（APP-03）
 
-依据当前 Swagger 的 `APP-03 来源接入与数据治理` 调整了 `src/api/governance.ts`、`src/pages/governance/Sources.vue`、`Batches.vue`、`Mappings.vue`、`Cases.vue`、`Standards.vue` 及 `src/config/pageApiRegistry.ts`。该分组目前只有以下五个写接口；批次按 ID 查询属于 APP-08，但接入批次页一并使用。
+依据线上 Swagger 的 `APP-03 来源接入与数据治理` 调整了 `src/api/governance.ts`、`src/pages/governance/Sources.vue`、`Batches.vue`、`Mappings.vue`、`Cases.vue`、`Standards.vue` 及 `src/config/pageApiRegistry.ts`。该分组目前只有以下五个写接口；批次按 ID 查询属于 APP-08，但接入批次页一并使用。
 
 | 页面与操作 | 接口 | 当前行为 |
 | --- | --- | --- |
@@ -221,9 +222,31 @@ X-Purpose-Code: EXCHANGE_OUTPUT
 
 来源系统接口没有列表、详情、启停接口；页面只显示当前页面注册成功的结果，刷新后不会保留。批次接口没有列表能力，未填写任务 ID 时不请求也不显示示例批次。正式 APP-03 写请求不走 `apiCall` 的模拟成功 fallback，错误由页面反馈。
 
-治理异常案卷、数据元与值域在 APP-03 没有查询或管理接口；页面明确标注本地参考数据，移除了会宣称保存、处置或重放成功的操作。事件与 Schema 配置页面属于 APP-04，不是本次 APP-03 对接范围。`src/api/client.ts` 已识别上述正式路径；后端增加列表或管理接口时需同步更新接口白名单与页面。
+治理异常案卷、数据元与值域在 APP-03 没有查询或管理接口；页面明确标注本地参考数据。事件与 Schema 配置页面属于 APP-04，已按线上 Swagger 接入创建事件类型、创建 Schema 草稿、测试、发布和按事件类型/版本查询。`src/api/client.ts` 已识别上述正式路径；后端增加列表或管理接口时需同步更新接口白名单与页面。
 
 本次仅核对 Swagger 和代码并更新页面、接口及本文档，未执行打包、测试、lint、启动或页面联调；实际业务参数、鉴权及响应仍待环境联调。
+
+### 11.6 2026-09-18 实时 Swagger 修订
+
+- 本项目接口契约的唯一来源改为 `http://192.168.1.39/api/tcmirp/v3/api-docs`，Swagger UI 仅用于浏览；本地 `jk.txt` 不再作为对接依据。
+- APP-03 的 `ownerPartyId`、`projectSpaceId`、`batchId`、`sourceSystemId`、`fileId`、`expectedRecordCount`、`rawRecordId`、`replayId` 及治理票据 ID 均按数字字符串处理。
+- `EventTypeRequest` 的名称字段为 `eventName`，不是 `name`；事件类型页面和 API 类型已同步调整。
+- `MappingIssue` 字段为 `fieldPath`、`ruleCode`、`errorCode`、`message`，页面已按实时模型展示。
+- APP-03 仍未提供来源系统列表、批次列表、治理案卷、数据元和值域管理接口；这些页面不得虚构正式查询或保存能力。
+- 2026-09-18 实时 Swagger 已将多数大整数 ID 定义为带 `^-?[0-9]+$` 约束的字符串；接入与治理页面不得再使用 `el-input-number` 或 `Number(...)` 转换这些 ID。
+
+### 11.7 主数据中心（APP-02）
+
+主数据中心已按实时 Swagger 增加或调整为四个独立入口：主体、标识命名空间、业务对象登记、标识绑定。对应接口如下：
+
+| 页面 | 接口 | 页面行为 |
+| --- | --- | --- |
+| 主体 | `POST /openapi/v1/parties` | 提交主体类型、名称、行政区划编码及扩展属性 JSON 字符串，展示 `partyId`、`status` |
+| 标识命名空间 | `POST /openapi/v1/identifier-namespaces` | 提交命名空间编码、名称、目标类型和标识值正则，展示接口返回的完整定义 |
+| 业务对象登记 | `POST /openapi/v1/business-objects` | 项目空间 ID、所有者主体 ID 均按数字字符串提交；动态属性按 JSON 字符串提交，展示 `objectId`、`versionNo` |
+| 标识绑定 | `POST /openapi/v1/identifiers-resolve`、`POST /openapi/v1/identifier-bindings` | 支持先解析再自动回填目标 ID，也支持从歧义候选中选取目标后绑定；生效时间按 `yyyy-MM-dd HH:mm:ss` 提交 |
+
+上述接口当前均未提供列表查询能力，页面只展示本次操作的接口返回结果，不加载本地样例列表。`src/api/client.ts` 已将命名空间登记加入正式接口白名单。本次未执行打包、测试、lint、项目启动或页面联调。
 
 ## 12. 后续接手建议
 

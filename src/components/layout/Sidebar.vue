@@ -8,6 +8,7 @@
       :default-active="activePath"
       class="sidebar-menu"
       :router="true"
+      unique-opened
       background-color="#ffffff"
       text-color="#1a2420"
       active-text-color="#176b4d"
@@ -89,11 +90,11 @@ const menuGroups = [
     icon: Filter,
     items: [
       { title: '来源系统', path: '/governance/sources', hasApi: true, apiPath: '/openapi/v1/source-systems' },
-      { title: '接入批次', path: '/governance/batches', hasApi: true, apiPath: '/openapi/v1/batches, /raw-records' },
-      { title: '字段映射', path: '/governance/mappings', hasApi: true, apiPath: '/openapi/v1/mappings/test' },
+      { title: '接入批次与原始记录', path: '/governance/batches', hasApi: true, apiPath: '/openapi/v1/batches, /openapi/v1/raw-records' },
+      { title: '字段映射预检', path: '/governance/mappings', hasApi: true, apiPath: '/openapi/v1/mappings/test' },
       { title: '治理异常案卷', path: '/governance/cases', hasApi: false, apiPath: '' },
       { title: '数据元与值域', path: '/governance/standards', hasApi: false, apiPath: '' },
-      { title: '事件 Schema 配置', path: '/governance/events', hasApi: false, apiPath: '' }
+      { title: '事件 Schema 配置', path: '/governance/events', hasApi: true, apiPath: '/openapi/v1/event-fact/config' }
     ]
   },
   {
@@ -101,8 +102,10 @@ const menuGroups = [
     index: 'master-data',
     icon: OfficeBuilding,
     items: [
-      { title: '主体机构', path: '/master-data/parties', hasApi: true, apiPath: '/openapi/v1/parties' },
-      { title: '业务对象', path: '/master-data/objects', hasApi: true, apiPath: '/openapi/v1/business-objects' },
+      { title: '主体', path: '/master-data/parties', hasApi: true, apiPath: '/openapi/v1/parties' },
+      { title: '标识命名空间', path: '/master-data/identifier-namespaces', hasApi: true, apiPath: '/openapi/v1/identifier-namespaces' },
+      { title: '业务对象登记', path: '/master-data/objects', hasApi: true, apiPath: '/openapi/v1/business-objects' },
+      { title: '标识绑定', path: '/master-data/identifier-bindings', hasApi: true, apiPath: '/openapi/v1/identifier-bindings' },
       { title: '饮片与监管编码', path: '/master-data/decoction-pieces', hasApi: true, apiPath: '/openapi/v1/decoction-piece-products' }
     ]
   },

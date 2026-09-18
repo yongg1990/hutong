@@ -34,7 +34,7 @@
     </div>
 
     <!-- Node Detail Drawer -->
-    <el-drawer v-model="drawerVisible" :title="'节点详情: ' + (selectedNode?.label || '')" size="420px">
+    <el-drawer v-model="drawerVisible" :title="'节点详情: ' + (selectedNode?.label || '')" size="420px" :close-on-click-modal="false">
       <div v-if="selectedNode">
         <div class="kv-row"><span>节点编号:</span> <b class="mono">{{ selectedNode.id }}</b></div>
         <div class="kv-row"><span>节点类型:</span> <b>{{ selectedNode.type }}</b></div>

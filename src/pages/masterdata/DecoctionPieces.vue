@@ -37,7 +37,7 @@
     </div>
 
     <!-- Register Herb Piece Modal -->
-    <el-dialog v-model="createModalVisible" title="登记中药饮片与监管编码标准" width="540px">
+    <el-dialog v-model="createModalVisible" title="登记中药饮片与监管编码标准" width="540px" :close-on-click-modal="false">
       <el-form :model="createForm" label-position="top">
         <el-form-item label="品种名称" required>
           <el-input v-model="createForm.speciesName" placeholder="如: 三七、天麻、黄芪" />

@@ -98,9 +98,19 @@ const router = createRouter({
           component: () => import('@/pages/masterdata/Parties.vue')
         },
         {
+          path: 'master-data/identifier-namespaces',
+          name: 'MasterIdentifierNamespaces',
+          component: () => import('@/pages/masterdata/IdentifierNamespaces.vue')
+        },
+        {
           path: 'master-data/objects',
           name: 'MasterObjects',
           component: () => import('@/pages/masterdata/Objects.vue')
+        },
+        {
+          path: 'master-data/identifier-bindings',
+          name: 'MasterIdentifierBindings',
+          component: () => import('@/pages/masterdata/IdentifierBindings.vue')
         },
         {
           path: 'master-data/decoction-pieces',

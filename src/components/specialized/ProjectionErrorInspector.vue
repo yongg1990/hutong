@@ -4,6 +4,7 @@
     title="互通投影失败字段透视与来源定位器 (Projection Error Inspector)"
     width="680px"
     append-to-body
+    :close-on-click-modal="false"
   >
     <div class="inspector-header">
       <el-alert

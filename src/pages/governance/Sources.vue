@@ -15,7 +15,11 @@
       <el-table :data="sources" empty-text="暂无本次注册记录">
         <el-table-column prop="id" label="来源系统 ID" width="130" class-name="mono" />
         <el-table-column prop="code" label="系统标识" width="140" class-name="mono" />
-        <el-table-column prop="name" label="系统名称（提交值）" min-width="180" />
+        <el-table-column prop="name" label="系统名称 *" min-width="180" />
+        <el-table-column prop="systemType" label="来源类型 *" width="120" />
+        <el-table-column prop="endpointType" label="接入方式 *" width="110" />
+        <el-table-column prop="ownerPartyId" label="所属主体 ID *" width="150" class-name="mono" />
+        <el-table-column prop="purposeCodes" label="默认用途代码 *" min-width="160" class-name="mono" />
         <el-table-column prop="version" label="配置版本" width="110" class-name="mono" />
         <el-table-column prop="registeredAt" label="注册时间" width="170" />
         <el-table-column label="状态" width="100">
@@ -25,7 +29,7 @@
     </div>
 
     <!-- Register Modal -->
-    <el-dialog v-model="dialogVisible" title="注册新接入来源系统" width="520px">
+    <el-dialog v-model="dialogVisible" title="注册新接入来源系统" width="520px" :close-on-click-modal="false">
       <el-form :model="regForm" label-position="top">
         <el-form-item label="系统标识 (Source Code)" required>
           <el-input v-model="regForm.systemCode" placeholder="如: WMS-KM-02" />
@@ -34,7 +38,7 @@
           <el-input v-model="regForm.systemName" placeholder="如: 昆明二号仓储管理系统" />
         </el-form-item>
         <el-form-item label="来源系统类型" required><el-input v-model="regForm.systemType" placeholder="如 WMS、LIMS、ERP" /></el-form-item>
-        <el-form-item label="所属主体 ID" required><el-input-number v-model="regForm.ownerPartyId" :min="1" style="width: 100%" /></el-form-item>
+        <el-form-item label="所属主体 ID" required><el-input v-model="regForm.ownerPartyId" placeholder="数字 ID 字符串" /></el-form-item>
         <el-form-item label="接入方式" required>
           <el-select v-model="regForm.endpointType" style="width: 100%">
             <el-option v-for="item in ['API', 'FILE', 'MESSAGE', 'DATABASE']" :key="item" :label="item" :value="item" />
@@ -69,7 +73,7 @@ const saving = ref(false);
 const emptyForm = () => ({
   systemCode: '',
   systemName: '',
-  systemType: '', ownerPartyId: 0, endpointType: 'API', baseUrl: '',
+  systemType: '', ownerPartyId: '', endpointType: 'API', baseUrl: '',
   signaturePublicKey: '', signatureAlgorithm: '', trustLevel: '', purposeCodes: '', status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE'
 });
 const regForm = ref(emptyForm());
@@ -83,6 +87,10 @@ const openRegister = () => {
 const confirmRegister = async () => {
   const form = regForm.value;
   const purposeCodes = form.purposeCodes.split(',').map(item => item.trim()).filter(Boolean);
+  if (form.ownerPartyId && !/^-?\d+$/.test(form.ownerPartyId)) {
+    ElMessage.warning('所属主体 ID 必须是数字字符串');
+    return;
+  }
   if (!form.systemCode || !form.systemName || !form.systemType || !form.ownerPartyId || !form.signaturePublicKey || !form.signatureAlgorithm || !form.trustLevel || !purposeCodes.length) {
     ElMessage.warning('请填写所有必填字段');
     return;
@@ -97,7 +105,9 @@ const confirmRegister = async () => {
     };
     const created = await governanceApi.registerSourceSystem(payload);
     sources.value.unshift({
-      id: created.sourceSystemId, code: created.sourceSystemCode, name: form.systemName, status: created.status,
+      id: created.sourceSystemId, code: created.sourceSystemCode, name: form.systemName,
+      systemType: form.systemType, endpointType: form.endpointType, ownerPartyId: form.ownerPartyId,
+      purposeCodes: purposeCodes.join(', '), status: created.status,
       version: created.version,
       registeredAt: created.registeredAt
     });

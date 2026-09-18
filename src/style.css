@@ -257,6 +257,12 @@ body {
   padding: 18px 20px !important;
 }
 
+.pagination-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 0 2px;
+}
+
 a {
   color: var(--color-brand);
   text-decoration: none;

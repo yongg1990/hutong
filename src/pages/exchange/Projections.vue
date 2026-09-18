@@ -99,7 +99,7 @@
       </div>
     </div>
 
-    <el-dialog v-model="createDialogVisible" title="新建投影任务" width="620px">
+    <el-dialog v-model="createDialogVisible" title="新建投影任务" width="620px" :close-on-click-modal="false">
       <el-form :model="createForm" label-position="top">
         <div class="form-grid">
           <el-form-item label="规范包代码" required><el-input v-model="createForm.profileCode" /></el-form-item>

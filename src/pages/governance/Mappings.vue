@@ -12,7 +12,7 @@
     <el-form :model="form" label-position="top" class="precheck-form">
       <el-form-item label="映射配置代码" required><el-input v-model="form.mappingProfileCode" /></el-form-item>
       <el-form-item label="映射配置版本" required><el-input v-model="form.mappingProfileVersion" /></el-form-item>
-      <el-form-item label="来源系统 ID" required><el-input-number v-model="form.sourceSystemId" :min="1" style="width: 100%" /></el-form-item>
+      <el-form-item label="来源系统 ID" required><el-input v-model="form.sourceSystemId" placeholder="数字 ID 字符串" /></el-form-item>
       <el-form-item label="目标事件类型" required><el-input v-model="form.targetEventType" /></el-form-item>
       <el-form-item label="目标 Schema 版本" required><el-input v-model="form.targetSchemaVersion" /></el-form-item>
       <el-form-item label="警告阻断"><el-switch v-model="form.failOnWarning" /></el-form-item>
@@ -35,12 +35,12 @@
               <tr>
                 <th>字段路径</th>
                 <th>规则码</th>
-                <th>级别</th>
+                <th>错误码</th>
                 <th>消息</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(issue, idx) in previewIssues" :key="idx"><td>{{ issue.path }}</td><td>{{ issue.ruleCode }}</td><td>{{ issue.severity }}</td><td>{{ issue.message }}</td></tr>
+              <tr v-for="(issue, idx) in previewIssues" :key="idx"><td>{{ issue.fieldPath }}</td><td>{{ issue.ruleCode }}</td><td>{{ issue.errorCode }}</td><td>{{ issue.message }}</td></tr>
             </tbody>
           </table>
         </div>
@@ -50,12 +50,23 @@
       <div class="column-panel">
         <div class="panel-head">预检响应</div>
         <div class="preview-box">
+          <el-descriptions :column="1" size="small" border>
+            <el-descriptions-item label="预检结果">
+              <StatusTag :code="previewResult.passed ? 'COMPLETED' : 'FAILED'" :label="previewResult.passed ? '通过' : '未通过'" />
+            </el-descriptions-item>
+            <el-descriptions-item label="映射事件类型">{{ previewResult.mappedEventType || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="映射配置版本">{{ previewResult.mappingProfileVersion || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="目标 Schema 版本">{{ previewResult.targetSchemaVersion || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="治理票据 ID">
+              <span class="mono">{{ (previewResult.governanceTickets || []).join(', ') || '-' }}</span>
+            </el-descriptions-item>
+          </el-descriptions>
           <div class="json-code mono">{{ previewJsonText }}</div>
 
           <div v-if="previewIssues.length > 0" class="error-notice">
             <div v-for="(iss, idx) in previewIssues" :key="idx" style="margin-bottom: 8px;">
-              <strong>{{ iss.severity === 'ERROR' ? '规则拦截' : '预检提醒' }} [{{ iss.ruleCode }}]:</strong>
-              <p><code>{{ iss.path }}</code> {{ iss.message }}</p>
+              <strong>规则问题 [{{ iss.ruleCode || iss.errorCode }}]:</strong>
+              <p><code>{{ iss.fieldPath }}</code> {{ iss.message }}</p>
             </div>
           </div>
           <div v-else class="success-notice" style="background: #eef7f2; border: 1px solid #c2e2cf; border-radius: 4px; padding: 10px; font-size: 12px; margin-top: 12px; color: #0e5f40;">
@@ -71,9 +82,10 @@
 import { ref, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
+import StatusTag from '@/components/common/StatusTag.vue';
 import { governanceApi, type MappingIssue } from '@/api/governance';
 import { apiErrorMessage } from '@/api/client';
-const form = ref({ mappingProfileCode: '', mappingProfileVersion: '', sourceSystemId: Number(localStorage.getItem('tcmirp_source_system_id')) || 0, targetEventType: '', targetSchemaVersion: '', failOnWarning: false });
+const form = ref({ mappingProfileCode: '', mappingProfileVersion: '', sourceSystemId: localStorage.getItem('tcmirp_source_system_id') || '', targetEventType: '', targetSchemaVersion: '', failOnWarning: false });
 const sampleJson = ref('{}');
 const sampleKeys = ref<string[]>([]);
 const prechecking = ref(false);
@@ -83,6 +95,10 @@ const previewIssues = ref<MappingIssue[]>([]);
 const previewJsonText = computed(() => JSON.stringify(previewResult.value, null, 2));
 
 const runPrecheck = async () => {
+  if (form.value.sourceSystemId && !/^-?\d+$/.test(form.value.sourceSystemId)) {
+    ElMessage.warning('来源系统 ID 必须是数字字符串');
+    return;
+  }
   if (!form.value.mappingProfileCode || !form.value.mappingProfileVersion || !form.value.sourceSystemId || !form.value.targetEventType || !form.value.targetSchemaVersion) {
     ElMessage.warning('请填写映射和目标事件信息');
     return;

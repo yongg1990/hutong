@@ -238,7 +238,7 @@
     </div>
 
     <!-- Walkthrough Guide Dialog -->
-    <el-dialog v-model="guideModalVisible" title="云南中药材全产业链协同与可信追溯全流程演练指南" width="680px">
+    <el-dialog v-model="guideModalVisible" title="云南中药材全产业链协同与可信追溯全流程演练指南" width="680px" :close-on-click-modal="false">
       <div class="guide-content">
         <p style="margin-bottom: 16px; color: #3f4e48; font-size: 13px;">
           本平台已完成从<strong>源头田间种植</strong>至<strong>终端处方代煎</strong>的完整数据链路贯通。您可以按照以下 6 个标准业务阶段顺序体验全链条协同与数据穿透：

@@ -4,6 +4,7 @@
     title="Schema 版本差异可视化对比 (Diff Inspector)"
     width="720px"
     append-to-body
+    :close-on-click-modal="false"
   >
     <div class="diff-header">
       <div class="version-tag left">

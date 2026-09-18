@@ -1,8 +1,8 @@
 <template>
   <div class="governance-page">
     <PageHeader
-      title="接入批次"
-      subtitle="创建批量接入任务，按任务 ID 查询处理状态"
+      title="接入批次与原始记录"
+      subtitle="创建批量接入任务、留存不可变原始记录并按任务 ID 查询处理状态"
     >
       <template #actions>
         <el-button @click="loadBatches">刷新查询</el-button>
@@ -14,6 +14,19 @@
       </template>
     </PageHeader>
     <el-alert type="info" :closable="false" title="接口不提供批次列表。请输入批量任务 ID 查询；原始记录重放需要单独的 rawRecordId。" style="margin-bottom: 12px" />
+
+    <div v-if="lastOperation" class="operation-result panel">
+      <div class="panel-header">
+        <h2>{{ lastOperation.title }}</h2>
+        <el-button text size="small" @click="lastOperation = null">关闭</el-button>
+      </div>
+      <div class="operation-grid">
+        <div v-for="item in lastOperation.items" :key="item.label" class="operation-item">
+          <span class="operation-label">{{ item.label }}</span>
+          <span class="operation-value mono">{{ item.value || '-' }}</span>
+        </div>
+      </div>
+    </div>
 
     <!-- KPI Summary Grid -->
     <div class="kpi-grid">
@@ -101,7 +114,7 @@
     </div>
 
     <!-- Error Drawer -->
-    <el-drawer v-model="drawerVisible" title="接入批次失败明细" size="520px">
+    <el-drawer v-model="drawerVisible" title="接入批次失败明细" size="520px" :close-on-click-modal="false">
       <div v-if="selectedBatch" class="drawer-inner">
         <div class="batch-meta-banner">
           <div class="meta-item">
@@ -125,7 +138,7 @@
       </div>
     </el-drawer>
     <!-- Create Batch Modal (OpenAPI: POST /openapi/v1/batches) -->
-    <el-dialog v-model="createBatchVisible" title="创建数据接入批次作业" width="560px">
+    <el-dialog v-model="createBatchVisible" title="创建数据接入批次作业" width="560px" :close-on-click-modal="false">
       <el-form :model="batchForm" label-position="top">
         <el-form-item label="批次唯一编码 (batchCode)" required>
           <el-input v-model="batchForm.batchCode" placeholder="如: BATCH-KM-05" />
@@ -133,7 +146,7 @@
         <el-form-item label="来源批次键 (sourceBatchKey)"><el-input v-model="batchForm.sourceBatchKey" /></el-form-item>
         <div style="display: flex; gap: 12px;">
           <el-form-item label="文件 ID (fileId)" style="flex: 1" required>
-            <el-input-number v-model="batchForm.fileId" :min="1" style="width: 100%" />
+            <el-input v-model="batchForm.fileId" placeholder="数字 ID 字符串" />
           </el-form-item>
           <el-form-item label="业务用途 (businessPurpose)" style="flex: 1" required>
             <el-input v-model="batchForm.businessPurpose" placeholder="TRACE" />
@@ -141,7 +154,7 @@
         </div>
         <div style="display: flex; gap: 12px;">
           <el-form-item label="来源系统 ID" style="flex: 1" required>
-            <el-input-number v-model="batchForm.sourceSystemId" :min="1" style="width: 100%" />
+            <el-input v-model="batchForm.sourceSystemId" placeholder="数字 ID 字符串" />
           </el-form-item>
           <el-form-item label="输入数据格式 (inputFormat)" style="flex: 1" required>
             <el-select v-model="batchForm.inputFormat" style="width: 100%">
@@ -161,7 +174,7 @@
         </div>
         <div style="display: flex; gap: 12px;">
           <el-form-item label="预期记录总数 (expectedRecordCount)" style="flex: 1">
-            <el-input-number v-model="batchForm.expectedRecordCount" :min="1" :max="100000" style="width: 100%" />
+            <el-input v-model="batchForm.expectedRecordCount" placeholder="数字字符串" />
           </el-form-item>
           <el-form-item label="提交处理模式" style="flex: 1">
             <el-select v-model="batchForm.submitMode" style="width: 100%">
@@ -182,7 +195,7 @@
         <el-button type="primary" :loading="creatingBatch" @click="confirmCreateBatch">确认提交</el-button>
       </template>
     </el-dialog>
-    <el-dialog v-model="replayVisible" title="重放原始记录" width="480px">
+    <el-dialog v-model="replayVisible" title="重放原始记录" width="480px" :close-on-click-modal="false">
       <el-form label-position="top">
         <el-form-item label="原始记录 ID" required><el-input v-model="replayRawId" /></el-form-item>
         <el-form-item label="映射版本" required><el-input v-model="replayVersion" /></el-form-item>
@@ -190,11 +203,11 @@
       </el-form>
       <template #footer><el-button @click="replayVisible = false">取消</el-button><el-button type="primary" :loading="replaying" @click="triggerReplay">提交重放</el-button></template>
     </el-dialog>
-    <el-dialog v-model="rawVisible" title="留存原始记录" width="560px">
+    <el-dialog v-model="rawVisible" title="留存原始记录" width="560px" :close-on-click-modal="false">
       <el-form :model="rawForm" label-position="top">
-        <el-form-item label="项目空间 ID" required><el-input-number v-model="rawForm.projectSpaceId" :min="1" style="width: 100%" /></el-form-item>
-        <el-form-item label="批量任务 ID"><el-input-number v-model="rawForm.batchId" :min="0" style="width: 100%" /></el-form-item>
-        <el-form-item label="来源系统 ID" required><el-input-number v-model="rawForm.sourceSystemId" :min="1" style="width: 100%" /></el-form-item>
+        <el-form-item label="项目空间 ID" required><el-input v-model="rawForm.projectSpaceId" placeholder="数字 ID 字符串" /></el-form-item>
+        <el-form-item label="批量任务 ID"><el-input v-model="rawForm.batchId" placeholder="数字 ID 字符串" /></el-form-item>
+        <el-form-item label="来源系统 ID" required><el-input v-model="rawForm.sourceSystemId" placeholder="数字 ID 字符串" /></el-form-item>
         <el-form-item label="来源业务键" required><el-input v-model="rawForm.sourceBusinessKey" /></el-form-item>
         <el-form-item label="内容类型" required><el-input v-model="rawForm.contentType" placeholder="application/json" /></el-form-item>
         <el-form-item label="内容摘要"><el-input v-model="rawForm.contentDigest" /></el-form-item>
@@ -222,7 +235,7 @@ const replayVisible = ref(false);
 const replaying = ref(false);
 const rawVisible = ref(false);
 const preserving = ref(false);
-const rawForm = ref({ projectSpaceId: Number(localStorage.getItem('tcmirp_project_space_id')) || 0, batchId: 0, sourceSystemId: Number(localStorage.getItem('tcmirp_source_system_id')) || 0, sourceBusinessKey: '', contentType: 'application/json', contentDigest: '', fileFragmentRef: '', rawPayload: '' });
+const rawForm = ref({ projectSpaceId: localStorage.getItem('tcmirp_project_space_id') || '', batchId: '', sourceSystemId: localStorage.getItem('tcmirp_source_system_id') || '', sourceBusinessKey: '', contentType: 'application/json', contentDigest: '', fileFragmentRef: '', rawPayload: '' });
 const batchId = ref('');
 const includeFailures = ref(true);
 const drawerVisible = ref(false);
@@ -230,17 +243,18 @@ const createBatchVisible = ref(false);
 const creatingBatch = ref(false);
 const selectedBatch = ref<IngestBatch | null>(null);
 const loading = ref(false);
+const lastOperation = ref<{ title: string; items: Array<{ label: string; value: string }> } | null>(null);
 
 const batchForm = ref({
   batchCode: '',
-  sourceSystemId: Number(localStorage.getItem('tcmirp_source_system_id')) || 0,
+  sourceSystemId: localStorage.getItem('tcmirp_source_system_id') || '',
   mappingProfileCode: '',
   mappingProfileVersion: '',
   inputFormat: 'JSON',
-  fileId: 0,
+  fileId: '',
   businessPurpose: '',
   sourceBatchKey: '',
-  expectedRecordCount: 1,
+  expectedRecordCount: '',
   submitMode: 'ASYNC',
   onError: 'CONTINUE_ON_ERROR'
 });
@@ -248,14 +262,14 @@ const batchForm = ref({
 const openCreateBatchModal = () => {
   batchForm.value = {
     batchCode: '',
-    sourceSystemId: Number(localStorage.getItem('tcmirp_source_system_id')) || 0,
+    sourceSystemId: localStorage.getItem('tcmirp_source_system_id') || '',
     mappingProfileCode: '',
     mappingProfileVersion: '',
     inputFormat: 'JSON',
-    fileId: 0,
+    fileId: '',
     businessPurpose: '',
     sourceBatchKey: '',
-    expectedRecordCount: 1,
+    expectedRecordCount: '',
     submitMode: 'ASYNC',
     onError: 'CONTINUE_ON_ERROR'
   };
@@ -263,14 +277,42 @@ const openCreateBatchModal = () => {
 };
 
 const confirmCreateBatch = async () => {
+  const numericFields = [batchForm.value.sourceSystemId, batchForm.value.fileId, batchForm.value.expectedRecordCount].filter(Boolean);
+  if (numericFields.some(value => !/^-?\d+$/.test(value))) {
+    ElMessage.warning('来源系统 ID、文件 ID 和预期记录数必须是数字字符串');
+    return;
+  }
   if (!batchForm.value.batchCode || !batchForm.value.sourceSystemId || !batchForm.value.fileId || !batchForm.value.mappingProfileCode || !batchForm.value.mappingProfileVersion || !batchForm.value.businessPurpose || !batchForm.value.inputFormat || !batchForm.value.onError || !batchForm.value.submitMode) {
     ElMessage.warning('请填写所有必填字段');
     return;
   }
   creatingBatch.value = true;
   try {
-    const res = await governanceApi.createBatch(batchForm.value);
+    const form = batchForm.value;
+    const res = await governanceApi.createBatch({
+      batchCode: form.batchCode,
+      sourceSystemId: form.sourceSystemId,
+      mappingProfileCode: form.mappingProfileCode,
+      mappingProfileVersion: form.mappingProfileVersion,
+      inputFormat: form.inputFormat,
+      fileId: form.fileId,
+      businessPurpose: form.businessPurpose,
+      onError: form.onError,
+      submitMode: form.submitMode,
+      ...(form.sourceBatchKey.trim() ? { sourceBatchKey: form.sourceBatchKey.trim() } : {}),
+      ...(form.expectedRecordCount.trim() ? { expectedRecordCount: form.expectedRecordCount.trim() } : {})
+    });
     batchId.value = String(res.batchId);
+    lastOperation.value = {
+      title: '批次受理结果',
+      items: [
+        { label: '批次 ID', value: String(res.batchId || '') },
+        { label: '业务编号', value: res.batchCode || '' },
+        { label: '任务状态', value: res.batchStatus || '' },
+        { label: '受理时间', value: res.acceptedAt || '' },
+        { label: '状态查询地址', value: res.statusQueryUrl || '' }
+      ]
+    };
     createBatchVisible.value = false;
     ElMessage.success(`批次作业 [${res.batchCode}] 已受理`);
   } catch (e) {
@@ -284,26 +326,28 @@ const confirmCreateBatch = async () => {
 
 const batches = ref<IngestBatch[]>([]);
 
-const totalRecords = computed(() => {
-  return batches.value.reduce((acc, cur) => acc + (cur.totalCount || 0), 0);
-});
+const sumCount = (field: 'totalCount' | 'successCount' | 'failCount') =>
+  batches.value.reduce((acc, cur) => acc + BigInt(cur[field] || '0'), 0n);
 
-const totalSuccess = computed(() => {
-  return batches.value.reduce((acc, cur) => acc + (cur.successCount || 0), 0);
-});
-
-const totalFailed = computed(() => {
-  return batches.value.reduce((acc, cur) => acc + (cur.failCount || 0), 0);
-});
+const totalRecords = computed(() => sumCount('totalCount').toString());
+const totalSuccess = computed(() => sumCount('successCount').toString());
+const totalFailed = computed(() => sumCount('failCount').toString());
 
 const successRate = computed(() => {
-  if (totalRecords.value === 0) return 0;
-  return ((totalSuccess.value / totalRecords.value) * 100).toFixed(1);
+  const total = BigInt(totalRecords.value);
+  if (total === 0n) return '0.0';
+  const tenths = (BigInt(totalSuccess.value) * 1000n) / total;
+  return String(tenths / 10n) + '.' + String(tenths % 10n);
 });
 
 const loadBatches = async () => {
   if (!batchId.value.trim()) {
     batches.value = [];
+    return;
+  }
+  if (!/^-?\d+$/.test(batchId.value.trim())) {
+    batches.value = [];
+    ElMessage.warning('批量任务 ID 必须是数字字符串');
     return;
   }
   loading.value = true;
@@ -312,7 +356,7 @@ const loadBatches = async () => {
       batchId: batchId.value || undefined,
       includeFailures: includeFailures.value,
       pageNo: 1,
-      pageSize: 20
+      pageSize: 100
     });
   } catch (err) {
     batches.value = [];
@@ -339,13 +383,23 @@ const openErrorDrawer = (row: IngestBatch) => {
 };
 
 const triggerReplay = async () => {
-  if (!/^\d+$/.test(replayRawId.value) || !replayVersion.value.trim() || !replayReason.value.trim()) {
+  if (!/^-?\d+$/.test(replayRawId.value) || !replayVersion.value.trim() || !replayReason.value.trim()) {
     ElMessage.warning('请输入原始记录 ID、映射版本和重放原因');
     return;
   }
   replaying.value = true;
   try {
     const res = await governanceApi.replayRawRecord(replayRawId.value, replayVersion.value, replayReason.value);
+    lastOperation.value = {
+      title: '原始记录重放结果',
+      items: [
+        { label: '重放 ID', value: String(res.replayId || '') },
+        { label: '原始记录 ID', value: String(res.rawRecordId || '') },
+        { label: '映射版本', value: res.mappingVersion || '' },
+        { label: '处理状态', value: res.status || '' },
+        { label: '请求时间', value: res.requestedAt || '' }
+      ]
+    };
     ElMessage.success(`原始记录重放已受理，任务 ID: ${res.replayId}`);
     replayVisible.value = false;
     if (batchId.value) await loadBatches();
@@ -356,6 +410,11 @@ const triggerReplay = async () => {
 
 const preserveRaw = async () => {
   const form = rawForm.value;
+  const numericIds = [form.projectSpaceId, form.batchId, form.sourceSystemId].filter(Boolean);
+  if (numericIds.some(value => !/^-?\d+$/.test(value))) {
+    ElMessage.warning('项目空间 ID、批量任务 ID 和来源系统 ID 必须是数字字符串');
+    return;
+  }
   if (!form.projectSpaceId || !form.sourceSystemId || !form.sourceBusinessKey.trim() || !form.contentType.trim() || (!form.rawPayload && !form.fileFragmentRef)) {
     ElMessage.warning('请填写必填字段及原始内容或文件片段引用');
     return;
@@ -370,6 +429,15 @@ const preserveRaw = async () => {
       ...(form.rawPayload ? { rawPayload: form.rawPayload } : {})
     });
     replayRawId.value = String(result.rawRecordId);
+    lastOperation.value = {
+      title: '原始记录留存结果',
+      items: [
+        { label: '原始记录 ID', value: String(result.rawRecordId || '') },
+        { label: '内容摘要', value: result.contentDigest || '' },
+        { label: '记录状态', value: result.status || '' },
+        { label: '幂等命中', value: result.duplicate ? '是' : '否' }
+      ]
+    };
     rawVisible.value = false;
     ElMessage.success(`原始记录 ${result.rawRecordId} 已受理${result.duplicate ? '（幂等命中）' : ''}`);
   } catch (err) { ElMessage.error(apiErrorMessage(err, '原始记录留存失败')); }
@@ -393,6 +461,40 @@ const preserveRaw = async () => {
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border-subtle);
   background: #fbfdfc;
+}
+
+.operation-result {
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.operation-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.operation-item {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.operation-label {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.operation-value {
+  overflow-wrap: anywhere;
+  color: var(--color-ink);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .operation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .panel-header h2 {

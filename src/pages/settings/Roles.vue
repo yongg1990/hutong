@@ -6,6 +6,7 @@
     >
       <template #actions>
         <el-button @click="loadRoles">刷新角色</el-button>
+        <el-button @click="openPermissionManager">编辑权限</el-button>
         <el-button type="primary" @click="openCreateDialog">
           + 新增业务角色
         </el-button>
@@ -17,7 +18,7 @@
       <div class="kpi-card">
         <span class="label">角色数</span>
         <div class="value">
-          <strong class="mono">{{ roles.length }}</strong>
+          <strong class="mono">{{ total }}</strong>
           <span class="unit">个角色</span>
         </div>
       </div>
@@ -33,21 +34,16 @@
 
     <!-- Filter Bar -->
     <FilterBar @search="handleSearch" @reset="handleReset">
-      <el-input
-        v-model="keyword"
-        placeholder="角色编码 (ROLE_*) / 角色名称"
-        style="width: 260px"
-        clearable
-      />
+      <el-input v-model="tenantFilter" placeholder="租户 ID（留空查询全部）" style="width: 260px" clearable />
     </FilterBar>
 
     <!-- Roles Table Panel -->
     <div class="panel">
       <div class="panel-header">
-        <h2>系统角色权能清单 ({{ filteredRoles.length }})</h2>
+        <h2>系统角色权能清单 ({{ total }})</h2>
       </div>
       <div class="panel-body">
-        <el-table :data="filteredRoles" v-loading="loading" style="width: 100%" empty-text="暂无匹配的角色定义">
+        <el-table :data="roles" v-loading="loading" style="width: 100%" empty-text="暂无匹配的角色定义">
           <el-table-column prop="roleId" label="角色 ID" width="110" />
           <el-table-column prop="tenantId" label="租户 ID" width="110" />
           <el-table-column prop="roleCode" label="角色标识编码" min-width="170" class-name="mono">
@@ -76,6 +72,17 @@
             </template>
           </el-table-column>
         </el-table>
+        <div class="pagination-row">
+          <el-pagination
+            v-model:current-page="page"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="total"
+            layout="total, sizes, prev, pager, next"
+            @current-change="loadRoles"
+            @size-change="handleSizeChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -83,8 +90,9 @@
     <el-drawer
       v-model="drawerVisible"
       :title="'配置角色权限: ' + (activeRole?.roleName || '')"
-      size="560px"
+      size="min(960px, 96vw)"
       v-loading="loadingPerms"
+      :close-on-click-modal="false"
     >
       <div v-if="activeRole" class="drawer-perm-content">
         <div class="perm-banner">
@@ -139,12 +147,82 @@
       </div>
     </el-drawer>
 
+    <el-dialog v-model="permissionManagerVisible" title="编辑权限" width="min(960px, 96vw)" class="permission-manager-dialog" :close-on-click-modal="false">
+      <el-input v-model="permissionNameFilter" placeholder="搜索权限名称" clearable class="permission-search" />
+      <el-table
+        :key="permissionNameFilter.trim() ? 'search' : 'all'"
+        :data="filteredPermissionTree"
+        :row-key="row => String(row.id)"
+        :tree-props="{ children: 'children' }"
+        :default-expand-all="!!permissionNameFilter.trim()"
+        v-loading="loadingPermissionItems"
+        height="min(520px, calc(80vh - 160px))"
+        style="width: 100%"
+        empty-text="暂无匹配的权限"
+      >
+        <el-table-column prop="label" label="权限名称" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="code" label="权限编码" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="moduleCode" label="模块" width="110" />
+        <el-table-column prop="permissionType" label="类型" width="100" />
+        <el-table-column prop="status" label="状态" width="100" />
+        <el-table-column label="操作" width="130" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="openPermissionEdit(row)">修改</el-button>
+            <el-button link type="danger" @click="confirmDeletePermission(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
+    <el-dialog v-model="permissionEditVisible" title="修改权限" width="560px" append-to-body destroy-on-close :close-on-click-modal="false">
+      <el-form ref="permissionFormRef" :model="permissionForm" :rules="permissionRules" label-width="100px">
+        <el-form-item label="权限编码" prop="permissionCode">
+          <el-input v-model="permissionForm.permissionCode" />
+        </el-form-item>
+        <el-form-item label="权限名称" prop="permissionName">
+          <el-input v-model="permissionForm.permissionName" />
+        </el-form-item>
+        <el-form-item label="模块编码" prop="moduleCode">
+          <el-input v-model="permissionForm.moduleCode" />
+        </el-form-item>
+        <el-form-item label="权限类型" prop="permissionType">
+          <el-select v-model="permissionForm.permissionType" style="width: 100%">
+            <el-option label="目录" value="directory" />
+            <el-option label="菜单" value="menu" />
+            <el-option label="按钮" value="button" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="上级权限">
+          <el-select v-model="permissionForm.parentId" placeholder="根节点" clearable style="width: 100%">
+            <el-option v-for="item in parentOptions" :key="item.id" :label="item.label + ' (' + item.code + ')'" :value="String(item.id)" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="API 方法">
+          <el-input v-model="permissionForm.apiMethod" />
+        </el-form-item>
+        <el-form-item label="API 路径">
+          <el-input v-model="permissionForm.apiPath" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="permissionForm.status" style="width: 100%">
+            <el-option label="启用" value="ACTIVE" />
+            <el-option label="停用" value="INACTIVE" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="permissionEditVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingPermissionItem" @click="savePermissionItem">保存</el-button>
+      </template>
+    </el-dialog>
+
     <!-- Create / Edit Dialog -->
     <el-dialog
       v-model="dialogVisible"
       title="创建新角色"
       width="540px"
       destroy-on-close
+      :close-on-click-modal="false"
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px" label-position="right">
         <el-form-item label="角色编码" prop="roleCode">
@@ -178,7 +256,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue';
-import { ElMessage, type FormInstance, type ElTree } from 'element-plus';
+import { ElMessage, ElMessageBox, type FormInstance, type ElTree } from 'element-plus';
 import { apiErrorMessage } from '@/api/client';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
@@ -186,19 +264,69 @@ import StatusTag from '@/components/common/StatusTag.vue';
 import {
   rbacApi,
   type RoleItem,
-  type PermissionNode
+  type PermissionNode,
+  type PermissionUpdateRequest
 } from '@/api/rbac';
 
 const roles = ref<RoleItem[]>([]);
+const total = ref(0);
+const page = ref(1);
+const pageSize = ref(20);
 const permissionTree = ref<PermissionNode[]>([]);
 const permissionCount = ref(0);
+const permissionItems = ref<PermissionNode[]>([]);
+const permissionNameFilter = ref('');
+const filteredPermissionTree = computed(() => {
+  const tree = buildPermissionTree(permissionItems.value);
+  const keyword = permissionNameFilter.value.trim().toLowerCase();
+  if (!keyword) return tree;
+  const filter = (nodes: PermissionNode[]): PermissionNode[] => nodes.flatMap(node => {
+    if (node.label.toLowerCase().includes(keyword)) return [node];
+    const children = filter(node.children || []);
+    return children.length ? [{ ...node, children }] : [];
+  });
+  return filter(tree);
+});
+const permissionManagerVisible = ref(false);
+const permissionEditVisible = ref(false);
+const loadingPermissionItems = ref(false);
+const savingPermissionItem = ref(false);
+const editingPermission = ref<PermissionNode | null>(null);
+const permissionFormRef = ref<FormInstance>();
+const permissionForm = ref<PermissionUpdateRequest>({
+  permissionCode: '', permissionName: '', moduleCode: '', permissionType: '',
+  parentId: '', apiMethod: '', apiPath: '', status: 'ACTIVE'
+});
+const permissionRules = {
+  permissionCode: [{ required: true, message: '请输入权限编码', trigger: 'blur' }],
+  permissionName: [{ required: true, message: '请输入权限名称', trigger: 'blur' }],
+  moduleCode: [{ required: true, message: '请输入模块编码', trigger: 'blur' }],
+  permissionType: [{ required: true, message: '请选择权限类型', trigger: 'change' }]
+};
+const parentOptions = computed(() => {
+  const excluded = new Set<string>();
+  if (editingPermission.value) {
+    excluded.add(String(editingPermission.value.id));
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const item of permissionItems.value) {
+        if (item.parentId != null && excluded.has(String(item.parentId)) && !excluded.has(String(item.id))) {
+          excluded.add(String(item.id));
+          changed = true;
+        }
+      }
+    }
+  }
+  return permissionItems.value.filter(item => !excluded.has(String(item.id)));
+});
 const loading = ref(false);
 const submitting = ref(false);
 const savingPerms = ref(false);
 const loadingPerms = ref(false);
 
-const keyword = ref('');
-const appliedKeyword = ref('');
+const tenantFilter = ref('');
+const appliedTenantId = ref('');
 const dialogVisible = ref(false);
 const drawerVisible = ref(false);
 
@@ -219,29 +347,21 @@ const rules = {
   roleName: [{ required: true, message: '请输入角色名称', trigger: 'blur' }]
 };
 
-const filteredRoles = computed(() => {
-  return roles.value.filter(item => {
-    if (appliedKeyword.value) {
-      const q = appliedKeyword.value.toLowerCase();
-      const m1 = (item.roleCode || '').toLowerCase().includes(q);
-      const m2 = (item.roleName || '').toLowerCase().includes(q);
-      if (!m1 && !m2) return false;
-    }
-    return true;
-  });
-});
-
 const loadRoles = async () => {
   loading.value = true;
   try {
-    const [rList, pTree] = await Promise.all([
-      rbacApi.getRoles(),
+    const [result, pTree] = await Promise.all([
+      rbacApi.getRolePage({ tenantId: appliedTenantId.value, page: page.value, size: pageSize.value }),
       rbacApi.getPermissionTree()
     ]);
-    roles.value = rList;
+    roles.value = result.records;
+    total.value = result.total;
+    page.value = result.page;
+    pageSize.value = result.size;
     permissionCount.value = pTree.length;
   } catch (err) {
     roles.value = [];
+    total.value = 0;
     permissionCount.value = 0;
     ElMessage.error(apiErrorMessage(err, '角色与权限加载失败'));
   } finally {
@@ -254,12 +374,89 @@ onMounted(() => {
 });
 
 const handleSearch = () => {
-  appliedKeyword.value = keyword.value.trim();
+  appliedTenantId.value = tenantFilter.value.trim();
+  page.value = 1;
+  loadRoles();
 };
 
 const handleReset = () => {
-  keyword.value = '';
-  appliedKeyword.value = '';
+  tenantFilter.value = '';
+  appliedTenantId.value = '';
+  page.value = 1;
+  loadRoles();
+};
+
+const handleSizeChange = () => {
+  page.value = 1;
+  loadRoles();
+};
+
+const loadPermissionItems = async () => {
+  loadingPermissionItems.value = true;
+  try {
+    permissionItems.value = await rbacApi.getPermissions();
+    permissionCount.value = permissionItems.value.length;
+  } catch (err) {
+    ElMessage.error(apiErrorMessage(err, '权限列表加载失败'));
+  } finally {
+    loadingPermissionItems.value = false;
+  }
+};
+
+const openPermissionManager = () => {
+  permissionNameFilter.value = '';
+  permissionManagerVisible.value = true;
+  loadPermissionItems();
+};
+
+const openPermissionEdit = (item: PermissionNode) => {
+  editingPermission.value = item;
+  permissionForm.value = {
+    permissionCode: item.code,
+    permissionName: item.label,
+    moduleCode: item.moduleCode || '',
+    permissionType: item.permissionType || '',
+    parentId: item.parentId == null ? '' : String(item.parentId),
+    apiMethod: item.apiMethod || '',
+    apiPath: item.apiPath || '',
+    status: item.status || 'ACTIVE'
+  };
+  permissionEditVisible.value = true;
+};
+
+const savePermissionItem = async () => {
+  if (!editingPermission.value || !permissionFormRef.value) return;
+  const valid = await permissionFormRef.value.validate().catch(() => false);
+  if (!valid) return;
+  savingPermissionItem.value = true;
+  try {
+    const data = { ...permissionForm.value, parentId: permissionForm.value.parentId || null };
+    await rbacApi.updatePermission(editingPermission.value.id, data);
+    ElMessage.success('权限修改成功');
+    permissionEditVisible.value = false;
+    await loadPermissionItems();
+  } catch (err) {
+    ElMessage.error(apiErrorMessage(err, '权限修改失败'));
+  } finally {
+    savingPermissionItem.value = false;
+  }
+};
+
+const confirmDeletePermission = async (item: PermissionNode) => {
+  try {
+    await ElMessageBox.confirm('确定删除权限【' + item.label + '】吗？', '删除权限', {
+      confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
+    });
+  } catch {
+    return;
+  }
+  try {
+    await rbacApi.deletePermission(item.id);
+    ElMessage.success('权限删除成功');
+    await loadPermissionItems();
+  } catch (err) {
+    ElMessage.error(apiErrorMessage(err, '权限删除失败'));
+  }
 };
 
 const openCreateDialog = () => {
@@ -301,8 +498,10 @@ const openPermissionDrawer = async (row: RoleItem) => {
     const permissions = await rbacApi.getRolePermissions(row.id);
     permissionTree.value = buildPermissionTree(permissions);
     currentCheckedKeys.value = permissions.filter(p => p.granted).map(p => p.code);
+    syncParentChecks();
     await nextTick();
     treeRef.value?.setCheckedKeys(currentCheckedKeys.value);
+    updateParentIndeterminate();
   } catch (err) {
     ElMessage.error(apiErrorMessage(err, '角色权限加载失败'));
     drawerVisible.value = false;
@@ -322,10 +521,46 @@ const buildPermissionTree = (permissions: PermissionNode[]): PermissionNode[] =>
   return roots;
 };
 
-const onTreeCheck = () => {
-  if (treeRef.value) {
-    currentCheckedKeys.value = treeRef.value.getCheckedKeys(false) as string[];
-  }
+const syncParentChecks = () => {
+  const checked = new Set(currentCheckedKeys.value);
+  const visit = (node: PermissionNode): boolean => {
+    if (!node.children?.length) return checked.has(node.code);
+    const allChildrenChecked = node.children.map(visit).every(Boolean);
+    if (allChildrenChecked) checked.add(node.code);
+    else checked.delete(node.code);
+    return allChildrenChecked;
+  };
+  permissionTree.value.forEach(visit);
+  currentCheckedKeys.value = [...checked];
+};
+
+const updateParentIndeterminate = () => {
+  const checked = new Set(currentCheckedKeys.value);
+  const visit = (node: PermissionNode): boolean => {
+    const descendantChecked = node.children?.map(visit).some(Boolean) ?? false;
+    const treeNode = treeRef.value?.getNode(node.code);
+    if (treeNode) treeNode.indeterminate = !checked.has(node.code) && descendantChecked;
+    return checked.has(node.code) || descendantChecked;
+  };
+  permissionTree.value.forEach(visit);
+};
+
+const onTreeCheck = (data: PermissionNode) => {
+  if (!treeRef.value) return;
+  const checked = new Set(treeRef.value.getCheckedKeys(false) as string[]);
+  const isChecked = checked.has(data.code);
+  const updateDescendants = (node: PermissionNode) => {
+    for (const child of node.children || []) {
+      if (isChecked) checked.add(child.code);
+      else checked.delete(child.code);
+      updateDescendants(child);
+    }
+  };
+  updateDescendants(data);
+  currentCheckedKeys.value = [...checked];
+  syncParentChecks();
+  treeRef.value.setCheckedKeys(currentCheckedKeys.value);
+  updateParentIndeterminate();
 };
 
 const checkAllNodes = () => {
@@ -341,6 +576,7 @@ const checkAllNodes = () => {
   if (treeRef.value) {
     treeRef.value.setCheckedKeys(all);
     currentCheckedKeys.value = all;
+    updateParentIndeterminate();
   }
 };
 
@@ -348,6 +584,7 @@ const uncheckAllNodes = () => {
   if (treeRef.value) {
     treeRef.value.setCheckedKeys([]);
     currentCheckedKeys.value = [];
+    updateParentIndeterminate();
   }
 };
 
@@ -437,6 +674,10 @@ const savePermissions = async () => {
   color: var(--color-brand);
 }
 
+.perm-banner .mono {
+  overflow-wrap: anywhere;
+}
+
 .tree-tools {
   display: flex;
   gap: 8px;
@@ -445,6 +686,7 @@ const savePermissions = async () => {
 
 .tree-container {
   flex: 1;
+  min-height: 0;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 12px;
@@ -453,11 +695,35 @@ const savePermissions = async () => {
   max-height: calc(100vh - 280px);
 }
 
+.permission-search {
+  width: 260px;
+  margin-bottom: 12px;
+}
+
+:global(.permission-manager-dialog .el-dialog__body) {
+  overflow-y: hidden !important;
+}
+
+.tree-container :deep(.el-tree-node__content) {
+  height: auto;
+  min-height: 32px;
+  align-items: flex-start;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.tree-container :deep(.el-tree-node__expand-icon),
+.tree-container :deep(.el-checkbox) {
+  margin-top: 2px;
+}
+
 .custom-tree-node {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
   width: 100%;
+  min-width: 0;
   padding-right: 12px;
   font-size: 13px;
 }
@@ -477,6 +743,8 @@ const savePermissions = async () => {
 }
 
 .tree-code-tag {
+  max-width: 38%;
+  overflow-wrap: anywhere;
   font-size: 11px;
   color: var(--color-muted);
   background: #f1f6f3;

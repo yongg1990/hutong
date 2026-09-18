@@ -55,7 +55,9 @@
             </template>
           </el-table-column>
           <el-table-column prop="tenantName" label="机构/企业全称" min-width="220" show-overflow-tooltip />
-          <el-table-column prop="tenantType" label="租户类型" width="130" />
+          <el-table-column prop="tenantType" label="租户类型" width="130">
+            <template #default="{ row }">{{ tenantTypeLabel(row.tenantType) }}</template>
+          </el-table-column>
           <el-table-column label="状态" width="100">
             <template #default="{ row }">
               <StatusTag :code="row.status" :label="row.status === 'ACTIVE' ? '启用' : row.status === 'INACTIVE' ? '停用' : row.status" />
@@ -105,6 +107,7 @@
       :title="isEditing ? '编辑租户机构信息' : '新增入驻租户机构'"
       width="640px"
       destroy-on-close
+      :close-on-click-modal="false"
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="130px" label-position="right">
         <el-form-item label="租户编码" prop="tenantCode">
@@ -113,13 +116,9 @@
         <el-form-item label="机构/企业全称" prop="tenantName">
           <el-input v-model="form.tenantName" placeholder="如 云南中药产业发展有限公司" />
         </el-form-item>
-        <el-form-item label="机构类型" prop="tenantType">
-            <el-select v-model="form.tenantType" placeholder="请选择机构业务类型">
-              <el-option label="示范联盟/平台 (PLATFORM)" value="PLATFORM" />
-              <el-option label="中药材种植加工生产方 (PRODUCER)" value="PRODUCER" />
-              <el-option label="中药饮片交割商贸方 (EXCHANGE)" value="EXCHANGE" />
-              <el-option label="第三方检验检测中心 (INSPECTION)" value="INSPECTION" />
-              <el-option label="医疗机构/处方调剂方 (HOSPITAL)" value="HOSPITAL" />
+        <el-form-item label="租户类型" prop="tenantType">
+            <el-select v-model="form.tenantType" placeholder="请选择租户类型">
+              <el-option v-for="option in tenantTypeOptions" :key="option.value" :label="option.label" :value="option.value" />
             </el-select>
         </el-form-item>
         <el-form-item v-if="isEditing" label="运行状态">
@@ -136,7 +135,7 @@
     </el-dialog>
 
     <!-- Detail Drawer -->
-    <el-drawer v-model="drawerVisible" title="租户详细信息" size="520px">
+    <el-drawer v-model="drawerVisible" title="租户详细信息" size="520px" :close-on-click-modal="false">
       <div v-if="activeTenant" class="drawer-detail">
         <div class="detail-header-card">
           <div class="tenant-title">{{ activeTenant.tenantName }}</div>
@@ -146,7 +145,7 @@
         <div class="detail-sec">
           <h4>租户信息</h4>
           <div class="kv-list">
-            <div class="kv-item"><span>租户类型:</span> <strong>{{ activeTenant.tenantType }}</strong></div>
+            <div class="kv-item"><span>租户类型:</span> <strong>{{ tenantTypeLabel(activeTenant.tenantType) }}</strong></div>
             <div class="kv-item"><span>当前状态:</span> <StatusTag :code="activeTenant.status" :label="activeTenant.status === 'ACTIVE' ? '启用' : '停用'" /></div>
           </div>
         </div>
@@ -193,18 +192,27 @@ const dialogVisible = ref(false);
 const drawerVisible = ref(false);
 const isEditing = ref(false);
 const activeTenant = ref<TenantItem | null>(null);
+const tenantTypeOptions = [
+  { value: 'standard', label: '标准' },
+  { value: 'enterprise', label: '企业' },
+  { value: 'platform', label: '平台' }
+];
+const tenantTypeLabel = (value?: string) => {
+  const normalized = String(value || '').toLowerCase();
+  return tenantTypeOptions.find(option => option.value === normalized)?.label || value || '-';
+};
 
 const formRef = ref<FormInstance>();
 const form = ref<Partial<TenantItem>>({
   tenantCode: '',
   tenantName: '',
-  tenantType: 'PRODUCER',
+  tenantType: 'standard',
   status: 'ACTIVE'
 });
 
 const rules = {
   tenantName: [{ required: true, message: '请输入机构/企业全称', trigger: 'blur' }],
-  tenantType: [{ required: true, message: '请选择机构类型', trigger: 'change' }]
+  tenantType: [{ required: true, message: '请选择租户类型', trigger: 'change' }]
 };
 
 const activeTenantsCount = computed(() => tenants.value.filter(t => t.status === 'ACTIVE').length);
@@ -254,7 +262,7 @@ const openCreateDialog = () => {
   form.value = {
     tenantCode: '',
     tenantName: '',
-    tenantType: 'PRODUCER',
+    tenantType: 'standard',
     status: 'ACTIVE'
   };
   dialogVisible.value = true;
@@ -262,7 +270,7 @@ const openCreateDialog = () => {
 
 const openEditDialog = (row: TenantItem) => {
   isEditing.value = true;
-  form.value = { ...row };
+  form.value = { ...row, tenantType: String(row.tenantType || '').toLowerCase() };
   if (drawerVisible.value) drawerVisible.value = false;
   dialogVisible.value = true;
 };
@@ -374,12 +382,6 @@ const confirmDelete = (row: TenantItem) => {
 .form-row-two {
   display: flex;
   gap: 16px;
-}
-
-.pagination-row {
-  display: flex;
-  justify-content: flex-end;
-  padding: 14px 0 2px;
 }
 
 .drawer-detail {

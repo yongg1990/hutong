@@ -1,25 +1,27 @@
 import { request, apiCall } from './client';
 
+export interface BusinessScope {
+  scenarioCodes: string[];
+  regionCodes: string[];
+  partyIds: string[];
+  objectTypes: string[];
+}
+
 export interface ProjectSpaceCreateRequest {
   projectCode: string;
   projectName: string;
   regionCode: string;
-  businessScope?: {
-    scenarioCodes?: string[];
-    regionCodes?: string[];
-    partyIds?: string[];
-    objectTypes?: string[];
-  };
+  businessScope: BusinessScope;
 }
 
 export interface ProjectSpaceResponse {
-  projectSpaceId: number | string;
-  tenantId?: number | string;
+  projectSpaceId: string;
+  tenantId?: string;
   projectCode: string;
   projectName: string;
   regionCode: string;
-  businessScope?: any;
-  status: 'ACTIVE' | 'ARCHIVED' | string;
+  businessScope?: BusinessScope;
+  status: 'ACTIVE' | 'INACTIVE' | string;
   lockVersion?: number;
   createdAt: string;
 }
@@ -29,18 +31,18 @@ export interface DeploymentInstanceCreateRequest {
   deploymentMode: 'SAAS' | 'DEDICATED' | 'HYBRID' | 'EDGE_ONLY';
   environment: string;
   regionCode: string;
-  capabilities?: Record<string, any>;
+  capabilities: Record<string, unknown>;
 }
 
 export interface DeploymentInstanceResponse {
-  deploymentInstanceId: number | string;
-  tenantId?: number | string;
+  deploymentInstanceId: string;
+  tenantId?: string;
   instanceCode: string;
   deploymentMode: string;
   environment: string;
   regionCode: string;
-  capabilities?: Record<string, any>;
-  status: 'ACTIVE' | 'SUSPENDED' | 'OFFLINE' | string;
+  capabilities?: Record<string, unknown>;
+  status: 'ACTIVE' | 'INACTIVE' | string;
   version?: string;
   createdAt: string;
 }
@@ -76,120 +78,26 @@ const mockAlerts: AuditAlert[] = [
   { alertId: 'ALT-202608-03', type: 'PROOF_CONSENSUS_DELAY', level: 'LOW', content: '长安链存证共识延时达 3.8s，高于预警阈值 2s', occurredAt: '14:50', isResolved: true }
 ];
 
-const mockProjectSpaces: ProjectSpaceResponse[] = [
-  {
-    projectSpaceId: 1,
-    tenantId: 1,
-    projectCode: 'PRJ-YN-TCM-2026',
-    projectName: '云南中药全产业链追溯示范项目',
-    regionCode: '530000',
-    businessScope: {
-      scenarioCodes: ['FIELD', 'PROCESS', 'QUALITY', 'SUPPLY'],
-      regionCodes: ['530000', '532600'],
-      partyIds: [1, 2, 3],
-      objectTypes: ['CROP_BATCH', 'PROCESS_BATCH', 'HERB_PACKAGE']
-    },
-    status: 'ACTIVE',
-    lockVersion: 1,
-    createdAt: '2026-01-10 08:30:00'
-  },
-  {
-    projectSpaceId: 2,
-    tenantId: 2,
-    projectCode: 'PRJ-WS-SANQI-01',
-    projectName: '文山三七专线合规追溯项目',
-    regionCode: '532600',
-    businessScope: {
-      scenarioCodes: ['FIELD', 'PROCESS'],
-      regionCodes: ['532600'],
-      partyIds: [2],
-      objectTypes: ['CROP_BATCH', 'PROCESS_BATCH']
-    },
-    status: 'ACTIVE',
-    lockVersion: 1,
-    createdAt: '2026-02-15 10:00:00'
-  }
-];
-
 /**
  * 设置与运维管理接口 (Swagger: /admin/v1/*, /settings/*, /operations/*)
  */
 export const settingsApi = {
   // ================= 1. 项目空间 (POST /admin/v1/project-spaces, GET /admin/v1/project-spaces/{id}) =================
   async createProjectSpace(data: ProjectSpaceCreateRequest): Promise<ProjectSpaceResponse> {
-    const newPrj: ProjectSpaceResponse = {
-      projectSpaceId: Date.now(),
-      tenantId: 1,
-      projectCode: data.projectCode,
-      projectName: data.projectName,
-      regionCode: data.regionCode,
-      businessScope: data.businessScope || {},
-      status: 'ACTIVE',
-      lockVersion: 1,
-      createdAt: new Date().toLocaleString()
-    };
-
-    return apiCall(
-      request.post('/admin/v1/project-spaces', data),
-      newPrj,
-      '创建项目空间'
-    );
+    return request.post('/admin/v1/project-spaces', data) as unknown as Promise<ProjectSpaceResponse>;
   },
 
-  async getProjectSpaceById(id: number | string): Promise<ProjectSpaceResponse> {
-    const fallback = mockProjectSpaces.find(p => String(p.projectSpaceId) === String(id)) || mockProjectSpaces[0];
-    return apiCall(
-      request.get(`/admin/v1/project-spaces/${id}`),
-      fallback,
-      '获取项目空间详情'
-    );
+  async getProjectSpaceById(id: string): Promise<ProjectSpaceResponse> {
+    return request.get(`/admin/v1/project-spaces/${id}`) as unknown as Promise<ProjectSpaceResponse>;
   },
 
   // ================= 2. 部署实例 (POST /admin/v1/deployment-instances, GET /admin/v1/deployment-instances/{id}) =================
   async createDeploymentInstance(data: DeploymentInstanceCreateRequest): Promise<DeploymentInstanceResponse> {
-    const newInst: DeploymentInstanceResponse = {
-      deploymentInstanceId: Date.now(),
-      tenantId: 1,
-      instanceCode: data.instanceCode,
-      deploymentMode: data.deploymentMode,
-      environment: data.environment,
-      regionCode: data.regionCode,
-      capabilities: data.capabilities || {},
-      status: 'ACTIVE',
-      version: '1.4.0',
-      createdAt: new Date().toLocaleString()
-    };
-
-    return apiCall(
-      request.post('/admin/v1/deployment-instances', data),
-      newInst,
-      '创建部署实例'
-    );
+    return request.post('/admin/v1/deployment-instances', data) as unknown as Promise<DeploymentInstanceResponse>;
   },
 
-  async getDeploymentInstanceById(id: number | string): Promise<DeploymentInstanceResponse> {
-    const fallback: DeploymentInstanceResponse = {
-      deploymentInstanceId: id,
-      tenantId: 1,
-      instanceCode: 'INST-KM-01',
-      deploymentMode: 'HYBRID',
-      environment: 'PROD',
-      regionCode: '530100',
-      capabilities: {
-        offlineCache: true,
-        edgeRuleValidation: true,
-        cryptoKeyStorage: 'HSM'
-      },
-      status: 'ACTIVE',
-      version: '1.4.0',
-      createdAt: '2026-01-15 12:00:00'
-    };
-
-    return apiCall(
-      request.get(`/admin/v1/deployment-instances/${id}`),
-      fallback,
-      '获取部署实例详情'
-    );
+  async getDeploymentInstanceById(id: string): Promise<DeploymentInstanceResponse> {
+    return request.get(`/admin/v1/deployment-instances/${id}`) as unknown as Promise<DeploymentInstanceResponse>;
   },
 
   // ================= 3. 本地运维演示数据 =================

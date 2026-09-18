@@ -51,6 +51,13 @@ export interface UserItem {
   updatedAt?: string;
 }
 
+export interface UserPage {
+  records: UserItem[];
+  total: number;
+  page: number;
+  size: number;
+}
+
 export interface RoleItem {
   id: string | number;
   roleId?: string | number;
@@ -94,13 +101,14 @@ export interface PermissionCreateRequest {
 }
 
 export interface PermissionUpdateRequest {
-  permissionName?: string;
-  moduleCode?: string;
+  permissionCode: string;
+  permissionName: string;
+  moduleCode: string;
   apiMethod?: string;
   apiPath?: string;
   status?: string;
-  parentId?: number;
-  permissionType?: string;
+  parentId?: string | number | null;
+  permissionType: string;
 }
 
 // Initial Mock Seed Data
@@ -429,6 +437,13 @@ function setLocal<T>(key: string, val: T): void {
   }
 }
 
+export interface RolePage {
+  records: RoleItem[];
+  total: number;
+  page: number;
+  size: number;
+}
+
 function mapTenantResponse(item: any): TenantItem {
   return {
     id: item.tenantId ?? item.id,
@@ -438,6 +453,23 @@ function mapTenantResponse(item: any): TenantItem {
     status: item.status,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt
+  };
+}
+
+function mapUserResponse(u: any): UserItem {
+  return {
+    id: u.userId, userId: u.userId, username: u.username,
+    realName: u.displayName, displayName: u.displayName, tenantId: u.tenantId,
+    roles: [], status: u.status, createdAt: u.createdAt, updatedAt: u.updatedAt
+  };
+}
+
+function mapRoleResponse(r: any): RoleItem {
+  return {
+    id: r.roleId, roleId: r.roleId, tenantId: r.tenantId,
+    roleCode: r.roleCode, roleName: r.roleName, description: r.description,
+    status: r.status, createdAt: r.createdAt, updatedAt: r.updatedAt,
+    permissions: []
   };
 }
 
@@ -512,6 +544,20 @@ export const rbacApi = {
   },
 
   // ================= 2. 用户管理 (Users) =================
+  async getUserPage(params?: { tenantId?: string | number; page?: number; size?: number }): Promise<UserPage> {
+    const query = new URLSearchParams();
+    if (params?.tenantId != null && params.tenantId !== '') query.set('tenantId', String(params.tenantId));
+    query.set('page', String(params?.page || 1));
+    query.set('size', String(params?.size || 20));
+    const res: any = await request.get('/tenant-access/users/page?' + query.toString());
+    return {
+      records: (res.records || []).map(mapUserResponse),
+      total: Number(res.total ?? 0),
+      page: Number(res.page ?? params?.page ?? 1),
+      size: Number(res.size ?? params?.size ?? 20)
+    };
+  },
+
   // GET /tenant-access/users?tenantId=...
   async getUsers(params?: {
     tenantId?: string | number;
@@ -521,18 +567,7 @@ export const rbacApi = {
       query.append('tenantId', String(params.tenantId));
     }
     const res: any = await request.get(`/tenant-access/users?${query.toString()}`);
-    return res.map((u: any) => ({
-      id: u.userId,
-      userId: u.userId,
-      username: u.username,
-      realName: u.displayName,
-      displayName: u.displayName,
-      tenantId: u.tenantId,
-      roles: [],
-      status: u.status,
-      createdAt: u.createdAt,
-      updatedAt: u.updatedAt
-    }));
+    return res.map(mapUserResponse);
   },
 
   // POST /tenant-access/users
@@ -560,16 +595,24 @@ export const rbacApi = {
     tenantId?: number | string | null
   ): Promise<void> {
     const query = tenantId == null || tenantId === '' ? '' : `?tenantId=${encodeURIComponent(String(tenantId))}`;
-    await request.post(`/tenant-access/users/${userId}/roles${query}`, { roleId: roleIds.map(Number) });
+    await request.post(`/tenant-access/users/${userId}/roles${query}`, { roleIds: roleIds.map(String) });
   },
 
-  // GET /tenant-access/users/{userId}/roles/{roleId}/delete?tenantId=...
-  async unbindUserRole(
+  // GET /tenant-access/users/{userId}/roles?tenantId=...
+  async getUserRoles(userId: number | string, tenantId?: number | string | null): Promise<RoleItem[]> {
+    const query = tenantId == null || tenantId === '' ? '' : '?tenantId=' + encodeURIComponent(String(tenantId));
+    const res: any[] = await request.get('/tenant-access/users/' + userId + '/roles' + query);
+    return res.map(mapRoleResponse);
+  },
+
+  // POST /tenant-access/users/{userId}/roles/delete?tenantId=...
+  async unbindUserRoles(
     userId: number | string,
-    roleId: number | string,
-    tenantId: number | string
+    roleIds: (number | string)[],
+    tenantId?: number | string | null
   ): Promise<void> {
-    await request.get(`/tenant-access/users/${userId}/roles/${roleId}/delete?tenantId=${tenantId}`);
+    const query = tenantId == null || tenantId === '' ? '' : '?tenantId=' + encodeURIComponent(String(tenantId));
+    await request.post('/tenant-access/users/' + userId + '/roles/delete' + query, { roleIds: roleIds.map(String) });
   },
 
   async updateUser(id: string | number, data: Partial<UserItem>): Promise<UserItem> {
@@ -597,17 +640,26 @@ export const rbacApi = {
   },
 
   // ================= 3. 角色与权限管理 (Roles & Permissions) =================
+  async getRolePage(params?: { tenantId?: string | number; page?: number; size?: number }): Promise<RolePage> {
+    const query = new URLSearchParams();
+    if (params?.tenantId != null && params.tenantId !== '') query.set('tenantId', String(params.tenantId));
+    query.set('page', String(params?.page || 1));
+    query.set('size', String(params?.size || 20));
+    const res: any = await request.get('/tenant-access/roles/page?' + query.toString());
+    return {
+      records: (res.records || []).map(mapRoleResponse),
+      total: Number(res.total ?? 0),
+      page: Number(res.page ?? params?.page ?? 1),
+      size: Number(res.size ?? params?.size ?? 20)
+    };
+  },
+
   async getRoles(params?: { keyword?: string; tenantId?: string | number }): Promise<RoleItem[]> {
     const query = new URLSearchParams();
     if (params?.tenantId != null && params.tenantId !== '') query.set('tenantId', String(params.tenantId));
     const keyword = params?.keyword?.trim().toLowerCase();
     const res: any = await request.get(`/tenant-access/roles?${query}`);
-    return res.map((r: any) => ({
-      id: r.roleId, roleId: r.roleId, tenantId: r.tenantId,
-      roleCode: r.roleCode, roleName: r.roleName, description: r.description,
-      status: r.status, createdAt: r.createdAt, updatedAt: r.updatedAt,
-      permissions: []
-    })).filter((r: RoleItem) => !keyword ||
+    return res.map(mapRoleResponse).filter((r: RoleItem) => !keyword ||
       (r.roleCode || '').toLowerCase().includes(keyword) ||
       (r.roleName || '').toLowerCase().includes(keyword));
   },
@@ -717,21 +769,13 @@ export const rbacApi = {
   async updatePermission(
     permissionId: number | string,
     data: PermissionUpdateRequest
-  ): Promise<any> {
-    return apiCall(
-      request.post(`/tenant-access/permissions/${permissionId}/update`, data),
-      { success: true, permissionId, ...data },
-      '更新权限节点'
-    );
+  ): Promise<PermissionNode> {
+    return request.post('/tenant-access/permissions/' + permissionId + '/update', data);
   },
 
   // GET /tenant-access/permissions/{permissionId}/delete
   async deletePermission(permissionId: number | string): Promise<boolean> {
-    return apiCall(
-      request.get(`/tenant-access/permissions/${permissionId}/delete`),
-      true,
-      '删除权限节点'
-    );
+    return request.get('/tenant-access/permissions/' + permissionId + '/delete');
   },
 
   async getPermissionTree(): Promise<PermissionNode[]> {

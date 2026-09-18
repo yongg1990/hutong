@@ -210,8 +210,10 @@ const navGroups = [
   {
     title: '主数据',
     items: [
-      { name: '主体机构', route: '/master-data/parties', icon: OfficeBuilding },
-      { name: '业务对象', route: '/master-data/objects', icon: Grape },
+      { name: '主体', route: '/master-data/parties', icon: OfficeBuilding },
+      { name: '标识命名空间', route: '/master-data/identifier-namespaces', icon: Collection },
+      { name: '业务对象登记', route: '/master-data/objects', icon: Grape },
+      { name: '标识绑定', route: '/master-data/identifier-bindings', icon: Connection },
       { name: '饮片与监管编码', route: '/master-data/decoction-pieces', icon: Tickets }
     ]
   },

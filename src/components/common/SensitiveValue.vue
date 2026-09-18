@@ -30,6 +30,7 @@
       title="敏感数据查阅调阅审计"
       width="460px"
       append-to-body
+      :close-on-click-modal="false"
     >
       <div class="audit-tip">
         当前字段属于三级 <strong>STRICT_SENSITIVE</strong> 严格敏感信息（包含患者隐私或秘钥）。调阅记录将被记录入审计日志。

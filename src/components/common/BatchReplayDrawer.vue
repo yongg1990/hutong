@@ -3,6 +3,7 @@
     v-model="visible"
     title="治理异常同类型问题批量修复与重放"
     size="560px"
+    :close-on-click-modal="false"
   >
     <div class="batch-replay-content">
       <el-alert

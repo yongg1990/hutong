@@ -32,7 +32,7 @@
       </el-table>
     </div>
 
-    <el-dialog v-model="createDialogVisible" title="登记证据" width="600px">
+    <el-dialog v-model="createDialogVisible" title="登记证据" width="600px" :close-on-click-modal="false">
       <el-form :model="createForm" label-position="top">
         <div class="form-grid">
           <el-form-item label="证据类型" required><el-input v-model="createForm.evidenceType" /></el-form-item>

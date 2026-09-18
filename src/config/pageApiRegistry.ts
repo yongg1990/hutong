@@ -123,11 +123,12 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
   '/governance/events': {
     hasApi: true,
     moduleName: '事件类型与 Schema 配置',
-    apiPath: '/openapi/v1/event-fact/config/schemas',
+    apiPath: '/openapi/v1/event-fact/config/event-types, /openapi/v1/event-fact/config/schemas',
     specDoc: 'OpenAPI 3.1.0 / APP-04 事件配置与事实引擎',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
+      { method: 'POST', path: '/openapi/v1/event-fact/config/event-types', desc: '创建事件类型' },
       { method: 'GET', path: '/openapi/v1/event-fact/schemas/{eventType}/{schemaVersion}', desc: '查询已发布 Schema (schema)' },
       { method: 'POST', path: '/openapi/v1/event-fact/config/schemas', desc: '创建 Schema 草稿 (schema)' },
       { method: 'POST', path: '/openapi/v1/event-fact/config/schemas/test', desc: '测试 Schema (test)' },
@@ -135,10 +136,10 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     ]
   },
 
-  // 5. 主数据中心 - 主体机构 (APP-02 主体、对象与监管编码)
+  // 5. 主数据中心 - 主体登记 (APP-02 主体、对象与监管编码)
   '/master-data/parties': {
     hasApi: true,
-    moduleName: '主体机构登记与资质',
+    moduleName: '主体登记',
     apiPath: '/openapi/v1/parties',
     specDoc: 'OpenAPI 3.1.0 / APP-02 主体、对象与监管编码',
     protocol: 'RESTful JSON / Axios',
@@ -148,22 +149,47 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     ]
   },
 
-  // 6. 主数据中心 - 业务对象 (APP-02 主体、对象与监管编码)
+  // 6. 主数据中心 - 标识命名空间 (APP-02 标识命名空间)
+  '/master-data/identifier-namespaces': {
+    hasApi: true,
+    moduleName: '标识命名空间',
+    apiPath: '/openapi/v1/identifier-namespaces',
+    specDoc: 'OpenAPI 3.1.0 / APP-02 标识命名空间',
+    protocol: 'RESTful JSON / Axios',
+    status: 'CONNECTED',
+    endpoints: [
+      { method: 'POST', path: '/openapi/v1/identifier-namespaces', desc: '登记标识命名空间 (registerNamespaceDef)' }
+    ]
+  },
+
+  // 7. 主数据中心 - 业务对象登记 (APP-02 主体、对象与监管编码)
   '/master-data/objects': {
     hasApi: true,
-    moduleName: '业务对象与外部标识管理',
-    apiPath: '/openapi/v1/business-objects, /openapi/v1/identifiers-*',
+    moduleName: '业务对象登记',
+    apiPath: '/openapi/v1/business-objects',
     specDoc: 'OpenAPI 3.1.0 / APP-02 主体、对象与监管编码',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
-      { method: 'POST', path: '/openapi/v1/business-objects', desc: '业务对象登记 (registerObject)' },
+      { method: 'POST', path: '/openapi/v1/business-objects', desc: '业务对象登记 (registerObject)' }
+    ]
+  },
+
+  // 8. 主数据中心 - 标识绑定 (APP-02 主体、对象与监管编码)
+  '/master-data/identifier-bindings': {
+    hasApi: true,
+    moduleName: '标识解析与绑定',
+    apiPath: '/openapi/v1/identifiers-resolve, /openapi/v1/identifier-bindings',
+    specDoc: 'OpenAPI 3.1.0 / APP-02 主体、对象与监管编码',
+    protocol: 'RESTful JSON / Axios',
+    status: 'CONNECTED',
+    endpoints: [
       { method: 'POST', path: '/openapi/v1/identifiers-resolve', desc: '外部标识解析 (resolve)' },
       { method: 'POST', path: '/openapi/v1/identifier-bindings', desc: '外部标识绑定 (bind)' }
     ]
   },
 
-  // 7. 主数据中心 - 饮片与监管编码 (APP-02 主体、对象与监管编码)
+  // 9. 主数据中心 - 饮片与监管编码 (APP-02 主体、对象与监管编码)
   '/master-data/decoction-pieces': {
     hasApi: true,
     moduleName: '饮片品种与国家监管编码',
@@ -197,15 +223,16 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
   '/settings/users': {
     hasApi: true,
     moduleName: '用户管理与角色授权',
-    apiPath: '/tenant-access/users',
+    apiPath: '/tenant-access/users/page',
     specDoc: 'OpenAPI 3.1.0 / APP-01 用户与角色',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
-      { method: 'GET', path: '/tenant-access/users', desc: '查询用户列表 (list)' },
+      { method: 'GET', path: '/tenant-access/users/page', desc: '分页查询用户列表' },
       { method: 'POST', path: '/tenant-access/users', desc: '创建用户 (create)' },
-      { method: 'POST', path: '/tenant-access/users/{userId}/roles', desc: '给用户绑定角色 (bind)' },
-      { method: 'GET', path: '/tenant-access/users/{userId}/roles/{roleId}/delete', desc: '解除用户角色 (remove)' }
+      { method: 'POST', path: '/tenant-access/users/{userId}/roles', desc: '批量绑定用户角色 (bind)' },
+      { method: 'GET', path: '/tenant-access/users/{userId}/roles', desc: '查询用户已绑定角色' },
+      { method: 'POST', path: '/tenant-access/users/{userId}/roles/delete', desc: '批量解除用户角色 (removeBatch)' }
     ]
   },
 
@@ -213,12 +240,12 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
   '/settings/roles': {
     hasApi: true,
     moduleName: '角色与权限矩阵',
-    apiPath: '/tenant-access/roles, /tenant-access/permissions',
+    apiPath: '/tenant-access/roles/page, /tenant-access/permissions',
     specDoc: 'OpenAPI 3.1.0 / APP-01 角色与权限',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
-      { method: 'GET', path: '/tenant-access/roles', desc: '查询角色列表 (list)' },
+      { method: 'GET', path: '/tenant-access/roles/page', desc: '分页查询角色列表' },
       { method: 'POST', path: '/tenant-access/roles/tenant', desc: '创建角色 (create)' },
       { method: 'GET', path: '/tenant-access/roles/{roleId}/permissions', desc: '查询角色权限赋权状态 (find)' },
       { method: 'POST', path: '/tenant-access/roles/{roleId}/permissions', desc: '替换角色权限 (replace)' },

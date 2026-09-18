@@ -31,6 +31,7 @@
       title="关联追溯证据凭证"
       width="600px"
       append-to-body
+      :close-on-click-modal="false"
     >
       <el-table :data="availableList" @selection-change="handleSelectionChange" height="280">
         <el-table-column type="selection" width="45" />

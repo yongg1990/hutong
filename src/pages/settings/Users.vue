@@ -15,15 +15,15 @@
     <!-- Top KPI Row -->
     <div class="kpi-grid">
       <div class="kpi-card">
-        <span class="label">当前列表用户数</span>
+        <span class="label">用户总数</span>
         <div class="value">
-          <strong class="mono">{{ users.length }}</strong>
+          <strong class="mono">{{ total }}</strong>
           <span class="unit">人</span>
         </div>
       </div>
 
       <div class="kpi-card">
-        <span class="label">正常可用账号</span>
+        <span class="label">本页正常可用账号</span>
         <div class="value">
           <strong class="mono brand-color">{{ activeUsersCount }}</strong>
           <span class="unit">人激活</span>
@@ -31,7 +31,7 @@
       </div>
 
       <div class="kpi-card">
-        <span class="label">所属协同租户数</span>
+        <span class="label">本页所属协同租户数</span>
         <div class="value">
           <strong class="mono">{{ distinctTenantsCount }}</strong>
           <span class="unit">家机构</span>
@@ -55,10 +55,10 @@
     <!-- Users Table Panel -->
     <div class="panel">
       <div class="panel-header">
-        <h2>用户账号列表 ({{ filteredUsers.length }})</h2>
+        <h2>用户账号列表 ({{ total }})</h2>
       </div>
       <div class="panel-body">
-        <el-table :data="filteredUsers" v-loading="loading" style="width: 100%" empty-text="暂无匹配的用户账号">
+        <el-table :data="users" v-loading="loading" style="width: 100%" empty-text="暂无匹配的用户账号">
           <el-table-column prop="userId" label="用户 ID" width="110" class-name="mono" />
           <el-table-column prop="tenantId" label="租户 ID" width="110" class-name="mono" />
           <el-table-column prop="username" label="登录账号" min-width="140" class-name="mono">
@@ -82,6 +82,17 @@
             </template>
           </el-table-column>
         </el-table>
+        <div class="pagination-row">
+          <el-pagination
+            v-model:current-page="page"
+            v-model:page-size="pageSize"
+            :page-sizes="[10, 20, 50, 100]"
+            :total="total"
+            layout="total, sizes, prev, pager, next"
+            @current-change="loadUsers"
+            @size-change="handleSizeChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -91,6 +102,7 @@
       title="新增业务用户账号"
       width="600px"
       destroy-on-close
+      :close-on-click-modal="false"
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px" label-position="right">
         <div class="form-row-two">
@@ -138,16 +150,16 @@
         <el-button type="primary" :loading="submitting" @click="submitForm">保存提交</el-button>
       </template>
     </el-dialog>
-    <el-dialog v-model="roleDialogVisible" :title="roleAction === 'bind' ? '绑定角色' : '解除角色'" width="480px">
+    <el-dialog v-model="roleDialogVisible" :title="roleAction === 'bind' ? '绑定角色' : '解除角色'" width="480px" :close-on-click-modal="false">
       <el-select v-if="roleAction === 'bind'" v-model="bindingRoleIds" multiple placeholder="选择角色" style="width: 100%" :loading="loadingDialogRoles">
         <el-option v-for="r in dialogRoles" :key="r.id" :label="r.roleName + ' (' + r.roleCode + ')'" :value="r.id" />
       </el-select>
-      <el-select v-else v-model="selectedRoleId" placeholder="选择角色" style="width: 100%" :loading="loadingDialogRoles">
+      <el-select v-else v-model="unbindingRoleIds" multiple placeholder="选择要解除的角色" style="width: 100%" :loading="loadingDialogRoles">
         <el-option v-for="r in dialogRoles" :key="r.id" :label="r.roleName + ' (' + r.roleCode + ')'" :value="r.id" />
       </el-select>
       <template #footer>
         <el-button @click="roleDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" :disabled="loadingDialogRoles || (roleAction === 'bind' ? !bindingRoleIds.length : !selectedRoleId)" @click="submitRoleAction">确认</el-button>
+        <el-button type="primary" :loading="submitting" :disabled="loadingDialogRoles || (roleAction === 'bind' ? !bindingRoleIds.length : !unbindingRoleIds.length)" @click="submitRoleAction">确认</el-button>
       </template>
     </el-dialog>
   </div>
@@ -163,12 +175,16 @@ import { rbacApi, type UserItem, type TenantItem, type RoleItem } from '@/api/rb
 import { apiErrorMessage } from '@/api/client';
 
 const users = ref<UserItem[]>([]);
+const total = ref(0);
+const page = ref(1);
+const pageSize = ref(20);
 const tenants = ref<TenantItem[]>([]);
 const roles = ref<RoleItem[]>([]);
 const loading = ref(false);
 const submitting = ref(false);
 
 const tenantFilter = ref<string | number>('');
+const appliedTenantId = ref<string | number>('');
 
 const dialogVisible = ref(false);
 const password = ref('');
@@ -177,7 +193,7 @@ const roleDialogVisible = ref(false);
 const dialogRoles = ref<RoleItem[]>([]);
 const loadingDialogRoles = ref(false);
 const bindingRoleIds = ref<(string | number)[]>([]);
-const selectedRoleId = ref<string | number>('');
+const unbindingRoleIds = ref<(string | number)[]>([]);
 const roleAction = ref<'bind' | 'unbind'>('bind');
 const selectedUser = ref<UserItem | null>(null);
 
@@ -197,7 +213,6 @@ const rules = {
 
 const activeUsersCount = computed(() => users.value.filter(u => u.status === 'ACTIVE').length);
 const distinctTenantsCount = computed(() => new Set(users.value.map(u => u.tenantId)).size);
-const filteredUsers = computed(() => users.value);
 const availableRoles = computed(() => roles.value.filter(r =>
   form.value.tenantId == null || form.value.tenantId === '' ||
   r.tenantId == null || String(r.tenantId) === String(form.value.tenantId)
@@ -206,19 +221,23 @@ const availableRoles = computed(() => roles.value.filter(r =>
 const loadData = async () => {
   loading.value = true;
   try {
-    const [uList, tList, rList] = await Promise.all([
-      rbacApi.getUsers({ tenantId: tenantFilter.value || undefined }),
+    const [result, tList, rList] = await Promise.all([
+      rbacApi.getUserPage({ tenantId: appliedTenantId.value || undefined, page: page.value, size: pageSize.value }),
       rbacApi.getTenants({ page: 1, size: 100 }),
       rbacApi.getRoles()
     ]);
+    total.value = result.total;
+    page.value = result.page;
+    pageSize.value = result.size;
     tenants.value = tList;
     roles.value = rList;
-    users.value = uList.map(user => ({
+    users.value = result.records.map(user => ({
       ...user,
       tenantName: tList.find(tenant => String(tenant.id) === String(user.tenantId))?.tenantName
     }));
   } catch (err) {
     users.value = [];
+    total.value = 0;
     ElMessage.error(apiErrorMessage(err, '用户与角色数据加载失败'));
   } finally {
     loading.value = false;
@@ -234,11 +253,20 @@ onMounted(() => {
 });
 
 const handleSearch = () => {
+  appliedTenantId.value = tenantFilter.value;
+  page.value = 1;
   loadData();
 };
 
 const handleReset = () => {
   tenantFilter.value = '';
+  appliedTenantId.value = '';
+  page.value = 1;
+  loadData();
+};
+
+const handleSizeChange = () => {
+  page.value = 1;
   loadData();
 };
 
@@ -293,25 +321,30 @@ const submitForm = async () => {
 const openRoleDialog = async (row: UserItem, action: 'bind' | 'unbind') => {
   selectedUser.value = row;
   roleAction.value = action;
-  selectedRoleId.value = '';
+  unbindingRoleIds.value = [];
   bindingRoleIds.value = [];
   dialogRoles.value = [];
   roleDialogVisible.value = true;
   loadingDialogRoles.value = true;
   try {
-    const roleList = await rbacApi.getRoles();
-    dialogRoles.value = roleList.filter(role =>
-      row.tenantId == null || row.tenantId === '' || role.tenantId == null || String(role.tenantId) === String(row.tenantId)
-    );
+    if (action === 'unbind') {
+      dialogRoles.value = await rbacApi.getUserRoles(row.userId ?? row.id, row.tenantId);
+    } else {
+      const roleList = await rbacApi.getRoles();
+      dialogRoles.value = roleList.filter(role =>
+        row.tenantId == null || row.tenantId === '' || role.tenantId == null || String(role.tenantId) === String(row.tenantId)
+      );
+    }
   } catch (err) {
     ElMessage.error(apiErrorMessage(err, '角色列表加载失败'));
+    roleDialogVisible.value = false;
   } finally {
     loadingDialogRoles.value = false;
   }
 };
 
 const submitRoleAction = async () => {
-  if (!selectedUser.value || (roleAction.value === 'bind' ? !bindingRoleIds.value.length : !selectedRoleId.value)) return;
+  if (!selectedUser.value || (roleAction.value === 'bind' ? !bindingRoleIds.value.length : !unbindingRoleIds.value.length)) return;
   const { userId, tenantId } = selectedUser.value;
   if (userId == null) {
     ElMessage.error('用户 ID 缺失');
@@ -322,11 +355,7 @@ const submitRoleAction = async () => {
     if (roleAction.value === 'bind') {
       await rbacApi.bindUserRoles(userId, bindingRoleIds.value, tenantId);
     } else {
-      if (tenantId == null || tenantId === '') {
-        ElMessage.error('租户 ID 缺失');
-        return;
-      }
-      await rbacApi.unbindUserRole(userId, selectedRoleId.value, tenantId);
+      await rbacApi.unbindUserRoles(userId, unbindingRoleIds.value, tenantId);
     }
     ElMessage.success(roleAction.value === 'bind' ? '角色绑定成功' : '角色解除成功');
     roleDialogVisible.value = false;

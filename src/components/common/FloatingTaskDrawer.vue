@@ -4,6 +4,7 @@
     title="后台异步任务队列与进度"
     direction="rtl"
     size="420px"
+    :close-on-click-modal="false"
   >
     <div class="task-drawer-content">
       <div v-if="taskStore.jobs.length === 0" class="empty-jobs">

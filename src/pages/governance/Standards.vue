@@ -59,7 +59,7 @@
     </div>
 
     <!-- New Data Element Dialog -->
-    <el-dialog v-model="elementModalVisible" title="新增数据元标准定义" width="520px">
+    <el-dialog v-model="elementModalVisible" title="新增数据元标准定义" width="520px" :close-on-click-modal="false">
       <el-form :model="elementForm" label-position="top">
         <el-form-item label="数据元编码 (DE_CODE)" required>
           <el-input v-model="elementForm.code" placeholder="如: DE_HERB_WATER_CONTENT" />
@@ -86,7 +86,7 @@
     </el-dialog>
 
     <!-- New Value Item Dialog -->
-    <el-dialog v-model="valueModalVisible" title="新增值域代码明细 (Code Item)" width="480px">
+    <el-dialog v-model="valueModalVisible" title="新增值域代码明细 (Code Item)" width="480px" :close-on-click-modal="false">
       <el-form :model="valueForm" label-position="top">
         <el-form-item label="所属值域集 (ValueSet)" required>
           <el-select v-model="valueForm.valueSet" style="width: 100%">

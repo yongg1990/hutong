@@ -97,6 +97,7 @@
       width="640px"
       append-to-body
       class="diag-dialog"
+      :close-on-click-modal="false"
     >
       <div class="diag-content">
         <el-alert

@@ -135,7 +135,7 @@
       </div>
     </div>
 
-    <el-dialog v-model="profileDialogVisible" :title="editingProfileId ? '编辑规范包' : '新建规范包'" width="560px">
+    <el-dialog v-model="profileDialogVisible" :title="editingProfileId ? '编辑规范包' : '新建规范包'" width="560px" :close-on-click-modal="false">
       <el-form :model="profileForm" label-width="120px">
         <el-form-item label="规范包代码" required><el-input v-model="profileForm.profileCode" /></el-form-item>
         <el-form-item label="规范包名称" required><el-input v-model="profileForm.profileName" /></el-form-item>
@@ -154,7 +154,7 @@
       </template>
     </el-dialog>
 
-    <el-drawer v-model="versionsVisible" title="规范版本历史" size="680px">
+    <el-drawer v-model="versionsVisible" title="规范版本历史" size="680px" :close-on-click-modal="false">
       <el-table :data="versions" v-loading="loadingVersions">
         <el-table-column prop="id" label="版本 ID" width="110" />
         <el-table-column prop="profileId" label="规范包 ID" width="120" />

@@ -5,23 +5,31 @@ import type { GovernanceCase } from '@/types';
 export interface IngestBatch {
   batchId: string;
   sourceSystem: string;
-  totalCount: number;
-  successCount: number;
-  failCount: number;
+  totalCount: string;
+  successCount: string;
+  failCount: string;
   startTime: string;
-  status: 'COMPLETED' | 'PROCESSING' | 'FAILED';
+  status: string;
   errorLogs?: string[];
   mappingProfileVersion?: string;
   targetSchemaVersions?: Record<string, string>;
   processedAt?: string;
-  failedRecordDetails?: any[];
+  failedRecordDetails?: FailedRecordDetail[];
+}
+
+export interface FailedRecordDetail {
+  lineNo?: string;
+  code?: string;
+  fieldPath?: string;
+  ruleCode?: string;
+  message?: string;
 }
 
 export interface SourceSystemRequest {
   sourceSystemCode: string;
   sourceSystemName: string;
   sourceSystemType: string;
-  ownerPartyId: number | string;
+  ownerPartyId: string;
   endpointType: 'API' | 'FILE' | 'MESSAGE' | 'DATABASE' | string;
   baseUrl?: string;
   signaturePublicKey: string;
@@ -32,17 +40,17 @@ export interface SourceSystemRequest {
 }
 
 export interface SourceSystemResponse {
-  sourceSystemId: number | string;
+  sourceSystemId: string;
   sourceSystemCode: string;
-  version?: number | string;
+  version?: string;
   status: string;
   registeredAt?: string;
 }
 
 export interface PreserveRawCommand {
-  projectSpaceId: number | string;
-  batchId?: number | string;
-  sourceSystemId: number | string;
+  projectSpaceId: string;
+  batchId?: string;
+  sourceSystemId: string;
   sourceBusinessKey: string;
   contentType: string;
   contentDigest?: string;
@@ -51,15 +59,15 @@ export interface PreserveRawCommand {
 }
 
 export interface RawRecordAccepted {
-  rawRecordId: number | string;
+  rawRecordId: string;
   contentDigest: string;
   status: string;
   duplicate: boolean;
 }
 
 export interface ReplayAccepted {
-  replayId: number | string;
-  rawRecordId: number | string;
+  replayId: string;
+  rawRecordId: string;
   mappingVersion: string;
   status: string;
   requestedAt: string;
@@ -68,7 +76,7 @@ export interface ReplayAccepted {
 export interface MappingPrecheckRequest {
   mappingProfileCode: string;
   mappingProfileVersion: string;
-  sourceSystemId: number | string;
+  sourceSystemId: string;
   targetEventType: string;
   targetSchemaVersion: string;
   sourceSample: Record<string, any>;
@@ -77,8 +85,8 @@ export interface MappingPrecheckRequest {
 }
 
 export interface MappingIssue {
-  path: string;
-  severity: 'ERROR' | 'WARN' | 'INFO';
+  fieldPath: string;
+  errorCode: string;
   message: string;
   ruleCode: string;
 }
@@ -90,17 +98,17 @@ export interface MappingPreview {
   targetSchemaVersion: string;
   mappedPayload: Record<string, any>;
   issues: MappingIssue[];
-  governanceTickets?: number[];
+  governanceTickets?: string[];
 }
 
 export interface BatchRequest {
   batchCode: string;
-  sourceSystemId: number | string;
+  sourceSystemId: string;
   mappingProfileCode: string;
   mappingProfileVersion: string;
   inputFormat: string;
-  fileId: number | string;
-  expectedRecordCount?: number;
+  fileId: string;
+  expectedRecordCount?: string;
   sourceBatchKey?: string;
   businessPurpose: string;
   onError?: 'STOP_ON_ERROR' | 'CONTINUE_ON_ERROR' | string;
@@ -108,7 +116,7 @@ export interface BatchRequest {
 }
 
 export interface BatchResponse {
-  batchId: number | string;
+  batchId: string;
   batchCode: string;
   batchStatus: string;
   acceptedAt: string;
@@ -124,8 +132,8 @@ export interface SourceSystem {
   authType: string;
   status: 'ONLINE' | 'OFFLINE' | 'ACTIVE' | 'INACTIVE';
   lastHeartbeat: string;
-  ownerPartyId?: number | string;
-  version?: number | string;
+  ownerPartyId?: string;
+  version?: string;
   registeredAt?: string;
 }
 
@@ -145,7 +153,7 @@ export const governanceApi = {
 
   // ================= 3. 原始记录重放 POST /openapi/v1/raw-records/{rawRecordId}/replays =================
   async replayRawRecord(
-    rawRecordId: number | string,
+    rawRecordId: string,
     mappingVersion: string = '1.4.0',
     reason: string = '异常规则已修正，手动触发重放'
   ): Promise<ReplayAccepted> {
@@ -173,21 +181,21 @@ export const governanceApi = {
           params: {
             includeFailures: params.includeFailures ?? true,
             pageNo: params.pageNo || 1,
-            pageSize: params.pageSize || 20
+            pageSize: params.pageSize || 100
           }
         }).then((item: any) => [{
           batchId: item.batchId,
           sourceSystem: '',
-          totalCount: Number(item.totalRecords || 0),
-          successCount: Number(item.successRecords || 0),
-          failCount: Number(item.failedRecords || 0),
+          totalCount: String(item.totalRecords || '0'),
+          successCount: String(item.successRecords || '0'),
+          failCount: String(item.failedRecords || '0'),
           startTime: '',
-          status: item.batchStatus,
+          status: String(item.batchStatus || ''),
           mappingProfileVersion: item.mappingProfileVersion,
           targetSchemaVersions: item.targetSchemaVersions,
           processedAt: item.processedAt,
           failedRecordDetails: item.failedRecordDetails
-        }]));
+        }]);
     }
     return [];
   },

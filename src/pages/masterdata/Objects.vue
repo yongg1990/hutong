@@ -1,155 +1,134 @@
 <template>
   <div class="master-data-page">
-    <PageHeader
-      title="业务对象主数据"
-      subtitle="作物批次、加工批次、包装单元与订单对象版本管理"
-    >
-      <template #actions>
-        <el-button type="primary" @click="openCreateModal">
-          新增业务对象
-        </el-button>
-      </template>
-    </PageHeader>
+    <PageHeader title="业务对象登记" subtitle="登记项目空间内的批次、包装、订单等业务对象" />
 
-    <FilterBar @search="handleSearch" @reset="handleReset">
-      <el-input v-model="objectCode" placeholder="业务对象代码/名称" style="width: 200px" />
-      <el-select v-model="objectType" placeholder="对象类型" style="width: 160px">
-        <el-option label="全部类型" value="" />
-        <el-option label="CROP_BATCH - 作物批次" value="CROP_BATCH" />
-        <el-option label="PROCESS_BATCH - 加工批次" value="PROCESS_BATCH" />
-        <el-option label="HERB_PACKAGE - 包装单元" value="HERB_PACKAGE" />
-      </el-select>
-    </FilterBar>
+    <div class="workspace-grid">
+      <section class="panel">
+        <div class="panel-header"><h2>对象信息</h2></div>
+        <div class="panel-body">
+          <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
+            <div class="form-grid">
+              <el-form-item label="项目空间 ID" prop="projectSpaceId">
+                <el-input v-model="form.projectSpaceId" class="mono" placeholder="请输入数字字符串 ID" />
+              </el-form-item>
+              <el-form-item label="对象类型" prop="objectType">
+                <el-select v-model="form.objectType" allow-create filterable style="width: 100%">
+                  <el-option v-for="type in objectTypes" :key="type" :label="type" :value="type" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="来源业务键" prop="sourceBusinessKey">
+                <el-input v-model="form.sourceBusinessKey" placeholder="来源系统内唯一业务键" />
+              </el-form-item>
+              <el-form-item label="所有者主体 ID" prop="ownerPartyId">
+                <el-input v-model="form.ownerPartyId" class="mono" placeholder="可选，数字字符串 ID" />
+              </el-form-item>
+            </div>
+            <el-form-item label="对象动态属性 JSON" prop="attributes">
+              <el-input v-model="form.attributes" type="textarea" :rows="9" placeholder='{"displayName":"2026 年三七春播批次","batchNo":"CROP-2026-001"}' />
+            </el-form-item>
+            <div class="form-actions">
+              <el-button @click="resetForm">重置</el-button>
+              <el-button type="primary" :loading="submitting" @click="submit">提交登记</el-button>
+            </div>
+          </el-form>
+        </div>
+      </section>
 
-    <div class="panel">
-      <el-table :data="objects" v-loading="loading">
-        <el-table-column prop="id" label="对象 ID" width="120" class-name="mono" />
-        <el-table-column prop="objectCode" label="对象统一编码 *" width="180" class-name="mono" />
-        <el-table-column prop="displayName" label="显示名称 *" min-width="200" />
-        <el-table-column prop="objectType" label="对象类型 *" width="140" />
-        <el-table-column prop="ownerParty" label="所属主体机构 *" min-width="180" />
-        <el-table-column prop="version" label="当前版本" width="90" class-name="mono" />
-        <el-table-column prop="lastEventTime" label="最近更新时间 *" width="160" />
-        <el-table-column label="状态 *" width="90">
-          <template #default="{ row }"><StatusTag :code="row.status" /></template>
-        </el-table-column>
-      </el-table>
+      <aside class="panel result-panel">
+        <div class="panel-header"><h2>登记结果</h2></div>
+        <div class="panel-body">
+          <el-empty v-if="!result" description="提交后显示对象 ID 与版本号" :image-size="72" />
+          <el-descriptions v-else :column="1" border>
+            <el-descriptions-item label="对象 ID"><span class="mono">{{ result.objectId }}</span></el-descriptions-item>
+            <el-descriptions-item label="当前版本号"><span class="mono">{{ result.versionNo }}</span></el-descriptions-item>
+            <el-descriptions-item label="来源业务键">{{ submittedBusinessKey }}</el-descriptions-item>
+            <el-descriptions-item label="对象类型">{{ submittedObjectType }}</el-descriptions-item>
+          </el-descriptions>
+        </div>
+      </aside>
     </div>
-
-    <!-- Create Object Modal -->
-    <el-dialog v-model="createModalVisible" title="创建业务对象主数据" width="520px">
-      <el-form :model="createForm" label-position="top">
-        <el-form-item label="业务对象编码" required>
-          <el-input v-model="createForm.objectCode" placeholder="如: CROP-2026-SQ-009" />
-        </el-form-item>
-        <el-form-item label="对象名称" required>
-          <el-input v-model="createForm.displayName" placeholder="如: 文山三七春播规范化试验田批次" />
-        </el-form-item>
-        <el-form-item label="对象类型" required>
-          <el-select v-model="createForm.objectType" style="width: 100%">
-            <el-option label="CROP_BATCH - 作物种植批次" value="CROP_BATCH" />
-            <el-option label="PROCESS_BATCH - 药材加工批次" value="PROCESS_BATCH" />
-            <el-option label="HERB_PACKAGE - 包装单元对象" value="HERB_PACKAGE" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="权属机构主体">
-          <el-input v-model="createForm.ownerParty" placeholder="如: 文山三七标准化种植示范基地" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="createModalVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="confirmCreateObject">确认创建</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
+import { reactive, ref } from 'vue';
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
-import FilterBar from '@/components/common/FilterBar.vue';
-import StatusTag from '@/components/common/StatusTag.vue';
-import { masterDataApi } from '@/api/masterData';
+import { masterDataApi, type BusinessObjectResponse } from '@/api/masterData';
 import { apiErrorMessage } from '@/api/client';
-import type { MasterObject } from '@/types';
 
-const objectCode = ref('');
-const objectType = ref('');
-const loading = ref(false);
-const saving = ref(false);
-const createModalVisible = ref(false);
-
-const createForm = ref({
-  objectCode: '',
-  displayName: '',
+const objectTypes = ['CROP_BATCH', 'PROCESS_BATCH', 'HERB_PACKAGE', 'ORDER'];
+const storedProjectSpaceId = localStorage.getItem('tcmirp_project_space_id') || localStorage.getItem('tcmirp_project_id') || '';
+const initialForm = () => ({
+  projectSpaceId: storedProjectSpaceId,
   objectType: 'CROP_BATCH',
-  ownerParty: '文山三七标准化种植示范基地'
+  sourceBusinessKey: '',
+  ownerPartyId: '',
+  attributes: JSON.stringify({ displayName: '', batchNo: '' }, null, 2)
 });
 
-const objects = ref<MasterObject[]>([]);
+const formRef = ref<FormInstance>();
+const form = reactive(initialForm());
+const submitting = ref(false);
+const result = ref<BusinessObjectResponse | null>(null);
+const submittedBusinessKey = ref('');
+const submittedObjectType = ref('');
 
-const openCreateModal = () => {
-  createForm.value = {
-    objectCode: `OBJ-${Date.now().toString().slice(-6)}`,
-    displayName: '',
-    objectType: 'CROP_BATCH',
-    ownerParty: '文山三七标准化种植示范基地'
-  };
-  createModalVisible.value = true;
+const numericId = (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+  if (!value || /^-?[0-9]+$/.test(value)) callback();
+  else callback(new Error('请输入数字字符串 ID'));
 };
 
-const confirmCreateObject = async () => {
-  if (!createForm.value.objectCode || !createForm.value.displayName) {
-    ElMessage.warning('请填写业务对象编码与名称');
-    return;
-  }
-  saving.value = true;
+const validJson = (_rule: unknown, value: string, callback: (error?: Error) => void) => {
   try {
-    const res = await masterDataApi.createMasterObject(createForm.value);
-    objects.value.unshift(res);
-    createModalVisible.value = false;
-    ElMessage.success(`业务对象 [${res.displayName}] 创建成功！`);
-  } catch (err) {
-    ElMessage.error(apiErrorMessage(err, '创建失败，请稍后重试'));
-  } finally {
-    saving.value = false;
+    const parsed = JSON.parse(value);
+    if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') throw new Error();
+    callback();
+  } catch {
+    callback(new Error('请输入合法的 JSON 对象字符串'));
   }
 };
 
-const loadObjects = async () => {
-  loading.value = true;
+const rules: FormRules = {
+  projectSpaceId: [{ required: true, message: '请输入项目空间 ID', trigger: 'blur' }, { validator: numericId, trigger: 'blur' }],
+  objectType: [{ required: true, message: '请输入对象类型', trigger: 'change' }],
+  sourceBusinessKey: [{ required: true, message: '请输入来源业务键', trigger: 'blur' }],
+  ownerPartyId: [{ validator: numericId, trigger: 'blur' }],
+  attributes: [{ required: true, message: '请输入动态属性', trigger: 'blur' }, { validator: validJson, trigger: 'blur' }]
+};
+
+const resetForm = () => {
+  Object.assign(form, initialForm());
+  formRef.value?.clearValidate();
+  result.value = null;
+};
+
+const submit = async () => {
+  if (!await formRef.value?.validate().catch(() => false)) return;
+  submitting.value = true;
   try {
-    objects.value = await masterDataApi.getMasterObjects({
-      keyword: objectCode.value,
-      objectType: objectType.value
+    result.value = await masterDataApi.registerBusinessObject({
+      projectSpaceId: form.projectSpaceId.trim(),
+      objectType: form.objectType.trim(),
+      ownerPartyId: form.ownerPartyId.trim() || undefined,
+      attributes: form.attributes.trim(),
+      sourceBusinessKey: form.sourceBusinessKey.trim()
     });
-  } catch (err) {
-    console.error('Failed to load objects', err);
+    submittedBusinessKey.value = form.sourceBusinessKey.trim();
+    submittedObjectType.value = form.objectType.trim();
+    ElMessage.success('业务对象登记成功');
+  } catch (error) {
+    ElMessage.error(apiErrorMessage(error, '业务对象登记失败'));
   } finally {
-    loading.value = false;
+    submitting.value = false;
   }
-};
-
-onMounted(() => {
-  loadObjects();
-});
-
-const handleSearch = async () => {
-  await loadObjects();
-};
-
-const handleReset = async () => {
-  objectCode.value = '';
-  objectType.value = '';
-  await loadObjects();
 };
 </script>
 
 <style scoped>
-.panel {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-}
+.workspace-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.75fr); gap: 16px; align-items: start; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.result-panel { min-height: 260px; }
+@media (max-width: 960px) { .workspace-grid, .form-grid { grid-template-columns: 1fr; } }
 </style>

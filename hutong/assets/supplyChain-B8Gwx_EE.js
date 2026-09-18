@@ -1,0 +1,1 @@
+import{r as o}from"./index-7-njx7M9.js";function u(s,e){return o.post(`/supply-chain/${s}`,{schemaVersion:e.schemaVersion||"1.0.0",sourceBusinessKey:e.sourceBusinessKey,occurredAt:e.occurredAt||new Date().toISOString(),payload:e.payload},{headers:{"X-Idempotency-Key":e.sourceBusinessKey}}).then(r=>r)}export{u as s};

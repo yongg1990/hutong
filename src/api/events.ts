@@ -2,10 +2,65 @@ import { request, apiCall } from './client';
 import type { TrustEvent } from '@/types';
 import { submitSupplyChainEvent } from './supplyChain';
 
+export interface EventTypeRequest {
+  eventType: string;
+  eventName: string;
+  scenarioCode: string;
+  description?: string;
+}
+
+export interface EventTypeResponse {
+  id: string;
+  eventType: string;
+  status: string;
+}
+
+export interface EventSchemaRequest {
+  eventType: string;
+  schemaVersion: string;
+  schemaJson: string;
+  referenceRulesJson?: string;
+  valueSetRefsJson?: string;
+}
+
+export interface SchemaSnapshot {
+  eventType: string;
+  schemaVersion: string;
+  schemaJson: string;
+  status: 'DRAFT' | 'PUBLISHED' | string;
+  contentDigest?: string;
+}
+
+export interface SchemaTestResult {
+  valid: boolean;
+  errors: string[];
+}
+
 /**
  * 可信事件上报与查询接口
  */
 export const eventsApi = {
+  async createEventType(data: EventTypeRequest): Promise<EventTypeResponse> {
+    return request.post<EventTypeResponse, EventTypeResponse>('/openapi/v1/event-fact/config/event-types', data);
+  },
+
+  async createSchemaDraft(data: EventSchemaRequest): Promise<SchemaSnapshot> {
+    return request.post<SchemaSnapshot, SchemaSnapshot>('/openapi/v1/event-fact/config/schemas', data);
+  },
+
+  async testEventSchema(eventType: string, schemaVersion: string, payloadJson: string): Promise<SchemaTestResult> {
+    return request.post<SchemaTestResult, SchemaTestResult>('/openapi/v1/event-fact/config/schemas/test', {
+      eventType,
+      schemaVersion,
+      payloadJson
+    });
+  },
+
+  async publishEventSchema(eventType: string, schemaVersion: string): Promise<SchemaSnapshot> {
+    return request.post<SchemaSnapshot, SchemaSnapshot>(
+      `/openapi/v1/event-fact/config/schemas/${encodeURIComponent(eventType)}/${encodeURIComponent(schemaVersion)}/publish`
+    );
+  },
   // 当前文档仅支持按事件 ID 查询。
   async queryTrustEvents(params?: {
     eventId?: string | number;
@@ -140,11 +195,9 @@ export const eventsApi = {
   },
 
   // 获取已发布事件 Schema（Swagger: /openapi/v1/event-fact/schemas/{eventType}/{schemaVersion}）
-  async getEventSchema(eventType: string, schemaVersion = '1.0.0'): Promise<any> {
-    return apiCall(
-      request.get('/openapi/v1/event-fact/schemas/' + eventType + '/' + schemaVersion),
-      null,
-      '获取事件契约Schema'
+  async getEventSchema(eventType: string, schemaVersion = '1.0.0'): Promise<SchemaSnapshot> {
+    return request.get<SchemaSnapshot, SchemaSnapshot>(
+      `/openapi/v1/event-fact/schemas/${encodeURIComponent(eventType)}/${encodeURIComponent(schemaVersion)}`
     );
   }
 };

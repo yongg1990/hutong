@@ -103,7 +103,7 @@ export const trustApi = {
           fileId: item.fileId,
           fileHash: item.contentDigest,
           status: item.status
-        }])),
+        }]),
         [],
         '按ID查询证据'
       );

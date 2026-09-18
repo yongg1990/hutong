@@ -123,6 +123,7 @@
       v-model="drawerVisible"
       :title="'链记录详情: ' + (activeProof?.chainRecordId || activeProof?.proofNo || '')"
       size="540px"
+      :close-on-click-modal="false"
     >
       <div v-if="activeProof" class="merkle-drawer-content">
         <h3 class="section-title">存证基础元数据</h3>
