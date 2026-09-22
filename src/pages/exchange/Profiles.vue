@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col gap-4">
+  <div class="exchange-page h-full flex flex-col gap-4">
     <PageHeader
       title="互通规范包"
       subtitle="定义不同业务场景与外部系统的交换数据标准、一致性映射与脱敏规则"

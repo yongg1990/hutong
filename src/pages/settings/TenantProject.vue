@@ -1,162 +1,70 @@
 <template>
-  <div class="settings-page">
-    <PageHeader title="项目协同空间" subtitle="创建项目空间，并按项目空间 ID 查询和切换当前业务上下文">
-      <template #actions><el-button type="primary" @click="openCreateDialog">创建项目空间</el-button></template>
+  <div class="settings-page project-space-page">
+    <PageHeader title="项目协同空间" subtitle="统一管理租户内项目空间、业务授权范围与协同上下文">
+      <template #actions><el-button :icon="Refresh" @click="loadSpaces">刷新</el-button><el-button type="primary" :icon="Plus" @click="openCreateDialog">创建项目空间</el-button></template>
     </PageHeader>
-
-    <FilterBar @search="loadProject" @reset="handleReset">
-      <el-input v-model="projectSpaceId" placeholder="项目空间 ID" clearable style="width: 280px" @keyup.enter="loadProject" />
+    <div class="overview-grid">
+      <div class="overview-card"><span class="overview-label">项目空间总数</span><strong>{{ total }}</strong><span class="overview-note">当前租户</span></div>
+      <div class="overview-card"><span class="overview-label">本页已启用空间</span><strong class="active-number">{{ activeCount }}</strong><span class="overview-note">可参与业务协同</span></div>
+      <div class="overview-card"><span class="overview-label">当前协同空间</span><strong class="context-name">{{ contextStore.projectName || '尚未选择' }}</strong><span class="overview-note mono">{{ currentProjectId || '请选择项目空间' }}</span></div>
+    </div>
+    <FilterBar @search="handleSearch" @reset="handleReset">
+      <el-input v-model="filters.projectCode" placeholder="项目代码" clearable style="width: 190px" @keyup.enter="handleSearch" />
+      <el-input v-model="filters.projectName" placeholder="项目名称" clearable style="width: 220px" @keyup.enter="handleSearch" />
+      <el-select v-model="filters.status" placeholder="项目状态" clearable style="width: 150px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
     </FilterBar>
-
-    <div class="panel" v-loading="loading">
-      <div class="panel-header">
-        <h2>项目空间详情</h2>
-        <el-button v-if="projectSpace" type="primary" @click="switchProject">设为当前项目空间</el-button>
-      </div>
-      <div class="panel-body">
-        <template v-if="projectSpace">
-          <el-descriptions :column="2" border>
-            <el-descriptions-item label="项目空间 ID"><span class="mono">{{ projectSpace.projectSpaceId }}</span></el-descriptions-item>
-            <el-descriptions-item label="租户 ID"><span class="mono">{{ projectSpace.tenantId || '-' }}</span></el-descriptions-item>
-            <el-descriptions-item label="项目代码"><span class="mono">{{ projectSpace.projectCode }}</span></el-descriptions-item>
-            <el-descriptions-item label="项目名称">{{ projectSpace.projectName }}</el-descriptions-item>
-            <el-descriptions-item label="区域代码"><span class="mono">{{ projectSpace.regionCode }}</span></el-descriptions-item>
-            <el-descriptions-item label="状态"><StatusTag :code="projectSpace.status" /></el-descriptions-item>
-            <el-descriptions-item label="锁版本"><span class="mono">{{ projectSpace.lockVersion ?? '-' }}</span></el-descriptions-item>
-            <el-descriptions-item label="创建时间">{{ projectSpace.createdAt || '-' }}</el-descriptions-item>
-          </el-descriptions>
-
-          <div class="scope-section">
-            <h3>业务范围</h3>
-            <div class="scope-grid">
-              <div v-for="item in scopeItems" :key="item.label" class="scope-item">
-                <span class="scope-label">{{ item.label }}</span>
-                <div class="tag-list">
-                  <el-tag v-for="value in item.values" :key="value" size="small" effect="plain">{{ value }}</el-tag>
-                  <span v-if="!item.values.length" class="empty-value">无授权范围</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-        <el-empty v-else description="请输入项目空间 ID 查询" />
+    <div class="panel">
+      <div class="panel-header"><div><h2>协同空间列表</h2><p class="panel-caption">支持按项目代码、项目名称和状态查询，分页数据来自 APP-01 项目空间接口</p></div><span class="result-count">共 {{ total }} 个空间</span></div>
+      <div class="panel-body table-body">
+        <el-table :data="spaces" v-loading="loading" row-key="projectSpaceId" empty-text="暂无项目空间">
+          <el-table-column label="项目空间" min-width="250"><template #default="{ row }"><div class="space-primary"><span class="space-name">{{ row.projectName }}</span><span v-if="String(row.projectSpaceId) === currentProjectId" class="current-mark">当前</span></div><span class="space-code mono">{{ row.projectCode }}</span></template></el-table-column>
+          <el-table-column label="项目空间 ID" min-width="180"><template #default="{ row }"><span class="mono id-text">{{ row.projectSpaceId }}</span></template></el-table-column>
+          <el-table-column prop="regionCode" label="区域代码" width="140"><template #default="{ row }"><span class="mono">{{ row.regionCode || '-' }}</span></template></el-table-column>
+          <el-table-column label="授权范围" min-width="250"><template #default="{ row }"><div class="scope-summary"><span v-for="item in scopePreview(row)" :key="item.label" class="scope-chip">{{ item.label }} {{ item.count }}</span><span v-if="!scopePreview(row).length" class="muted">未配置范围</span></div></template></el-table-column>
+          <el-table-column label="状态" width="100"><template #default="{ row }"><StatusTag :code="row.status" :label="row.status === 'ACTIVE' ? '启用' : '停用'" /></template></el-table-column>
+          <el-table-column prop="createdAt" label="创建时间" width="180" />
+          <el-table-column label="操作" width="250" fixed="right"><template #default="{ row }"><el-button link type="primary" @click="openDetail(row)">详情</el-button><el-button link @click="openEditDialog(row)">编辑</el-button><el-button link :type="row.status === 'ACTIVE' ? 'warning' : 'success'" @click="toggleStatus(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button><el-button v-if="String(row.projectSpaceId) !== currentProjectId" link type="primary" @click="switchProject(row)">设为当前</el-button></template></el-table-column>
+        </el-table>
+        <div class="pagination-row"><el-pagination v-model:current-page="page" v-model:page-size="size" :page-sizes="[10, 20, 50]" :total="total" layout="total, sizes, prev, pager, next" @current-change="loadSpaces" @size-change="loadSpaces" /></div>
       </div>
     </div>
-
-    <el-dialog v-model="createDialogVisible" title="创建项目空间" width="680px" destroy-on-close :close-on-click-modal="false">
-      <el-form :model="createForm" label-position="top">
-        <div class="form-grid">
-          <el-form-item label="项目代码" required><el-input v-model="createForm.projectCode" maxlength="64" show-word-limit /></el-form-item>
-          <el-form-item label="项目名称" required><el-input v-model="createForm.projectName" maxlength="200" show-word-limit /></el-form-item>
-          <el-form-item label="区域代码" required><el-input v-model="createForm.regionCode" maxlength="32" /></el-form-item>
-        </div>
-        <el-form-item label="场景代码"><el-select v-model="createForm.businessScope.scenarioCodes" multiple filterable allow-create default-first-option style="width: 100%" /></el-form-item>
-        <el-form-item label="授权区域代码"><el-select v-model="createForm.businessScope.regionCodes" multiple filterable allow-create default-first-option style="width: 100%" /></el-form-item>
-        <el-form-item label="主体 ID"><el-select v-model="createForm.businessScope.partyIds" multiple filterable allow-create default-first-option style="width: 100%" /></el-form-item>
-        <el-form-item label="业务对象类型"><el-select v-model="createForm.businessScope.objectTypes" multiple filterable allow-create default-first-option style="width: 100%" /></el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="createDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="creating" @click="createProject">创建</el-button>
-      </template>
-    </el-dialog>
+    <el-drawer v-model="detailVisible" title="项目空间详情" size="560px" v-loading="detailLoading"><template v-if="selectedSpace"><div class="drawer-hero"><div><div class="drawer-title">{{ selectedSpace.projectName }}</div><div class="mono drawer-id">{{ selectedSpace.projectCode }} · {{ selectedSpace.projectSpaceId }}</div></div><StatusTag :code="selectedSpace.status" :label="selectedSpace.status === 'ACTIVE' ? '启用' : '停用'" /></div><el-descriptions :column="1" border class="detail-descriptions"><el-descriptions-item label="租户 ID"><span class="mono">{{ selectedSpace.tenantId || '-' }}</span></el-descriptions-item><el-descriptions-item label="区域代码"><span class="mono">{{ selectedSpace.regionCode || '-' }}</span></el-descriptions-item><el-descriptions-item label="锁版本"><span class="mono">{{ selectedSpace.lockVersion ?? '-' }}</span></el-descriptions-item><el-descriptions-item label="创建时间">{{ selectedSpace.createdAt || '-' }}</el-descriptions-item></el-descriptions><div class="section-heading">业务授权范围</div><div v-for="item in detailScopeItems" :key="item.label" class="scope-detail-row"><span class="scope-detail-label">{{ item.label }}</span><div class="tag-list"><el-tag v-for="value in item.values" :key="value" size="small" effect="plain">{{ value }}</el-tag><span v-if="!item.values.length" class="muted">无授权范围</span></div></div><div class="drawer-actions"><el-button type="primary" @click="switchProject(selectedSpace); detailVisible = false">设为当前空间</el-button><el-button @click="openEditDialog(selectedSpace); detailVisible = false">编辑空间</el-button></div></template></el-drawer>
+    <el-dialog v-model="dialogVisible" :title="editing ? '编辑项目协同空间' : '创建项目协同空间'" width="720px" destroy-on-close :close-on-click-modal="false"><el-form ref="formRef" :model="form" :rules="rules" label-position="top"><div class="form-grid"><el-form-item label="项目代码" prop="projectCode"><el-input v-model="form.projectCode" :disabled="editing" maxlength="64" placeholder="租户内唯一代码" /></el-form-item><el-form-item label="项目名称" prop="projectName"><el-input v-model="form.projectName" maxlength="200" show-word-limit /></el-form-item><el-form-item label="区域代码" prop="regionCode"><el-input v-model="form.regionCode" maxlength="32" placeholder="如 YN" /></el-form-item><el-form-item v-if="editing" label="状态" prop="status"><el-select v-model="form.status" style="width: 100%"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select></el-form-item></div><div class="scope-form"><div class="form-section-title">业务授权范围 <span>空数组表示该维度不限制授权</span></div><el-form-item label="场景代码"><el-select v-model="form.businessScope.scenarioCodes" multiple filterable allow-create default-first-option style="width: 100%" placeholder="输入后回车添加" /></el-form-item><el-form-item label="授权区域代码"><el-select v-model="form.businessScope.regionCodes" multiple filterable allow-create default-first-option style="width: 100%" placeholder="输入后回车添加" /></el-form-item><el-form-item label="主体 ID"><el-select v-model="form.businessScope.partyIds" multiple filterable allow-create default-first-option style="width: 100%" placeholder="输入后回车添加数字 ID" /></el-form-item><el-form-item label="业务对象类型"><el-select v-model="form.businessScope.objectTypes" multiple filterable allow-create default-first-option style="width: 100%" placeholder="输入后回车添加" /></el-form-item></div></el-form><template #footer><el-button @click="dialogVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="submitForm">{{ editing ? '保存变更' : '创建空间' }}</el-button></template></el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { ElMessage } from 'element-plus';
-import { useContextStore } from '@/stores/contextStore';
+import { computed, onMounted, reactive, ref } from 'vue';
+import { ElMessage, type FormInstance } from 'element-plus';
+import { Plus, Refresh } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
-import { settingsApi, type ProjectSpaceCreateRequest, type ProjectSpaceResponse } from '@/api/settings';
 import { apiErrorMessage } from '@/api/client';
+import { settingsApi, type BusinessScope, type ProjectSpaceCreateRequest, type ProjectSpaceResponse } from '@/api/settings';
+import { useContextStore } from '@/stores/contextStore';
 
+type SpaceForm = ProjectSpaceCreateRequest & { status: 'ACTIVE' | 'INACTIVE'; lockVersion: number };
 const contextStore = useContextStore();
-const projectSpaceId = ref('');
-const projectSpace = ref<ProjectSpaceResponse | null>(null);
-const loading = ref(false);
-const creating = ref(false);
-const createDialogVisible = ref(false);
-
-const emptyCreateForm = (): ProjectSpaceCreateRequest => ({
-  projectCode: '', projectName: '', regionCode: '',
-  businessScope: { scenarioCodes: [], regionCodes: [], partyIds: [], objectTypes: [] }
-});
-const createForm = ref<ProjectSpaceCreateRequest>(emptyCreateForm());
-
-const scopeItems = computed(() => [
-  { label: '场景代码', values: projectSpace.value?.businessScope?.scenarioCodes || [] },
-  { label: '区域代码', values: projectSpace.value?.businessScope?.regionCodes || [] },
-  { label: '主体 ID', values: projectSpace.value?.businessScope?.partyIds || [] },
-  { label: '业务对象类型', values: projectSpace.value?.businessScope?.objectTypes || [] }
-]);
-
-const validId = (value: string) => /^[0-9]+$/.test(value.trim());
-
-const loadProject = async () => {
-  const id = projectSpaceId.value.trim();
-  if (!validId(id)) {
-    projectSpace.value = null;
-    ElMessage.warning('请输入有效的项目空间 ID');
-    return;
-  }
-  loading.value = true;
-  try {
-    projectSpace.value = await settingsApi.getProjectSpaceById(id);
-  } catch (err) {
-    projectSpace.value = null;
-    ElMessage.error(apiErrorMessage(err, '项目空间查询失败'));
-  } finally {
-    loading.value = false;
-  }
-};
-
-const handleReset = () => { projectSpaceId.value = ''; projectSpace.value = null; };
-
-const switchProject = () => {
-  if (!projectSpace.value) return;
-  const id = String(projectSpace.value.projectSpaceId);
-  contextStore.switchProject(id, projectSpace.value.projectName);
-  localStorage.setItem('tcmirp_project_space_id', id);
-  ElMessage.success(`当前项目空间已切换为：${projectSpace.value.projectName}`);
-};
-
-const openCreateDialog = () => { createForm.value = emptyCreateForm(); createDialogVisible.value = true; };
-
-const createProject = async () => {
-  if (!createForm.value.projectCode.trim() || !createForm.value.projectName.trim() || !createForm.value.regionCode.trim()) {
-    ElMessage.warning('请填写项目代码、项目名称和区域代码');
-    return;
-  }
-  creating.value = true;
-  try {
-    const created = await settingsApi.createProjectSpace(createForm.value);
-    projectSpace.value = created;
-    projectSpaceId.value = String(created.projectSpaceId);
-    createDialogVisible.value = false;
-    ElMessage.success('项目空间创建成功');
-  } catch (err) {
-    ElMessage.error(apiErrorMessage(err, '项目空间创建失败'));
-  } finally {
-    creating.value = false;
-  }
-};
+const spaces = ref<ProjectSpaceResponse[]>([]); const selectedSpace = ref<ProjectSpaceResponse | null>(null); const loading = ref(false); const detailLoading = ref(false); const saving = ref(false); const detailVisible = ref(false); const dialogVisible = ref(false); const editing = ref(false); const formRef = ref<FormInstance>();
+const page = ref(1); const size = ref(20); const total = ref(0); const filters = reactive({ projectCode: '', projectName: '', status: '' });
+const emptyScope = (): BusinessScope => ({ scenarioCodes: [], regionCodes: [], partyIds: [], objectTypes: [] });
+const emptyForm = (): SpaceForm => ({ projectCode: '', projectName: '', regionCode: '', businessScope: emptyScope(), status: 'ACTIVE', lockVersion: 0 });
+const form = ref<SpaceForm>(emptyForm());
+const currentProjectId = ref(localStorage.getItem('tcmirp_project_space_id') || localStorage.getItem('tcmirp_project_id') || String(contextStore.projectId || ''));
+const activeCount = computed(() => spaces.value.filter(item => item.status === 'ACTIVE').length);
+const rules = { projectCode: [{ required: true, message: '请输入项目代码', trigger: 'blur' }], projectName: [{ required: true, message: '请输入项目名称', trigger: 'blur' }], regionCode: [{ required: true, message: '请输入区域代码', trigger: 'blur' }] };
+const loadSpaces = async () => { loading.value = true; try { const params = { ...(filters.projectCode.trim() ? { projectCode: filters.projectCode.trim() } : {}), ...(filters.projectName.trim() ? { projectName: filters.projectName.trim() } : {}), ...(filters.status ? { status: filters.status } : {}), page: String(page.value), size: String(size.value) }; const result: any = await settingsApi.listProjectSpaces(params); spaces.value = Array.isArray(result?.records) ? result.records : []; total.value = Number(result?.total || 0); } catch (err) { spaces.value = []; total.value = 0; ElMessage.error(apiErrorMessage(err, '项目空间列表加载失败')); } finally { loading.value = false; } };
+const handleSearch = () => { page.value = 1; loadSpaces(); }; const handleReset = () => { filters.projectCode = ''; filters.projectName = ''; filters.status = ''; page.value = 1; loadSpaces(); };
+const scopePreview = (row: ProjectSpaceResponse) => { const scope = row.businessScope || emptyScope(); return [{ label: '场景', count: scope.scenarioCodes?.length || 0 }, { label: '区域', count: scope.regionCodes?.length || 0 }, { label: '主体', count: scope.partyIds?.length || 0 }, { label: '对象', count: scope.objectTypes?.length || 0 }].filter(item => item.count > 0).slice(0, 3); };
+const detailScopeItems = computed(() => { const scope = selectedSpace.value?.businessScope || emptyScope(); return [{ label: '场景代码', values: scope.scenarioCodes || [] }, { label: '授权区域代码', values: scope.regionCodes || [] }, { label: '主体 ID', values: scope.partyIds || [] }, { label: '业务对象类型', values: scope.objectTypes || [] }]; });
+const openDetail = async (row: ProjectSpaceResponse) => { selectedSpace.value = row; detailVisible.value = true; detailLoading.value = true; try { selectedSpace.value = await settingsApi.getProjectSpaceById(String(row.projectSpaceId)); } catch (err) { ElMessage.error(apiErrorMessage(err, '项目空间详情加载失败')); } finally { detailLoading.value = false; } }; const switchProject = (row: ProjectSpaceResponse) => { const id = String(row.projectSpaceId); contextStore.switchProject(id, row.projectName); currentProjectId.value = id; ElMessage.success('当前协同空间已切换为：' + row.projectName); };
+const openCreateDialog = () => { editing.value = false; form.value = emptyForm(); dialogVisible.value = true; }; const openEditDialog = (row: ProjectSpaceResponse) => { editing.value = true; form.value = { projectCode: row.projectCode, projectName: row.projectName, regionCode: row.regionCode, businessScope: { ...emptyScope(), ...(row.businessScope || {}) }, status: row.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE', lockVersion: row.lockVersion || 0 }; selectedSpace.value = row; dialogVisible.value = true; };
+const submitForm = async () => { const valid = await formRef.value?.validate().catch(() => false); if (!valid) return; saving.value = true; try { const payload = { projectName: form.value.projectName.trim(), regionCode: form.value.regionCode.trim(), businessScope: form.value.businessScope, status: form.value.status, lockVersion: form.value.lockVersion }; const result = editing.value && selectedSpace.value ? await settingsApi.updateProjectSpace(String(selectedSpace.value.projectSpaceId), payload) : await settingsApi.createProjectSpace({ projectCode: form.value.projectCode.trim(), projectName: form.value.projectName.trim(), regionCode: form.value.regionCode.trim(), businessScope: form.value.businessScope }); ElMessage.success(editing.value ? '项目空间已更新' : '项目空间创建成功'); dialogVisible.value = false; if (editing.value && selectedSpace.value && String(selectedSpace.value.projectSpaceId) === currentProjectId.value) contextStore.switchProject(String(result.projectSpaceId), result.projectName); await loadSpaces(); } catch (err) { ElMessage.error(apiErrorMessage(err, editing.value ? '项目空间更新失败' : '项目空间创建失败')); } finally { saving.value = false; } };
+const toggleStatus = async (row: ProjectSpaceResponse) => { try { const result = await settingsApi.updateProjectSpace(String(row.projectSpaceId), { projectName: row.projectName, regionCode: row.regionCode, businessScope: row.businessScope || emptyScope(), status: row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE', lockVersion: row.lockVersion || 0 }); ElMessage.success(result.status === 'ACTIVE' ? '项目空间已启用' : '项目空间已停用'); await loadSpaces(); } catch (err) { ElMessage.error(apiErrorMessage(err, '项目空间状态更新失败')); } };
+onMounted(loadSpaces);
 </script>
 
 <style scoped>
-.settings-page { width: 100%; padding-bottom: 24px; }
-.panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; }
-.panel-header { display: flex; justify-content: space-between; align-items: center; min-height: 54px; padding: 0 16px; border-bottom: 1px solid var(--color-border); background: #fbfdfc; }
-.panel-header h2, .scope-section h3 { margin: 0; font-size: 15px; }
-.panel-body { padding: 16px; }
-.scope-section { margin-top: 20px; }
-.scope-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 10px; }
-.scope-item { min-height: 72px; padding: 12px; border: 1px solid var(--color-border); border-radius: 6px; }
-.scope-label { display: block; margin-bottom: 8px; color: var(--color-muted); font-size: 12px; }
-.tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
-.empty-value { color: var(--color-muted); font-size: 13px; }
-.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
-@media (max-width: 720px) { .scope-grid, .form-grid { grid-template-columns: 1fr; } }
+.project-space-page{padding-bottom:28px}.overview-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:18px}.overview-card{min-height:108px;padding:17px 20px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:10px;box-shadow:var(--shadow-sm)}.overview-label{display:block;color:var(--color-muted);font-size:12px;font-weight:650}.overview-card strong{display:block;margin-top:8px;color:var(--color-ink);font-size:28px;line-height:1.1}.active-number{color:var(--color-brand)!important}.overview-note{display:block;margin-top:7px;color:var(--color-muted);font-size:11px}.context-name{overflow:hidden;max-width:100%;font-size:18px!important;text-overflow:ellipsis;white-space:nowrap}.panel-caption{margin:4px 0 0;color:var(--color-muted);font-size:11px}.result-count{color:var(--color-muted);font-size:12px}.table-body{padding-top:12px!important}.space-primary{display:flex;align-items:center;gap:8px}.space-name{color:var(--color-ink);font-weight:700}.space-code{display:block;margin-top:4px;color:var(--color-muted);font-size:11px}.current-mark{padding:2px 6px;border:1px solid #b9ded8;border-radius:4px;background:var(--color-brand-soft);color:var(--color-brand);font-size:10px;font-weight:700}.id-text{color:var(--color-text-secondary);font-size:12px}.scope-summary{display:flex;flex-wrap:wrap;gap:5px}.scope-chip{padding:3px 6px;border:1px solid var(--color-border);border-radius:4px;color:var(--color-text-secondary);background:#f7faf9;font-size:11px}.muted{color:var(--color-muted);font-size:12px}.drawer-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:15px;margin-bottom:16px;border:1px solid var(--color-border);border-radius:8px;background:#f3faf7}.drawer-title{color:var(--color-ink);font-size:18px;font-weight:750}.drawer-id{margin-top:6px;color:var(--color-muted);font-size:11px}.detail-descriptions{margin-bottom:22px}.section-heading,.form-section-title{margin-bottom:10px;color:var(--color-ink);font-size:13px;font-weight:750}.scope-detail-row{padding:12px 0;border-bottom:1px solid var(--color-border-subtle)}.scope-detail-label{display:block;margin-bottom:7px;color:var(--color-muted);font-size:12px}.tag-list{display:flex;flex-wrap:wrap;gap:6px}.drawer-actions{display:flex;gap:10px;margin-top:24px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}.scope-form{padding-top:5px}.form-section-title{padding-top:12px;border-top:1px solid var(--color-border-subtle)}.form-section-title span{margin-left:8px;color:var(--color-muted);font-size:11px;font-weight:400}@media(max-width:900px){.overview-grid{grid-template-columns:1fr}}@media(max-width:720px){.form-grid{grid-template-columns:1fr}.drawer-actions{flex-direction:column}}
 </style>

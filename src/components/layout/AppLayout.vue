@@ -28,7 +28,7 @@ import Sidebar from './Sidebar.vue';
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  background-color: var(--color-bg);
+  background: linear-gradient(135deg, #f3f7f6 0%, #f8fbfa 48%, #eef5f3 100%);
 }
 
 .app-body {
@@ -44,7 +44,7 @@ import Sidebar from './Sidebar.vue';
   overflow-x: hidden;
   min-width: 0;
   max-width: 100%;
-  padding: 16px 20px;
+  padding: 22px 26px 30px;
   background-color: var(--color-bg);
   position: relative;
   box-sizing: border-box;

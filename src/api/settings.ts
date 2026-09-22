@@ -26,6 +26,21 @@ export interface ProjectSpaceResponse {
   createdAt: string;
 }
 
+export interface ProjectSpaceUpdateRequest {
+  projectName: string;
+  regionCode: string;
+  businessScope: BusinessScope;
+  status?: 'ACTIVE' | 'INACTIVE';
+  lockVersion: number;
+}
+
+export interface ProjectSpacePageResult {
+  records: ProjectSpaceResponse[];
+  total: string;
+  page: string;
+  size: string;
+}
+
 export interface DeploymentInstanceCreateRequest {
   instanceCode: string;
   deploymentMode: 'SAAS' | 'DEDICATED' | 'HYBRID' | 'EDGE_ONLY';
@@ -82,13 +97,21 @@ const mockAlerts: AuditAlert[] = [
  * 设置与运维管理接口 (Swagger: /admin/v1/*, /settings/*, /operations/*)
  */
 export const settingsApi = {
-  // ================= 1. 项目空间 (POST /admin/v1/project-spaces, GET /admin/v1/project-spaces/{id}) =================
+  // ================= 1. 项目空间 (APP-01: list/create/find/update) =================
   async createProjectSpace(data: ProjectSpaceCreateRequest): Promise<ProjectSpaceResponse> {
     return request.post('/admin/v1/project-spaces', data) as unknown as Promise<ProjectSpaceResponse>;
   },
 
+  async listProjectSpaces(params: { projectCode?: string; projectName?: string; status?: string; page: string; size: string }): Promise<ProjectSpacePageResult> {
+    return request.get('/admin/v1/project-spaces', { params }) as unknown as Promise<ProjectSpacePageResult>;
+  },
+
   async getProjectSpaceById(id: string): Promise<ProjectSpaceResponse> {
     return request.get(`/admin/v1/project-spaces/${id}`) as unknown as Promise<ProjectSpaceResponse>;
+  },
+
+  async updateProjectSpace(id: string, data: ProjectSpaceUpdateRequest): Promise<ProjectSpaceResponse> {
+    return request.patch(`/admin/v1/project-spaces/${id}`, data) as unknown as Promise<ProjectSpaceResponse>;
   },
 
   // ================= 2. 部署实例 (POST /admin/v1/deployment-instances, GET /admin/v1/deployment-instances/{id}) =================

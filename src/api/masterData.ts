@@ -24,8 +24,23 @@ export interface NamespaceDefRequest {
 export interface NamespaceDefResponse extends NamespaceDefRequest {
   namespaceId: string;
   status: 'ACTIVE' | 'INACTIVE' | string;
+  lockVersion?: number;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface NamespaceUpdateRequest {
+  namespaceName: string;
+  valuePattern?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  lockVersion: number;
+}
+
+export interface NamespacePage {
+  records: NamespaceDefResponse[];
+  total: number;
+  page: number;
+  size: number;
 }
 
 export interface BusinessObjectRequest {
@@ -39,6 +54,37 @@ export interface BusinessObjectRequest {
 export interface BusinessObjectResponse {
   objectId: string;
   versionNo: string;
+}
+
+export interface BusinessObjectSummaryResponse {
+  objectId: string;
+  tenantId?: string;
+  projectSpaceId: string;
+  objectType: string;
+  currentVersionNo: string;
+  status: 'ACTIVE' | 'INACTIVE' | string;
+  ownerPartyId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface BusinessObjectDetailResponse extends BusinessObjectSummaryResponse {
+  attributes: string;
+  effectiveFrom?: string;
+}
+
+export interface BusinessObjectUpdateRequest {
+  ownerPartyId?: string;
+  attributes: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  currentVersionNo: string;
+}
+
+export interface BusinessObjectPage {
+  records: BusinessObjectSummaryResponse[];
+  total: number;
+  page: number;
+  size: number;
 }
 
 export interface IdentifierResolveRequest {
@@ -71,9 +117,123 @@ export interface IdentifierBindingResponse {
 export interface PieceProductCodeItem {
   schemeCode: string;
   code: string;
+  validFrom: string;
+  validTo?: string;
+  sourceAuthority: string;
+}
+
+export interface PieceProductResponse {
+  productId: string;
+}
+
+export interface PieceProductDetailResponse {
+  productId: string;
+  tenantId?: string;
+  productName: string;
+  materialName: string;
+  processingMethod: string;
+  specification?: string;
+  executiveStandard?: string;
+  medicalInsuranceCode?: string;
+  nmpaPieceCode?: string;
+  regulatoryAttributes?: string;
+  nmpaCodeVersion?: string;
+  status: 'ACTIVE' | 'INACTIVE' | string;
   validFrom?: string;
   validTo?: string;
-  sourceAuthority?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PieceProductPage {
+  records: PieceProductDetailResponse[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface PieceProductRequest {
+  productName: string;
+  materialName: string;
+  processingMethod: string;
+  specification?: string;
+  executiveStandard?: string;
+  codes: PieceProductCodeItem[];
+}
+
+export interface PieceProductUpdateRequest extends PieceProductRequest {
+  regulatoryAttributes?: string;
+  nmpaCodeVersion?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  validFrom: string;
+  validTo?: string;
+}
+
+export interface CodeSchemeResponse {
+  schemeId: string;
+  schemeCode: string;
+  schemeName: string;
+  issuerType: string;
+  validationJson: string;
+  status: 'ACTIVE' | 'INACTIVE' | string;
+  lockVersion?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CodeSchemePage {
+  records: CodeSchemeResponse[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface CodeSchemeCreateRequest {
+  schemeCode: string;
+  schemeName: string;
+  issuerType: string;
+  validationJson: string;
+}
+
+export interface CodeSchemeUpdateRequest {
+  schemeName: string;
+  issuerType: string;
+  validationJson: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  lockVersion: number;
+}
+
+export interface CodeSchemeSegment {
+  segmentId: string;
+  schemeId: string;
+  segmentNo: number;
+  startPos: number;
+  segmentLength: number;
+  semanticCode: string;
+  ruleJson: string;
+  createdAt?: string;
+}
+
+export interface CodeSchemeSegmentRequest {
+  segmentNo: number;
+  startPos: number;
+  segmentLength: number;
+  semanticCode: string;
+  ruleJson: string;
+}
+
+export interface CodeValidationResponse {
+  schemeCode: string;
+  normalizedCode?: string;
+  valid: boolean;
+  errorCode?: string;
+  segments?: Array<{
+    segmentNo?: number;
+    semanticCode?: string;
+    value?: string;
+    valid?: boolean;
+    errorCode?: string;
+  }>;
 }
 
 export const masterDataApi = {
@@ -82,19 +242,171 @@ export const masterDataApi = {
   },
 
   registerNamespace(data: NamespaceDefRequest): Promise<NamespaceDefResponse> {
-    return request.post<NamespaceDefResponse, NamespaceDefResponse>('/openapi/v1/identifier-namespaces', data);
+    return request.post<NamespaceDefResponse, NamespaceDefResponse>('/openapi/v1/identifiers/namespaces', data);
+  },
+
+  async getNamespacePage(params?: {
+    namespaceCode?: string;
+    namespaceName?: string;
+    targetType?: string;
+    status?: string;
+    page?: number;
+    size?: number;
+  }): Promise<NamespacePage> {
+    const query = new URLSearchParams();
+    if (params?.namespaceCode) query.set('namespaceCode', params.namespaceCode);
+    if (params?.namespaceName) query.set('namespaceName', params.namespaceName);
+    if (params?.targetType) query.set('targetType', params.targetType);
+    if (params?.status) query.set('status', params.status);
+    query.set('page', String(params?.page || 1));
+    query.set('size', String(params?.size || 20));
+    const response: any = await request.get('/openapi/v1/identifiers/namespaces?' + query.toString());
+    return {
+      records: Array.isArray(response?.records) ? response.records : [],
+      total: Number(response?.total ?? 0),
+      page: Number(response?.page ?? params?.page ?? 1),
+      size: Number(response?.size ?? params?.size ?? 20)
+    };
+  },
+
+  async getNamespaceById(id: string): Promise<NamespaceDefResponse> {
+    return request.get<NamespaceDefResponse, NamespaceDefResponse>('/openapi/v1/identifiers/namespaces/' + encodeURIComponent(id));
+  },
+
+  async updateNamespace(id: string, data: NamespaceUpdateRequest): Promise<NamespaceDefResponse> {
+    return request.post<NamespaceDefResponse, NamespaceDefResponse>(
+      '/openapi/v1/identifiers/namespaces/' + encodeURIComponent(id),
+      data
+    );
   },
 
   registerBusinessObject(data: BusinessObjectRequest): Promise<BusinessObjectResponse> {
     return request.post<BusinessObjectResponse, BusinessObjectResponse>('/openapi/v1/business-objects', data);
   },
 
+  async getBusinessObjectPage(params?: {
+    projectSpaceId?: string;
+    objectType?: string;
+    ownerPartyId?: string;
+    status?: string;
+    page?: number;
+    size?: number;
+  }): Promise<BusinessObjectPage> {
+    const query = new URLSearchParams();
+    if (params?.projectSpaceId) query.set('projectSpaceId', params.projectSpaceId);
+    if (params?.objectType) query.set('objectType', params.objectType);
+    if (params?.ownerPartyId) query.set('ownerPartyId', params.ownerPartyId);
+    if (params?.status) query.set('status', params.status);
+    query.set('page', String(params?.page || 1));
+    query.set('size', String(params?.size || 20));
+    const response: any = await request.get('/openapi/v1/business-objects?' + query.toString());
+    return {
+      records: Array.isArray(response?.records) ? response.records : [],
+      total: Number(response?.total ?? 0),
+      page: Number(response?.page ?? params?.page ?? 1),
+      size: Number(response?.size ?? params?.size ?? 20)
+    };
+  },
+
+  getBusinessObjectById(id: string): Promise<BusinessObjectDetailResponse> {
+    return request.get<BusinessObjectDetailResponse, BusinessObjectDetailResponse>(
+      '/openapi/v1/business-objects/' + encodeURIComponent(id)
+    );
+  },
+
+  updateBusinessObject(id: string, data: BusinessObjectUpdateRequest): Promise<BusinessObjectDetailResponse> {
+    return request.post<BusinessObjectDetailResponse, BusinessObjectDetailResponse>(
+      '/openapi/v1/business-objects/' + encodeURIComponent(id),
+      data
+    );
+  },
+
   resolveIdentifier(data: IdentifierResolveRequest): Promise<IdentifierResolutionResponse> {
-    return request.post<IdentifierResolutionResponse, IdentifierResolutionResponse>('/openapi/v1/identifiers-resolve', data);
+    return request.post<IdentifierResolutionResponse, IdentifierResolutionResponse>('/openapi/v1/identifiers/resolve', data);
   },
 
   bindIdentifier(data: IdentifierBindingRequest): Promise<IdentifierBindingResponse> {
-    return request.post<IdentifierBindingResponse, IdentifierBindingResponse>('/openapi/v1/identifier-bindings', data);
+    return request.post<IdentifierBindingResponse, IdentifierBindingResponse>('/openapi/v1/identifiers/bindings', data);
+  },
+
+  async getPieceProductPage(params?: {
+    productName?: string; materialName?: string; processingMethod?: string;
+    medicalInsuranceCode?: string; nmpaPieceCode?: string; status?: string;
+    page?: number; size?: number;
+  }): Promise<PieceProductPage> {
+    const query = new URLSearchParams();
+    (['productName', 'materialName', 'processingMethod', 'medicalInsuranceCode', 'nmpaPieceCode', 'status'] as const).forEach(key => {
+      if (params?.[key]) query.set(key, params[key] as string);
+    });
+    query.set('page', String(params?.page || 1)); query.set('size', String(params?.size || 20));
+    const response: any = await request.get('/openapi/v1/decoction-piece-products?' + query.toString());
+    return { records: Array.isArray(response?.records) ? response.records : [], total: Number(response?.total ?? 0), page: Number(response?.page ?? params?.page ?? 1), size: Number(response?.size ?? params?.size ?? 20) };
+  },
+
+  createPieceProduct(data: PieceProductRequest): Promise<PieceProductDetailResponse> {
+    return request.post<PieceProductDetailResponse, PieceProductDetailResponse>('/openapi/v1/decoction-piece-products', data);
+  },
+
+  getPieceProductById(id: string): Promise<PieceProductDetailResponse> {
+    return request.get<PieceProductDetailResponse, PieceProductDetailResponse>('/openapi/v1/decoction-piece-products/' + encodeURIComponent(id));
+  },
+
+  updatePieceProduct(id: string, data: PieceProductUpdateRequest): Promise<PieceProductDetailResponse> {
+    return request.post<PieceProductDetailResponse, PieceProductDetailResponse>('/openapi/v1/decoction-piece-products/' + encodeURIComponent(id), data);
+  },
+
+  disablePieceProduct(id: string): Promise<void> {
+    return request.post<void, void>('/openapi/v1/decoction-piece-products/' + encodeURIComponent(id) + '/delete');
+  },
+
+  async getCodeSchemePage(params?: { schemeCode?: string; schemeName?: string; issuerType?: string; status?: string; page?: number; size?: number }): Promise<CodeSchemePage> {
+    const query = new URLSearchParams();
+    (['schemeCode', 'schemeName', 'issuerType', 'status'] as const).forEach(key => { if (params?.[key]) query.set(key, params[key] as string); });
+    query.set('page', String(params?.page || 1)); query.set('size', String(params?.size || 20));
+    const response: any = await request.get('/openapi/v1/code-schemes?' + query.toString());
+    return { records: Array.isArray(response?.records) ? response.records : [], total: Number(response?.total ?? 0), page: Number(response?.page ?? params?.page ?? 1), size: Number(response?.size ?? params?.size ?? 20) };
+  },
+
+  createCodeScheme(data: CodeSchemeCreateRequest): Promise<CodeSchemeResponse> {
+    return request.post<CodeSchemeResponse, CodeSchemeResponse>('/openapi/v1/code-schemes', data);
+  },
+
+  getCodeSchemeById(id: string): Promise<CodeSchemeResponse> {
+    return request.get<CodeSchemeResponse, CodeSchemeResponse>('/openapi/v1/code-schemes/' + encodeURIComponent(id));
+  },
+
+  updateCodeScheme(id: string, data: CodeSchemeUpdateRequest): Promise<CodeSchemeResponse> {
+    return request.post<CodeSchemeResponse, CodeSchemeResponse>('/openapi/v1/code-schemes/' + encodeURIComponent(id), data);
+  },
+
+  disableCodeScheme(id: string): Promise<void> {
+    return request.post<void, void>('/openapi/v1/code-schemes/' + encodeURIComponent(id) + '/delete');
+  },
+
+  getCodeSchemeSegments(schemeId: string): Promise<CodeSchemeSegment[]> {
+    return request.get<CodeSchemeSegment[], CodeSchemeSegment[]>('/openapi/v1/code-schemes/' + encodeURIComponent(schemeId) + '/segments');
+  },
+
+  getCodeSchemeSegment(schemeId: string, segmentId: string): Promise<CodeSchemeSegment> {
+    return request.get<CodeSchemeSegment, CodeSchemeSegment>(
+      '/openapi/v1/code-schemes/' + encodeURIComponent(schemeId) + '/segments/' + encodeURIComponent(segmentId)
+    );
+  },
+
+  createCodeSchemeSegment(schemeId: string, data: CodeSchemeSegmentRequest): Promise<CodeSchemeSegment> {
+    return request.post<CodeSchemeSegment, CodeSchemeSegment>('/openapi/v1/code-schemes/' + encodeURIComponent(schemeId) + '/segments', data);
+  },
+
+  updateCodeSchemeSegment(schemeId: string, segmentId: string, data: CodeSchemeSegmentRequest): Promise<CodeSchemeSegment> {
+    return request.post<CodeSchemeSegment, CodeSchemeSegment>('/openapi/v1/code-schemes/' + encodeURIComponent(schemeId) + '/segments/' + encodeURIComponent(segmentId), data);
+  },
+
+  deleteCodeSchemeSegment(schemeId: string, segmentId: string): Promise<void> {
+    return request.post<void, void>('/openapi/v1/code-schemes/' + encodeURIComponent(schemeId) + '/segments/' + encodeURIComponent(segmentId) + '/delete');
+  },
+
+  validateCode(data: { schemeCode: string; rawCode: string; effectiveAt?: string }): Promise<CodeValidationResponse> {
+    return request.post<CodeValidationResponse, CodeValidationResponse>('/openapi/v1/code-schemes/validate', data);
   },
 
   async getHerbPieces(params?: { keyword?: string }): Promise<HerbPiece[]> {

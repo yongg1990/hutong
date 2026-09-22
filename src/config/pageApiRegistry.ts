@@ -5,7 +5,7 @@
  */
 
 export interface EndpointMeta {
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;
   desc: string;
 }
@@ -153,25 +153,31 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
   '/master-data/identifier-namespaces': {
     hasApi: true,
     moduleName: '标识命名空间',
-    apiPath: '/openapi/v1/identifier-namespaces',
-    specDoc: 'OpenAPI 3.1.0 / APP-02 标识命名空间',
+    apiPath: '/openapi/v1/identifiers/namespaces',
+    specDoc: 'OpenAPI 3.1.0 / APP-02 标识管理',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
-      { method: 'POST', path: '/openapi/v1/identifier-namespaces', desc: '登记标识命名空间 (registerNamespaceDef)' }
+      { method: 'GET', path: '/openapi/v1/identifiers/namespaces', desc: '分页查询标识命名空间' },
+      { method: 'POST', path: '/openapi/v1/identifiers/namespaces', desc: '创建标识命名空间' },
+      { method: 'GET', path: '/openapi/v1/identifiers/namespaces/{id}', desc: '查询命名空间详情' },
+      { method: 'POST', path: '/openapi/v1/identifiers/namespaces/{id}', desc: '更新标识命名空间' }
     ]
   },
 
-  // 7. 主数据中心 - 业务对象登记 (APP-02 主体、对象与监管编码)
+  // 7. 主数据中心 - 业务对象登记 (APP-02 业务对象管理)
   '/master-data/objects': {
     hasApi: true,
     moduleName: '业务对象登记',
     apiPath: '/openapi/v1/business-objects',
-    specDoc: 'OpenAPI 3.1.0 / APP-02 主体、对象与监管编码',
+    specDoc: 'OpenAPI 3.1.0 / APP-02 业务对象管理',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
-      { method: 'POST', path: '/openapi/v1/business-objects', desc: '业务对象登记 (registerObject)' }
+      { method: 'GET', path: '/openapi/v1/business-objects', desc: '分页查询业务对象' },
+      { method: 'POST', path: '/openapi/v1/business-objects', desc: '创建业务对象' },
+      { method: 'GET', path: '/openapi/v1/business-objects/{id}', desc: '查询业务对象详情' },
+      { method: 'POST', path: '/openapi/v1/business-objects/{id}', desc: '更新业务对象并创建属性版本' }
     ]
   },
 
@@ -179,26 +185,54 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
   '/master-data/identifier-bindings': {
     hasApi: true,
     moduleName: '标识解析与绑定',
-    apiPath: '/openapi/v1/identifiers-resolve, /openapi/v1/identifier-bindings',
-    specDoc: 'OpenAPI 3.1.0 / APP-02 主体、对象与监管编码',
+    apiPath: '/openapi/v1/identifiers/resolve, /openapi/v1/identifiers/bindings',
+    specDoc: 'OpenAPI 3.1.0 / APP-02 标识管理',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
-      { method: 'POST', path: '/openapi/v1/identifiers-resolve', desc: '外部标识解析 (resolve)' },
-      { method: 'POST', path: '/openapi/v1/identifier-bindings', desc: '外部标识绑定 (bind)' }
+      { method: 'POST', path: '/openapi/v1/identifiers/resolve', desc: '外部标识解析 (resolve)' },
+      { method: 'GET', path: '/openapi/v1/identifiers/bindings', desc: '分页查询外部标识绑定' },
+      { method: 'POST', path: '/openapi/v1/identifiers/bindings', desc: '外部标识绑定 (bind)' }
     ]
   },
 
-  // 9. 主数据中心 - 饮片与监管编码 (APP-02 主体、对象与监管编码)
+  // 9. 主数据中心 - 饮片品种管理 (APP-02 饮片品种管理)
   '/master-data/decoction-pieces': {
     hasApi: true,
-    moduleName: '饮片品种与国家监管编码',
+    moduleName: '饮片品种管理',
     apiPath: '/openapi/v1/decoction-piece-products',
-    specDoc: 'OpenAPI 3.1.0 / APP-02 主体、对象与监管编码',
+    specDoc: 'OpenAPI 3.1.0 / APP-02 饮片品种管理',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
-      { method: 'POST', path: '/openapi/v1/decoction-piece-products', desc: '饮片品种登记 (registerProduct)' }
+      { method: 'GET', path: '/openapi/v1/decoction-piece-products', desc: '分页查询饮片品种' },
+      { method: 'POST', path: '/openapi/v1/decoction-piece-products', desc: '饮片品种登记' },
+      { method: 'GET', path: '/openapi/v1/decoction-piece-products/{id}', desc: '查询饮片品种详情' },
+      { method: 'POST', path: '/openapi/v1/decoction-piece-products/{id}', desc: '更新饮片品种' },
+      { method: 'POST', path: '/openapi/v1/decoction-piece-products/{id}/delete', desc: '停用饮片品种' }
+    ]
+  },
+
+  // 10. 主数据中心 - 监管编码主数据 (APP-02 监管编码体系管理)
+  '/master-data/code-schemes': {
+    hasApi: true,
+    moduleName: '监管编码主数据',
+    apiPath: '/openapi/v1/code-schemes',
+    specDoc: 'OpenAPI 3.1.0 / APP-02 监管编码体系管理',
+    protocol: 'RESTful JSON / Axios',
+    status: 'CONNECTED',
+    endpoints: [
+      { method: 'GET', path: '/openapi/v1/code-schemes', desc: '分页查询监管编码体系' },
+      { method: 'POST', path: '/openapi/v1/code-schemes', desc: '创建监管编码体系' },
+      { method: 'GET', path: '/openapi/v1/code-schemes/{id}', desc: '查询监管编码体系详情' },
+      { method: 'POST', path: '/openapi/v1/code-schemes/{id}', desc: '更新监管编码体系' },
+      { method: 'POST', path: '/openapi/v1/code-schemes/{id}/delete', desc: '停用监管编码体系' },
+      { method: 'GET', path: '/openapi/v1/code-schemes/{schemeId}/segments', desc: '查询监管编码段' },
+      { method: 'POST', path: '/openapi/v1/code-schemes/{schemeId}/segments', desc: '创建监管编码段' },
+      { method: 'GET', path: '/openapi/v1/code-schemes/{schemeId}/segments/{segmentId}', desc: '查询监管编码段详情' },
+      { method: 'POST', path: '/openapi/v1/code-schemes/{schemeId}/segments/{segmentId}', desc: '更新监管编码段' },
+      { method: 'POST', path: '/openapi/v1/code-schemes/{schemeId}/segments/{segmentId}/delete', desc: '删除监管编码段' },
+      { method: 'POST', path: '/openapi/v1/code-schemes/validate', desc: '试校验并解析监管编码' }
     ]
   },
 
@@ -265,8 +299,10 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
+      { method: 'GET', path: '/admin/v1/project-spaces', desc: '分页查询项目空间 (query)' },
       { method: 'POST', path: '/admin/v1/project-spaces', desc: '创建项目空间 (create)' },
-      { method: 'GET', path: '/admin/v1/project-spaces/{id}', desc: '查询项目空间 (find)' }
+      { method: 'GET', path: '/admin/v1/project-spaces/{id}', desc: '查询项目空间 (find)' },
+      { method: 'PATCH', path: '/admin/v1/project-spaces/{id}', desc: '更新项目空间 (update)' }
     ]
   },
 
@@ -281,6 +317,24 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     endpoints: [
       { method: 'POST', path: '/admin/v1/deployment-instances', desc: '登记部署实例 (register)' },
       { method: 'GET', path: '/admin/v1/deployment-instances/{id}', desc: '查询部署实例 (find)' }
+    ]
+  },
+
+  '/settings/dictionaries': {
+    hasApi: true,
+    moduleName: '通用字典管理',
+    apiPath: '/tenant-access/dictionaries',
+    specDoc: 'OpenAPI 3.1.0 / APP-01 通用字典',
+    protocol: 'RESTful JSON / Axios',
+    status: 'CONNECTED',
+    endpoints: [
+      { method: 'GET', path: '/tenant-access/dictionaries', desc: '分页查询字典类型' },
+      { method: 'POST', path: '/tenant-access/dictionaries', desc: '创建租户字典类型' },
+      { method: 'POST', path: '/tenant-access/dictionaries/{typeId}', desc: '更新租户字典类型' },
+      { method: 'GET', path: '/tenant-access/dictionaries/{dictionaryCode}/items', desc: '分页查询字典项' },
+      { method: 'GET', path: '/tenant-access/dictionaries/{dictionaryCode}/items/active', desc: '查询全部有效字典项' },
+      { method: 'POST', path: '/tenant-access/dictionaries/{dictionaryCode}/items', desc: '创建租户字典项' },
+      { method: 'POST', path: '/tenant-access/dictionaries/{dictionaryCode}/items/{itemId}', desc: '更新租户字典项' }
     ]
   },
 

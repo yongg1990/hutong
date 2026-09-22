@@ -412,6 +412,7 @@ export const standardPermissionTree: PermissionNode[] = [
       { id: 'p_s_tenant', label: '租户增删改查与配额管理', code: 'tenant:crud' },
       { id: 'p_s_user', label: '用户账号增删改查与角色分配', code: 'user:crud' },
       { id: 'p_s_role', label: '角色权限矩阵与权限定制', code: 'role:crud' },
+      { id: 'p_s_dictionary', label: '通用字典类型与字典项管理', code: 'settings:dictionaries' },
       { id: 'p_s_edge', label: '前置边缘节点运维', code: 'settings:edge' },
       { id: 'p_s_jobs', label: '订阅与后台异步任务调度', code: 'settings:jobs' },
       { id: 'p_s_alerts', label: '安全审计与运行预警', code: 'settings:alerts' }

@@ -15,7 +15,7 @@
 主要完成内容：
 
 - 接入租户、用户、权限、规范包等正式列表接口。
-- 项目空间、部署实例、事件、证据、投影页面按文档提供的能力调整为按 ID 查询。
+- 项目空间页面已按 APP-01 正式分页接口展示列表，并支持按 ID 查询详情、创建、编辑和启停。
 - 接入证据登记、存证状态查询、验真和血缘查询。
 - 接入田间、质检、赋码、供销、代煎和主数据等业务写接口。
 - 新增供应链事件统一接口模块，覆盖 15 类业务事件。
@@ -150,7 +150,7 @@ X-Purpose-Code: EXCHANGE_OUTPUT
 
 ## 9. 已知限制与维护注意事项
 
-- OpenAPI 文档未提供列表接口的页面，目前保留本地基准数据或使用按 ID 查询；后端补齐列表接口后再切换为正式分页列表。
+- OpenAPI 文档仍未提供列表接口的页面，会继续保留本地基准数据或使用按 ID 查询；项目空间已例外接入正式分页列表。
 - `apiCall[0m 对未发布接口保留本地 fallback；登录接口不走 fallback，登录失败应直接反馈真实接口错误。
 - 正式接口路径变化时，需要同步更新 `src/api/client.ts[0m 的 `swaggerEndpointPatterns[0m。
 - 带 `*[0m 的表头表示当前接口无对应返回字段，不代表字段必填。
@@ -242,11 +242,24 @@ X-Purpose-Code: EXCHANGE_OUTPUT
 | 页面 | 接口 | 页面行为 |
 | --- | --- | --- |
 | 主体 | `POST /openapi/v1/parties` | 提交主体类型、名称、行政区划编码及扩展属性 JSON 字符串，展示 `partyId`、`status` |
-| 标识命名空间 | `POST /openapi/v1/identifier-namespaces` | 提交命名空间编码、名称、目标类型和标识值正则，展示接口返回的完整定义 |
+| 标识命名空间 | `GET/POST /openapi/v1/identifiers/namespaces`、`GET/POST /openapi/v1/identifiers/namespaces/{id}` | 支持分页查询、新增、详情和携带 lockVersion 的编辑 |
 | 业务对象登记 | `POST /openapi/v1/business-objects` | 项目空间 ID、所有者主体 ID 均按数字字符串提交；动态属性按 JSON 字符串提交，展示 `objectId`、`versionNo` |
-| 标识绑定 | `POST /openapi/v1/identifiers-resolve`、`POST /openapi/v1/identifier-bindings` | 支持先解析再自动回填目标 ID，也支持从歧义候选中选取目标后绑定；生效时间按 `yyyy-MM-dd HH:mm:ss` 提交 |
+| 标识绑定 | `POST /openapi/v1/identifiers/resolve`、`GET/POST /openapi/v1/identifiers/bindings` | 支持先解析再自动回填目标 ID，也支持从歧义候选中选取目标后绑定；生效时间按 `yyyy-MM-dd HH:mm:ss` 提交 |
 
-上述接口当前均未提供列表查询能力，页面只展示本次操作的接口返回结果，不加载本地样例列表。`src/api/client.ts` 已将命名空间登记加入正式接口白名单。本次未执行打包、测试、lint、项目启动或页面联调。
+主体、业务对象当前仍只提供写入接口；标识命名空间和标识绑定已提供正式分页查询能力。`src/api/client.ts`、页面接口注册配置和主数据接口模块均已同步 APP-02 实时路径。本次未执行打包、测试、lint、项目启动或页面联调。
+
+### 12.1 2026-09-21 标识命名空间页面重做
+
+标识命名空间页面已按 APP-02 实时 Swagger 的“标识管理”资源重做为分页工作台，正式端点如下：
+
+| 页面操作 | 接口 |
+| --- | --- |
+| 查询列表 | GET /openapi/v1/identifiers/namespaces，支持 namespaceCode、namespaceName、targetType、status、page、size |
+| 新增 | POST /openapi/v1/identifiers/namespaces |
+| 查看详情 | GET /openapi/v1/identifiers/namespaces/{id} |
+| 编辑 | POST /openapi/v1/identifiers/namespaces/{id}，提交 lockVersion 乐观锁版本 |
+
+页面文件为 src/pages/masterdata/IdentifierNamespaces.vue，接口方法位于 src/api/masterData.ts。旧的 /openapi/v1/identifier-namespaces 不再用于该页面；src/api/client.ts 与页面接口注册配置已同步更新。未执行打包、测试、lint 或项目启动。
 
 ## 12. 后续接手建议
 

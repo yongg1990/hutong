@@ -1,5 +1,6 @@
 export * from './client';
 export * from './workspace';
+export * from './dictionary';
 export * from './field';
 export * from './processQuality';
 export * from './coding';

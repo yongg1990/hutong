@@ -40,10 +40,12 @@ export const request = axios.create({
 const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
   { method: 'POST', pattern: /^\/tenant-access\/auth\/(login|logout)$/ },
   { method: 'GET', pattern: /^\/tenant-access\/(tenants|users|permissions)$/ },
+  { method: 'GET', pattern: /^\/tenant-access\/dictionaries(?:\/[^/]+\/items(?:\/active)?)?$/ },
   { method: 'GET', pattern: /^\/tenant-access\/roles$/ },
   { method: 'GET', pattern: /^\/tenant-access\/(roles|users)\/page$/ },
   { method: 'GET', pattern: /^\/tenant-access\/roles\/\d+\/permissions$/ },
   { method: 'POST', pattern: /^\/tenant-access\/(tenants|users|permissions)$/ },
+  { method: 'POST', pattern: /^\/tenant-access\/dictionaries(?:\/[^/]+)?(?:\/items(?:\/[^/]+)?)?$/ },
   { method: 'GET', pattern: /^\/tenant-access\/tenants\/\d+$/ },
   { method: 'POST', pattern: /^\/tenant-access\/tenants\/\d+\/update$/ },
   { method: 'GET', pattern: /^\/tenant-access\/tenants\/\d+\/delete$/ },
@@ -54,7 +56,19 @@ const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
   { method: 'POST', pattern: /^\/tenant-access\/roles\/\d+\/permissions$/ },
   { method: 'POST', pattern: /^\/tenant-access\/permissions\/\d+\/update$/ },
   { method: 'GET', pattern: /^\/tenant-access\/permissions\/\d+\/delete$/ },
-  { method: 'POST', pattern: new RegExp('^/openapi/v1/(trace-codes|source-systems|raw-records|parties|mappings/test|identifiers-resolve|identifier-namespaces|identifier-bindings|event-fact/events|event-fact/config/schemas|event-fact/config/schemas/test|event-fact/config/event-types|decoction-piece-products|business-objects|batches)$') },
+  { method: 'POST', pattern: new RegExp('^/openapi/v1/(trace-codes|source-systems|raw-records|parties|mappings/test|identifiers/namespaces|identifiers/bindings|identifiers/resolve|event-fact/events|event-fact/config/schemas|event-fact/config/schemas/test|event-fact/config/event-types|decoction-piece-products|business-objects|batches|code-schemes|code-schemes/validate)$') },
+  { method: 'GET', pattern: /^\/openapi\/v1\/business-objects(?:\/[0-9]+)?$/ },
+  { method: 'POST', pattern: /^\/openapi\/v1\/business-objects\/[0-9]+$/ },
+  { method: 'GET', pattern: /^\/openapi\/v1\/(decoction-piece-products|code-schemes)$/ },
+  { method: 'GET', pattern: /^\/openapi\/v1\/(decoction-piece-products|code-schemes)\/[0-9]+$/ },
+  { method: 'GET', pattern: /^\/openapi\/v1\/code-schemes\/[0-9]+\/segments$/ },
+  { method: 'GET', pattern: /^\/openapi\/v1\/code-schemes\/[0-9]+\/segments\/[0-9]+$/ },
+  { method: 'POST', pattern: /^\/openapi\/v1\/decoction-piece-products\/[0-9]+(?:\/delete)?$/ },
+  { method: 'POST', pattern: /^\/openapi\/v1\/code-schemes\/[0-9]+(?:\/delete|\/segments)?$/ },
+  { method: 'POST', pattern: /^\/openapi\/v1\/code-schemes\/[0-9]+\/segments\/[0-9]+(?:\/delete)?$/ },
+  { method: 'GET', pattern: new RegExp('^/openapi/v1/identifiers/namespaces(?:/[0-9]+)?$') },
+  { method: 'GET', pattern: new RegExp('^/openapi/v1/identifiers/bindings(?:/[0-9]+)?$') },
+  { method: 'POST', pattern: new RegExp('^/openapi/v1/identifiers/namespaces/[0-9]+$') },
   { method: 'POST', pattern: /^\/openapi\/v1\/raw-records\/-?\d+\/replays$/ },
   { method: 'POST', pattern: new RegExp('^/openapi/v1/event-fact/config/schemas/[^/]+/[^/]+/publish$') },
   { method: 'GET', pattern: new RegExp('^/openapi/v1/event-fact/schemas/[^/]+/[^/]+$') },
@@ -69,7 +83,9 @@ const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
   { method: 'POST', pattern: /^\/exchange-query\/(profiles(?:\/\d+)?|profile-versions(?:\/\d+\/(?:test|publish))?|field-rules(?:\/\d+)?|datasets(?:\/\d+)?|conformance-cases(?:\/\d+)?|bindings(?:\/\d+)?|projections|projects\/\d+\/projections\/\d+\/process)$/ },
   { method: 'POST', pattern: /^\/admin\/v1\/subscriptions$/ },
   { method: 'POST', pattern: new RegExp('^/admin/v1/(project-spaces|deployment-instances)$') },
-  { method: 'GET', pattern: new RegExp('^/admin/v1/(project-spaces|deployment-instances)/[0-9]+$') }
+  { method: 'GET', pattern: new RegExp('^/admin/v1/(project-spaces|deployment-instances)$') },
+  { method: 'GET', pattern: new RegExp('^/admin/v1/(project-spaces|deployment-instances)/[0-9]+$') },
+  { method: 'PATCH', pattern: new RegExp('^/admin/v1/project-spaces/[0-9]+$') }
 ];
 
 // Request Interceptor

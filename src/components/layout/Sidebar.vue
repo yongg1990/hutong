@@ -9,9 +9,6 @@
       class="sidebar-menu"
       :router="true"
       unique-opened
-      background-color="#ffffff"
-      text-color="#1a2420"
-      active-text-color="#176b4d"
     >
       <!-- 1. Workspace -->
       <el-menu-item index="/workspace">
@@ -103,10 +100,11 @@ const menuGroups = [
     icon: OfficeBuilding,
     items: [
       { title: '主体', path: '/master-data/parties', hasApi: true, apiPath: '/openapi/v1/parties' },
-      { title: '标识命名空间', path: '/master-data/identifier-namespaces', hasApi: true, apiPath: '/openapi/v1/identifier-namespaces' },
+      { title: '标识命名空间', path: '/master-data/identifier-namespaces', hasApi: true, apiPath: '/openapi/v1/identifiers/namespaces' },
       { title: '业务对象登记', path: '/master-data/objects', hasApi: true, apiPath: '/openapi/v1/business-objects' },
-      { title: '标识绑定', path: '/master-data/identifier-bindings', hasApi: true, apiPath: '/openapi/v1/identifier-bindings' },
-      { title: '饮片与监管编码', path: '/master-data/decoction-pieces', hasApi: true, apiPath: '/openapi/v1/decoction-piece-products' }
+      { title: '标识绑定', path: '/master-data/identifier-bindings', hasApi: true, apiPath: '/openapi/v1/identifiers/resolve, /openapi/v1/identifiers/bindings' },
+      { title: '监管编码主数据', path: '/master-data/code-schemes', hasApi: true, apiPath: '/openapi/v1/code-schemes' },
+      { title: '饮片品种管理', path: '/master-data/decoction-pieces', hasApi: true, apiPath: '/openapi/v1/decoction-piece-products' }
     ]
   },
   {
@@ -136,6 +134,7 @@ const menuGroups = [
     items: [
       { title: '租户管理', path: '/settings/tenants', hasApi: true, apiPath: '/tenant-access/tenants' },
       { title: '角色与权限', path: '/settings/roles', hasApi: true, apiPath: '/tenant-access/roles, /permissions' },
+      { title: '通用字典', path: '/settings/dictionaries', hasApi: true, apiPath: '/tenant-access/dictionaries' },
       { title: '用户管理', path: '/settings/users', hasApi: true, apiPath: '/tenant-access/users' },
       { title: '项目协同空间', path: '/settings/tenant-project', hasApi: true, apiPath: '/admin/v1/project-spaces' },
       { title: '前置节点部署', path: '/settings/deployments-edge', hasApi: true, apiPath: '/admin/v1/deployment-instances' },
@@ -148,104 +147,38 @@ const menuGroups = [
 
 <style scoped>
 .sidebar {
-  width: 240px;
-  background: var(--color-surface);
-  border-right: 1px solid var(--color-border);
+  width: 252px;
   flex-shrink: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbfa 100%);
+  border-right: 1px solid #d2e2de;
 }
-
 .sidebar-header {
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--color-border);
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: #fbfdfc;
+  justify-content: space-between;
+  padding: 18px 20px 13px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: transparent;
 }
-
-.sidebar-header-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.sidebar-menu {
-  border-right: none;
-  flex: 1;
-}
-
-.menu-name {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.group-title {
-  flex: 1;
-}
-
-:deep(.el-sub-menu__title) {
-  font-weight: 600;
-  font-size: 13px;
-  height: 44px;
-  line-height: 44px;
-}
-
-:deep(.el-menu-item) {
-  font-size: 13px;
-  height: 40px;
-  line-height: 40px;
-  display: flex !important;
-  align-items: center !important;
-  padding-right: 14px !important;
-}
-
-:deep(.el-menu-item.is-active) {
-  background-color: var(--color-brand-soft);
-  font-weight: 600;
-  border-right: 3.5px solid var(--color-brand);
-  color: var(--color-brand) !important;
-}
-
-.sidebar-footer {
-  padding: 12px 14px;
-  border-top: 1px solid var(--color-border);
-  background-color: #fbfdfc;
-  flex-shrink: 0;
-}
-
-.footer-spec-title {
-  font-size: 11px;
-  font-weight: 600;
-  color: #5c7267;
-  margin-bottom: 6px;
-  letter-spacing: 0.2px;
-}
-
-.spec-pills {
-  display: flex;
-  gap: 5px;
-  margin-bottom: 6px;
-}
-
-.spec-pill {
-  font-size: 9.5px;
-  color: #14724e;
-  background: #eef6f2;
-  border: 1px solid #cce3d7;
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-weight: 600;
-}
-
-.footer-meta {
-  font-size: 10px;
-  color: #8da498;
-}
+.sidebar-header-title { color: var(--color-muted); font-size: 10px; font-weight: 750; letter-spacing: 1px; text-transform: uppercase; }
+.sidebar-menu { flex: 1; border-right: none; padding: 5px 0 12px; }
+.menu-name, .group-title { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+:deep(.el-menu) { background: transparent; border-right: 0; }
+:deep(.el-sub-menu__title) { height: 46px; margin: 3px 10px 0; border-radius: 7px; color: #4a6662; font-size: 13px; font-weight: 700; line-height: 46px; }
+:deep(.el-sub-menu__title:hover) { background: #eef7f5; color: var(--color-brand); }
+:deep(.el-menu-item) { display: flex !important; align-items: center !important; height: 41px; margin: 1px 10px; padding-right: 14px !important; border-radius: 7px; color: #58716e; font-size: 13px; line-height: 41px; }
+:deep(.el-menu-item:hover) { background: #eef7f5; color: var(--color-brand); }
+:deep(.el-menu-item.is-active) { color: var(--color-brand) !important; font-weight: 700; background: linear-gradient(90deg, #e2f4f0, #eff9f7); border-right: 0; box-shadow: inset 3px 0 var(--color-brand), 0 2px 7px rgba(15, 118, 110, 0.08); }
+:deep(.el-sub-menu .el-menu) { background: transparent; }
+:deep(.el-menu-item .el-icon), :deep(.el-sub-menu__title .el-icon) { color: #79a19b; font-size: 17px; }
+:deep(.el-menu-item.is-active .el-icon), :deep(.el-sub-menu.is-opened > .el-sub-menu__title .el-icon) { color: var(--color-brand); }
+.sidebar-footer { flex-shrink: 0; padding: 16px 18px; border-top: 1px solid var(--color-border); background: rgba(239, 247, 245, 0.72); }
+.footer-spec-title { margin-bottom: 8px; color: #58716d; font-size: 11px; font-weight: 700; letter-spacing: 0.2px; }
+.spec-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.spec-pill { padding: 3px 6px; border: 1px solid #c5e1db; border-radius: 4px; background: #eaf6f3; color: #18776d; font-size: 9.5px; font-weight: 700; }
+.footer-meta { color: #8da6a1; font-size: 10px; }
+@media (max-width: 900px) { .sidebar { width: 220px; } }
 </style>

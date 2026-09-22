@@ -113,6 +113,11 @@ const router = createRouter({
           component: () => import('@/pages/masterdata/IdentifierBindings.vue')
         },
         {
+          path: 'master-data/code-schemes',
+          name: 'MasterCodeSchemes',
+          component: () => import('@/pages/masterdata/CodeSchemes.vue')
+        },
+        {
           path: 'master-data/decoction-pieces',
           name: 'MasterDecoctionPieces',
           component: () => import('@/pages/masterdata/DecoctionPieces.vue')
@@ -174,6 +179,11 @@ const router = createRouter({
           path: 'settings/roles',
           name: 'SettingsRoles',
           component: () => import('@/pages/settings/Roles.vue')
+        },
+        {
+          path: 'settings/dictionaries',
+          name: 'SettingsDictionaries',
+          component: () => import('@/pages/settings/Dictionaries.vue')
         },
         {
           path: 'settings/deployments-edge',

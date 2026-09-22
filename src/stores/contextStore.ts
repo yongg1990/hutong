@@ -18,6 +18,7 @@ export const useContextStore = defineStore('context', {
       this.projectId = projId;
       this.projectName = projName;
       localStorage.setItem('tcmirp_project_id', projId);
+      localStorage.setItem('tcmirp_project_space_id', projId);
     },
     setProject(projId: string, projName: string) {
       this.switchProject(projId, projName);

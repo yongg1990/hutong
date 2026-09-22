@@ -567,4 +567,15 @@ const confirmLogout = () => {
   color: #0f766e;
   font-family: monospace;
 }
+
+.navbar { height: 64px; padding: 0 24px; background: linear-gradient(115deg, #0b3837 0%, #0d5550 58%, #0b4644 100%); border-bottom: 1px solid rgba(180, 232, 222, 0.18); box-shadow: 0 5px 18px rgba(8, 58, 55, 0.2); }
+.brand { gap: 14px; }
+.brand-logo-wrap, .brand-svg-logo { width: 38px; height: 38px; }
+.brand-text .title { font-size: 15px; letter-spacing: 0.4px; }
+.project-selector { border-radius: 7px; padding: 7px 12px; }
+.header-actions { gap: 12px; }
+.user-badge { border-radius: 8px; padding: 5px 9px; }
+.logout-icon-btn { width: 34px; height: 34px; border-radius: 7px; border-color: rgba(196, 235, 227, 0.2); }
+@media (max-width: 1100px) { .brand-text .sub { display: none; } .header-center { margin-left: auto; } .user-info { display: none; } }
+@media (max-width: 760px) { .navbar { padding: 0 14px; } .brand-text .title { max-width: 260px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } .header-center { display: none; } }
 </style>
