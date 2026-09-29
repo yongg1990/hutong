@@ -1,5 +1,6 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { ElMessage } from 'element-plus';
+import { reactive } from 'vue';
 
 // Default requests use the local proxy for the documented intranet API.
 export const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/tcmirp';
@@ -34,12 +35,40 @@ export const request = axios.create({
   }
 });
 
+export const queryActivity = reactive({ pending: 0, visible: false });
+const activeQueries = new WeakSet<object>();
+let queryVisibleSince = 0;
+let hideQueryTimer: ReturnType<typeof setTimeout> | undefined;
+
+const beginQuery = (config: object) => {
+  if (hideQueryTimer) clearTimeout(hideQueryTimer);
+  hideQueryTimer = undefined;
+  if (queryActivity.pending === 0) queryVisibleSince = Date.now();
+  activeQueries.add(config);
+  queryActivity.pending++;
+  if (!queryActivity.visible) {
+    queryActivity.visible = true;
+  }
+};
+
+const finishQuery = (config?: object) => {
+  if (!config || !activeQueries.delete(config)) return;
+  queryActivity.pending--;
+  if (queryActivity.pending === 0) {
+    hideQueryTimer = setTimeout(() => {
+      if (queryActivity.pending === 0) queryActivity.visible = false;
+      hideQueryTimer = undefined;
+    }, Math.max(0, 500 - (Date.now() - queryVisibleSince)));
+  }
+};
+
 // Keep calls aligned with the currently published Swagger contract. The UI has
 // additional offline/demo views whose endpoints are not present in this backend;
 // those calls intentionally fall through to apiCall's local fallback.
 const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
   { method: 'POST', pattern: /^\/tenant-access\/auth\/(login|logout)$/ },
   { method: 'GET', pattern: /^\/tenant-access\/(tenants|users|permissions)$/ },
+  { method: 'GET', pattern: /^\/tenant-access\/permissions\/tree$/ },
   { method: 'GET', pattern: /^\/tenant-access\/dictionaries(?:\/[^/]+\/items(?:\/active)?)?$/ },
   { method: 'GET', pattern: /^\/tenant-access\/roles$/ },
   { method: 'GET', pattern: /^\/tenant-access\/(roles|users)\/page$/ },
@@ -58,6 +87,8 @@ const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
   { method: 'GET', pattern: /^\/tenant-access\/permissions\/\d+\/delete$/ },
   { method: 'POST', pattern: new RegExp('^/openapi/v1/(trace-codes|source-systems|raw-records|parties|mappings/test|identifiers/namespaces|identifiers/bindings|identifiers/resolve|event-fact/events|event-fact/config/schemas|event-fact/config/schemas/test|event-fact/config/event-types|decoction-piece-products|business-objects|batches|code-schemes|code-schemes/validate)$') },
   { method: 'GET', pattern: /^\/openapi\/v1\/business-objects(?:\/[0-9]+)?$/ },
+  { method: 'GET', pattern: /^\/openapi\/v1\/parties(?:\/[0-9]+)?$/ },
+  { method: 'POST', pattern: /^\/openapi\/v1\/parties\/[0-9]+$/ },
   { method: 'POST', pattern: /^\/openapi\/v1\/business-objects\/[0-9]+$/ },
   { method: 'GET', pattern: /^\/openapi\/v1\/(decoction-piece-products|code-schemes)$/ },
   { method: 'GET', pattern: /^\/openapi\/v1\/(decoction-piece-products|code-schemes)\/[0-9]+$/ },
@@ -69,6 +100,7 @@ const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
   { method: 'GET', pattern: new RegExp('^/openapi/v1/identifiers/namespaces(?:/[0-9]+)?$') },
   { method: 'GET', pattern: new RegExp('^/openapi/v1/identifiers/bindings(?:/[0-9]+)?$') },
   { method: 'POST', pattern: new RegExp('^/openapi/v1/identifiers/namespaces/[0-9]+$') },
+  { method: 'POST', pattern: /^\/openapi\/v1\/identifiers\/bindings\/[0-9]+$/ },
   { method: 'POST', pattern: /^\/openapi\/v1\/raw-records\/-?\d+\/replays$/ },
   { method: 'POST', pattern: new RegExp('^/openapi/v1/event-fact/config/schemas/[^/]+/[^/]+/publish$') },
   { method: 'GET', pattern: new RegExp('^/openapi/v1/event-fact/schemas/[^/]+/[^/]+$') },
@@ -82,10 +114,9 @@ const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
   { method: 'GET', pattern: /^\/exchange-query\/(profiles|profiles\/\d+\/versions|profile-versions\/\d+\/(datasets|conformance-cases)|datasets\/\d+\/field-rules|projects\/\d+\/bindings|projections\/\d+|objects\/\d+|events\/\d+(?:\/status)?|metadata\/profiles\/[^/]+|lineage\/[^/]+\/[^/]+)$/ },
   { method: 'POST', pattern: /^\/exchange-query\/(profiles(?:\/\d+)?|profile-versions(?:\/\d+\/(?:test|publish))?|field-rules(?:\/\d+)?|datasets(?:\/\d+)?|conformance-cases(?:\/\d+)?|bindings(?:\/\d+)?|projections|projects\/\d+\/projections\/\d+\/process)$/ },
   { method: 'POST', pattern: /^\/admin\/v1\/subscriptions$/ },
-  { method: 'POST', pattern: new RegExp('^/admin/v1/(project-spaces|deployment-instances)$') },
-  { method: 'GET', pattern: new RegExp('^/admin/v1/(project-spaces|deployment-instances)$') },
-  { method: 'GET', pattern: new RegExp('^/admin/v1/(project-spaces|deployment-instances)/[0-9]+$') },
-  { method: 'PATCH', pattern: new RegExp('^/admin/v1/project-spaces/[0-9]+$') }
+  { method: 'GET', pattern: /^\/openapi\/v1\/(project-spaces(?:\/[0-9]+)?|deployment-instances\/[0-9]+)$/ },
+  { method: 'POST', pattern: /^\/openapi\/v1\/(project-spaces|deployment-instances)$/ },
+  { method: 'PATCH', pattern: /^\/openapi\/v1\/project-spaces\/[0-9]+$/ },
 ];
 
 // Request Interceptor
@@ -95,6 +126,7 @@ request.interceptors.request.use((config) => {
   if (!swaggerEndpointPatterns.some(item => item.method === method && item.pattern.test(rawUrl))) {
     return Promise.reject(Object.assign(new Error('该接口未在当前 Swagger 文档发布，已使用本地演示数据'), { code: 'UNSUPPORTED_ENDPOINT' }));
   }
+  if (method === 'GET') beginQuery(config);
   // Retrieve token from weappauthorization or tcmirp_token
   const token = localStorage.getItem('weappauthorization') || localStorage.getItem('tcmirp_token');
 
@@ -140,6 +172,7 @@ request.interceptors.request.use((config) => {
 
 // Response Interceptor
 request.interceptors.response.use((response: AxiosResponse) => {
+  finishQuery(response.config);
   apiStatus.isOnline = true;
   apiStatus.checkedAt = new Date().toLocaleTimeString();
   apiStatus.lastError = undefined;
@@ -171,6 +204,7 @@ request.interceptors.response.use((response: AxiosResponse) => {
   }
   return res;
 }, (error) => {
+  finishQuery(error?.config);
   apiStatus.checkedAt = new Date().toLocaleTimeString();
   apiStatus.lastError = error.message || '网络连接超时或无法触达后端服务';
 

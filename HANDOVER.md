@@ -2,13 +2,46 @@
 
 ## 1. 文档信息
 
-- 文档版本：v1.5.0
-- 交接日期：2026-09-18
+- 文档版本：v1.6.0
+- 最近更新：2026-09-28
 - 项目目录：[96mF:\codex\gitHub\hutong[0m
 - 接口文档：线上 Swagger（实时 OpenAPI）http://192.168.1.39/api/tcmirp/swagger-ui/index.html#/
 - OpenAPI JSON：http://192.168.1.39/api/tcmirp/v3/api-docs
 
+## 2026-09-28 当前交接摘要
+
+### 本轮完成
+
+- 主体和标识绑定增加分页、按 ID 详情、编辑；详情为抽屉，编辑为弹框。项目空间和部署实例请求路径已改为 `/openapi/v1/project-spaces`、`/openapi/v1/deployment-instances`。
+- 新增文件上传与凭证页 `/trust/files-credentials`：上传会话创建/查询、短时 URL 传文件、完成确认、文件元数据查询、凭证登记与按 ID 查询。对象存储签名、PUT/POST 方法、CORS、分片及对象版本仍需真实环境联调。
+- 新增互通规范配置页 `/exchange/profile-config`：版本草稿、测试、发布，数据集、字段规则、一致性用例和项目绑定的创建/修改及关联查询；新增交换数据查询页 `/exchange/queries`：对象、事件、事件状态和已发布元数据定向查询。
+- 存证页增加任务创建、处理、重试、对账；投影页增加按 ID 查询、详情、输出下载、补偿处理；订阅页增加创建订阅、回调查询及重放；告警页增加按真实 ID 和锁版本执行 ACK/CLOSE。作业与告警列表仍为演示数据，通用作业触发入口已禁用。
+- 事件录入增加类型/版本、唯一来源业务键、发生时间、Payload JSON、发布 Schema 加载和预检。事件写请求失败不再返回模拟成功，受理结果不再宣称链上确认。追溯码登记需真实批次及包装单元 ID，不再使用硬编码 ID。
+- 证据页提供文件上传入口；本轮触及的事件、证据、血缘、存证、投影大整数 ID 保持字符串传递。业务工作台的演示清单加提示，田间、供销、代煎事件入口补齐。页面接口标记改为按已发布契约接入，不宣称完成联调。
+- 小白文档 `项目介绍与逐页操作手册.md` 包含项目总览、逐页用途及操作步骤。`项目介绍与页面差距清单.md` 保留为此前静态盘点，不能替代当前操作手册。
+
+### 关键文件与契约
+
+- API：`src/api/client.ts` 的 `swaggerEndpointPatterns` 是正式端点白名单；本轮还涉及 `masterData.ts`、`settings.ts`、`events.ts`、`trust.ts`、`exchange.ts`、`coding.ts`，新增 `exchangeConfig.ts`、`extendedServices.ts`。新增端点须同步核对方法、路径、参数和白名单。
+- 导航及接口说明：`src/router/index.ts`、`src/components/layout/Sidebar.vue`、`src/config/pageApiRegistry.ts`、`src/components/common/PageHeader.vue`。新增页面：`src/pages/trust/FilesCredentials.vue`、`src/pages/exchange/ProfileConfig.vue`、`src/pages/exchange/Queries.vue`。新增组件：`UploadSessionTransfer.vue`、`EvidenceReference.vue`。
+- 本地上下文使用 `tcmirp_tenant_id`、`tcmirp_project_space_id`、`tcmirp_source_system_id`、`tcmirp_purpose_code`；`tcmirp_project_id` 仅作兼容。Swagger 中雪花 ID 多为数字字符串，页面不能用 `Number()` 处理这些 ID。
+
+### 限制与后续工作
+
+1. 尚未用真实账号完成端到端联调。优先在真实租户/项目/来源系统上下文中检查上传及对象存储、规范版本测试/发布、投影生成、存证、回调重放和告警锁版本。静态接入不等于业务验收。
+2. Swagger 未发布工作台统计/待办、来源系统/批次/事件/证据等通用列表、治理案卷/数据元值域管理、订单库存查询、通用作业及审计列表。相应页仍可能含本地演示/参考数据，不得伪称后端全量记录；后端提供契约后再补正式查询。
+3. 部分老 API/页面仍有本地回退或示例数据。接手时逐个区分真实写入、按 ID 查询和演示清单；不要把事件受理、内容摘要、文件传输完成解释为链上确认。
+4. 下方历史记录有过时路径和能力描述，以本摘要、当前代码和实时 `/v3/api-docs` 为准，不要直接照抄旧表。
+
+### 检查与工作区
+
+- 上轮 `npm run lint`（`tsc --noEmit`）、修改过的 Vue 单文件组件语法检查、`git diff --check` 均通过；未执行打包。此结果不代表浏览器操作或后端联调通过。
+- 2026-09-28 检查时 3000 端口已有本项目 Vite 服务，`http://localhost:3000/` 返回 200；未另起服务。下次启动前先检查端口占用。
+- 当前工作区的代码改动及两份中文文档尚未提交，包含未跟踪新页面、接口模块和组件。勿清理、覆盖或回滚这些文件。未安排时不要执行打包，不要把输出写到独立日志文件。
+
 ## 2. 本次交接范围
+
+> 注意：第 2-12 节为此前各轮历史记录，保留供追溯；其中旧 `/admin/v1/project-spaces`、`/admin/v1/deployment-instances`、主体/绑定仅支持写入、未执行 lint 等说法已不代表当前状态。请先阅读上方“2026-09-28 当前交接摘要”，再以实时 OpenAPI 和当前代码核对。
 
 本次工作依据线上 Swagger 的实时 OpenAPI 定义完成相关页面和业务接口的对接与调整。不要再使用本地 jk.txt 作为接口契约；接口变更必须重新读取 /api/tcmirp/v3/api-docs。登录接口此前已验证可用，本次未修改 src/api/auth.ts。
 

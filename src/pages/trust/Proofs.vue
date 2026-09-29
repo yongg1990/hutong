@@ -5,51 +5,14 @@
       subtitle="按主体查询存证处理状态、链记录、交易哈希与对账结果"
     >
       <template #actions>
+        <el-button type="primary" @click="createVisible=true">创建存证任务</el-button>
+        <el-button @click="operationVisible=true">运维补偿</el-button>
         <el-button @click="loadProofs">刷新存证状态</el-button>
         <el-button type="primary" :disabled="!proofs.length" @click="batchVerify">
           批量验真
         </el-button>
       </template>
     </PageHeader>
-
-    <!-- Top KPI Row -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <span class="label">存证单总数</span>
-        <div class="value">
-          <strong class="mono">{{ proofs.length }}</strong>
-          <span class="unit">单</span>
-        </div>
-        <span class="sub">包含主链与联盟侧链存证</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">已确认链记录</span>
-        <div class="value">
-          <strong class="mono">{{ confirmedCount }}</strong>
-          <span class="unit">条</span>
-        </div>
-        <span class="sub">以链记录状态为准</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">失败链记录</span>
-        <div class="value">
-          <strong class="mono">{{ failedCount }}</strong>
-          <span class="unit">条</span>
-        </div>
-        <span class="sub">包含 FAILED 与 PARTIAL_FAILURE</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">最新确认区块高度</span>
-        <div class="value">
-          <strong class="mono">{{ latestBlockHeight || '-' }}</strong>
-          <span class="unit">区块</span>
-        </div>
-        <span class="sub">来自本次查询链记录</span>
-      </div>
-    </div>
 
     <!-- Filter Bar -->
     <FilterBar @search="handleSearch" @reset="handleReset">
@@ -60,7 +23,7 @@
         <el-option label="FILE" value="FILE" />
         <el-option label="PROJECTION" value="PROJECTION" />
       </el-select>
-      <el-input-number v-model="subjectId" :min="1" placeholder="主体 ID" style="width: 180px" />
+      <el-input v-model="subjectId" placeholder="主体 ID" style="width: 220px" />
       <el-input v-model="chainType" placeholder="链类型（可选）" style="width: 180px" clearable />
       <el-switch v-model="includeReceipts" active-text="包含回执" />
     </FilterBar>
@@ -69,7 +32,7 @@
     <div class="panel">
       <div class="panel-header">
         <h2>存证与链记录 ({{ filteredProofs.length }})</h2>
-        <span class="sub-text">查询条件与 CHN-010 存证状态接口一致</span>
+        <span v-if="failedCount" class="sub-text">失败链记录 {{ failedCount }} 条</span>
       </div>
       <div class="panel-body">
         <el-table :data="filteredProofs" v-loading="loading" style="width: 100%" empty-text="未检索到匹配的存证记录">
@@ -119,6 +82,9 @@
     </div>
 
     <!-- Merkle Verification Drawer -->
+    <el-dialog v-model="createVisible" title="创建存证任务" width="min(600px,94vw)"><el-form label-position="top"><el-form-item label="项目空间 ID" required><el-input v-model="proofForm.projectSpaceId" /></el-form-item><el-form-item label="存证策略 ID" required><el-input v-model="proofForm.proofPolicyId" /></el-form-item><el-form-item label="主体类型" required><el-select v-model="proofForm.subjectType"><el-option v-for="v in ['EVENT','OBJECT','FILE','PROJECTION','BATCH']" :key="v" :value="v" :label="v" /></el-select></el-form-item><el-form-item label="主体 ID" required><el-input v-model="proofForm.subjectId" /></el-form-item><el-form-item label="目标链"><div v-for="(target,index) in targets" :key="index" class="target-row"><el-select v-model="target.chainType"><el-option label="CHANGAN_CHAIN" value="CHANGAN_CHAIN" /><el-option label="FISCO_BCOS" value="FISCO_BCOS" /></el-select><el-input v-model="target.networkCode" placeholder="网络代码" /><el-button :icon="Delete" :disabled="targets.length===1" title="删除目标链" @click="targets.splice(index,1)" /></div><el-button :icon="Plus" @click="targets.push({chainType:'FISCO_BCOS',networkCode:''})">添加目标链</el-button></el-form-item></el-form><template #footer><el-button @click="createVisible=false">取消</el-button><el-button type="primary" :loading="operating" @click="createProof">提交</el-button></template></el-dialog>
+    <el-dialog v-model="operationVisible" title="存证运维补偿" width="min(520px,94vw)"><el-form label-position="top"><el-form-item label="操作"><el-select v-model="operation"><el-option label="处理独立链任务" value="process" /><el-option label="创建补偿重试" value="retry" /><el-option label="链记录对账" value="reconcile" /></el-select></el-form-item><el-form-item :label="operation==='process'?'链任务 ID':'链记录 ID'" required><el-input v-model="operationId" /></el-form-item></el-form><template #footer><el-button @click="operationVisible=false">取消</el-button><el-button type="primary" :loading="operating" @click="runOperation">提交</el-button></template></el-dialog>
+    <el-drawer v-model="operationResultVisible" title="存证操作结果" size="min(600px,94vw)"><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{{ JSON.stringify(operationResult,null,2) }}</pre></el-drawer>
     <el-drawer
       v-model="drawerVisible"
       :title="'链记录详情: ' + (activeProof?.chainRecordId || activeProof?.proofNo || '')"
@@ -178,7 +144,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { Delete, Plus } from '@element-plus/icons-vue';
+import { extendedServices } from '@/api/extendedServices';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
@@ -188,16 +156,20 @@ import { apiErrorMessage } from '@/api/client';
 const proofs = ref<ProofMerkleItem[]>([]);
 const loading = ref(false);
 const subjectType = ref('EVENT');
-const subjectId = ref<number | undefined>();
+const subjectId = ref('');
+const createVisible=ref(false), operationVisible=ref(false), operationResultVisible=ref(false), operating=ref(false);
+const proofForm=ref({projectSpaceId:localStorage.getItem('tcmirp_project_space_id')||'',proofPolicyId:'',subjectType:'EVENT',subjectId:''});
+const targets=ref([{chainType:'CHANGAN_CHAIN',networkCode:''}]);
+const operation=ref<'process'|'retry'|'reconcile'>('process'), operationId=ref(''), operationResult=ref<Record<string,unknown>>({});
+async function createProof(){if(![proofForm.value.projectSpaceId,proofForm.value.proofPolicyId,proofForm.value.subjectId].every(v=>/^\d+$/.test(v))||targets.value.some(v=>!v.networkCode.trim())){ElMessage.warning('请填写有效 ID 和目标网络代码');return;}operating.value=true;try{operationResult.value=await extendedServices.createProof({...proofForm.value,targets:targets.value});createVisible.value=false;operationResultVisible.value=true;ElMessage.success('存证任务已受理');}catch(e){ElMessage.error(apiErrorMessage(e,'创建失败'));}finally{operating.value=false;}}
+async function runOperation(){if(!/^\d+$/.test(operationId.value.trim())){ElMessage.warning('请输入有效 ID');return;}try{await ElMessageBox.confirm('确认对当前项目中的指定任务或链记录执行操作？','确认操作',{type:'warning'});}catch{return;}operating.value=true;try{const actions={process:extendedServices.processProof,retry:extendedServices.retryProof,reconcile:extendedServices.reconcileProof};operationResult.value=await actions[operation.value](operationId.value.trim());operationVisible.value=false;operationResultVisible.value=true;ElMessage.success('操作已提交');}catch(e){ElMessage.error(apiErrorMessage(e,'存证操作失败'));}finally{operating.value=false;}}
 const chainType = ref('');
 const includeReceipts = ref(false);
 
 const drawerVisible = ref(false);
 const activeProof = ref<ProofMerkleItem | null>(null);
 
-const confirmedCount = computed(() => proofs.value.filter(item => item.chainStatus === 'CONFIRMED').length);
 const failedCount = computed(() => proofs.value.filter(item => /FAILED/.test(item.chainStatus || item.status)).length);
-const latestBlockHeight = computed(() => proofs.value.map(item => Number(item.blockHeight)).filter(Number.isFinite).sort((a, b) => b - a)[0]);
 
 const filteredProofs = computed(() => proofs.value);
 
@@ -227,7 +199,7 @@ const handleSearch = () => {
 
 const handleReset = () => {
   subjectType.value = 'EVENT';
-  subjectId.value = undefined;
+  subjectId.value = '';
   chainType.value = '';
   includeReceipts.value = false;
   loadProofs();
@@ -264,6 +236,7 @@ const batchVerify = async () => {
 </script>
 
 <style scoped>
+.target-row { display:flex; gap:8px; width:100%; margin-bottom:8px; flex-wrap:wrap; }
 .trust-page {
   padding-bottom: 24px;
   width: 100%;

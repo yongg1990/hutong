@@ -109,35 +109,37 @@
     </div>
 
     <!-- Fixed Bottom Submit Bar -->
+    <el-button :loading="loadingSchema" @click="loadPublishedSchema">加载已发布 Schema</el-button>
+    <el-form label-position="top" class="event-context-form"><el-form-item label="事件类型代码"><el-input v-model="eventMeta.eventType" /></el-form-item><el-form-item label="Schema 版本" required><el-input v-model="eventMeta.schemaVersion" /></el-form-item><el-form-item label="来源业务键（每次动作唯一）" required><el-input v-model="eventMeta.sourceBusinessKey" /></el-form-item><el-form-item label="发生时间" required><el-date-picker v-model="eventMeta.occurredAt" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" /></el-form-item><el-form-item label="原始记录 ID（事实引擎可选）"><el-input v-model="eventMeta.rawRecordId" /></el-form-item><el-form-item label="提交方式"><el-radio-group v-model="eventMeta.useFactEngine"><el-radio-button :value="false">业务接口</el-radio-button><el-radio-button :value="true">事实引擎</el-radio-button></el-radio-group></el-form-item><el-form-item label="Payload JSON"><el-input v-model="payloadText" type="textarea" :rows="8" /></el-form-item><el-button :loading="testing" @click="testPayload">预检</el-button><el-alert v-if="testResult" :type="testResult.valid?'success':'error'" :closable="false" :title="testResult.valid?'预检通过':'预检失败'">{{ testResult.errors.join('; ') }}</el-alert></el-form>
     <div class="fixed-submit-bar">
       <div class="draft-info">
         <span class="dot-green"></span>
-        <span>本地草稿已于 16:18 自动保存 (已自动排除敏感 Token)</span>
+        <span>{{ draftSavedAt ? '草稿保存于 ' + draftSavedAt : '未保存草稿' }}</span>
       </div>
       <div class="submit-actions">
         <el-button @click="handleCancel">取消</el-button>
         <el-button @click="saveDraft">保存本地草稿</el-button>
         <el-button type="primary" :loading="isSubmitting" @click="handleSubmit">
-          提交事件并存证
+          提交事件
         </el-button>
       </div>
     </div>
 
     <!-- Submission Success Dialog with Cross-Links -->
-    <el-dialog v-model="successModalVisible" title="业务事件存证已成功上链写入" width="560px" :close-on-click-modal="false">
+    <el-dialog v-model="successModalVisible" title="业务事件已受理" width="min(560px,94vw)" :close-on-click-modal="false">
       <div class="submit-success-box">
         <div class="success-header">
           <el-icon class="success-icon"><CircleCheckFilled /></el-icon>
           <div class="header-text">
             <h3>{{ schemaConfig.eventTypeName }} ({{ schemaConfig.eventType }})</h3>
-            <p>已通过数据契约规范校验，生成规范化 Canonical JSON 并写入区块链存证凭据。</p>
+            <p>{{ submittedResult?.status || '已受理' }}</p>
           </div>
         </div>
 
         <div class="info-table">
           <div class="info-row"><span>事件全局 ID:</span> <b class="mono">{{ submittedResult?.eventId }}</b></div>
-          <div class="info-row"><span>存证哈希 (Merkle Root):</span> <span class="mono hash-text">{{ submittedResult?.proofHash || '0x7f8a9e2d1c3b4a5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e' }}</span></div>
-          <div class="info-row"><span>区块存证状态:</span> <el-tag type="success" size="small">CONFIRMED (已固化上链)</el-tag></div>
+          <div class="info-row"><span>事件内容摘要:</span> <span class="mono hash-text">{{ submittedResult?.payloadDigest || '-' }}</span></div>
+          <div class="info-row"><span>链上状态:</span><el-button link @click="successModalVisible=false;router.push('/trust/proofs')">查看存证状态</el-button></div>
         </div>
 
         <div class="next-action-title">您接下来可以进行以下跨模块协同联动：</div>
@@ -161,13 +163,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { CircleCheckFilled } from '@element-plus/icons-vue';
 import { useMetadataStore } from '@/stores/metadataStore';
 import StatusTag from '@/components/common/StatusTag.vue';
-import EvidencePicker from '@/components/common/EvidencePicker.vue';
+import EvidencePicker from '@/components/common/EvidenceReference.vue';
 import InspectionIndicatorGrid from '@/components/specialized/InspectionIndicatorGrid.vue';
 import PrescriptionItemGrid from '@/components/specialized/PrescriptionItemGrid.vue';
 import TraceCodeHierarchyInput from '@/components/specialized/TraceCodeHierarchyInput.vue';
@@ -210,6 +212,13 @@ const formData = reactive<Record<string, any>>({
 });
 
 const isSubmitting = ref(false);
+const eventMeta=reactive({eventType:props.eventType,schemaVersion:'1.0.0',sourceBusinessKey:'',occurredAt:'',rawRecordId:'',useFactEngine:false});
+const loadingSchema=ref(false);
+async function loadPublishedSchema(){loadingSchema.value=true;try{const snapshot=await eventsApi.getEventSchema(eventMeta.eventType,eventMeta.schemaVersion);const jsonSchema=JSON.parse(snapshot.schemaJson);const fields=Object.keys(jsonSchema.properties||{});const index=metadataStore.schemas.findIndex(s=>s.eventType===eventMeta.eventType);const config={eventType:snapshot.eventType,eventTypeName:snapshot.eventType,schemaVersion:snapshot.schemaVersion,status:snapshot.status,scenarioCode:'SUPPLY_CHAIN',groups:[{code:'BASIC',title:'业务数据',fields}],jsonSchema};if(index>=0)metadataStore.schemas.splice(index,1,config);else metadataStore.schemas.push(config);ElMessage.success('已加载发布版本');}catch(e){ElMessage.error(apiErrorMessage(e,'Schema 加载失败'));}finally{loadingSchema.value=false;}}
+const payloadText=ref(JSON.stringify(formData,null,2)), testing=ref(false), testResult=ref<{valid:boolean;errors:string[]}|null>(null), draftSavedAt=ref('');
+watch(formData,()=>{payloadText.value=JSON.stringify(formData,null,2);testResult.value=null;},{deep:true});
+function parsePayload(){const parsed=JSON.parse(payloadText.value);if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('Payload 必须是 JSON 对象');return parsed as Record<string,unknown>;}
+async function testPayload(){testing.value=true;try{testResult.value=await eventsApi.testEventSchema(eventMeta.eventType,eventMeta.schemaVersion,JSON.stringify(parsePayload()));}catch(e){testResult.value=null;ElMessage.error(apiErrorMessage(e,'预检失败，请检查 JSON、事件类型及版本'));}finally{testing.value=false;}}
 
 const getFieldProperty = (key: string) => {
   return schemaConfig.value.jsonSchema?.properties?.[key] || {};
@@ -229,18 +238,18 @@ const handleCancel = () => {
 };
 
 const saveDraft = () => {
-  ElMessage.success('表单无敏感字段草稿已成功保存至本地！');
+  try { const payload=parsePayload();const sensitive=/token|password|secret|patient|credential|phone|identity/i;const redact=(value:any):any=>Array.isArray(value)?value.map(redact):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).filter(([key])=>!sensitive.test(key)).map(([key,item])=>[key,redact(item)])):value;sessionStorage.setItem(`tcmirp_event_draft_${props.eventType}`,JSON.stringify({payload:redact(payload),schemaVersion:eventMeta.schemaVersion,eventType:eventMeta.eventType}));draftSavedAt.value=new Date().toLocaleTimeString();ElMessage.success('脱敏草稿已保存至当前会话'); } catch { ElMessage.error('草稿保存失败，请检查 JSON'); }
 };
 
 const successModalVisible = ref(false);
 const submittedResult = ref<any>(null);
 
 const handleSubmit = async () => {
+  if(!eventMeta.eventType.trim()||!eventMeta.schemaVersion.trim()||!eventMeta.sourceBusinessKey.trim()||!eventMeta.occurredAt||(eventMeta.rawRecordId&&!/^\d+$/.test(eventMeta.rawRecordId))){ElMessage.warning('请填写事件类型、版本、唯一业务键和时间，原始记录 ID 须为数字字符串');return;}
   isSubmitting.value = true;
   try {
     const res = await eventsApi.submitEvent({
-      eventType: schemaConfig.value.eventType,
-      payload: formData
+      ...eventMeta, payload: parsePayload()
     });
     submittedResult.value = res;
     successModalVisible.value = true;
@@ -268,11 +277,13 @@ const goToSupply = () => {
 
 const handleContinue = () => {
   successModalVisible.value = false;
+  eventMeta.sourceBusinessKey='';eventMeta.occurredAt='';eventMeta.rawRecordId='';testResult.value=null;
   ElMessage.info('已重置录入，您可以继续提交下一条事件数据。');
 };
 </script>
 
 <style scoped>
+.event-context-form{margin:18px 0;padding:16px 0;border-top:1px solid var(--color-border)}
 .schema-form-wrapper {
   padding-bottom: 70px;
 }

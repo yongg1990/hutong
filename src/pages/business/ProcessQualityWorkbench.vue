@@ -13,41 +13,7 @@
         </el-button>
       </template>
     </PageHeader>
-
-    <!-- Top KPI Stats for Primary Processing & Quality -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <span class="label">初加工批次总数</span>
-        <div class="value">
-          <strong>{{ primaryBatches.length }}</strong> <span class="unit">批次</span>
-        </div>
-        <span class="sub">产地趁鲜切制率 92.5%</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">平均折干率 (出干率)</span>
-        <div class="value">
-          <strong class="brand-color">31.66%</strong> <span class="unit">均值</span>
-        </div>
-        <span class="sub">损耗率控制在 2.1% 以内</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">质检检验报告数</span>
-        <div class="value">
-          <strong>{{ inspectEvents.length }}</strong> <span class="unit">份</span>
-        </div>
-        <span class="sub">全检合格率 100%</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">水分与杂质控标</span>
-        <div class="value">
-          <strong class="success-color">合规</strong> <span class="unit">符合ChP2025</span>
-        </div>
-        <span class="sub">云南28种趁鲜切制目录覆盖</span>
-      </div>
-    </div>
+    <el-alert type="info" :closable="false" title="加工清单和统计为演示数据；正式记录通过事件录入提交，查询使用返回的事件 ID。" style="margin-bottom:12px" />
 
     <!-- Active Tab Selector -->
     <div class="tab-bar">

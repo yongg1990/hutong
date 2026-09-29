@@ -5,6 +5,8 @@
       subtitle="定义不同业务场景与外部系统的交换数据标准、一致性映射与脱敏规则"
     >
       <template #actions>
+        <el-button @click="$router.push('/exchange/profile-config')">规范配置</el-button>
+        <el-button @click="$router.push('/exchange/queries')">交换查询</el-button>
         <el-button type="primary" @click="openCreate">
           <el-icon class="mr-1"><Plus /></el-icon>
           新建规范包
@@ -14,7 +16,7 @@
 
     <FilterBar @search="loadProfiles" @reset="handleReset">
       <el-input v-model="profileCode" placeholder="规范包代码" clearable style="width: 220px" />
-      <el-input-number v-model="limit" :min="1" :max="200" controls-position="right" />
+      <el-input-number v-model="limit" :min="1" :max="100" controls-position="right" />
     </FilterBar>
 
     <!-- Top Panel: Profile List -->
@@ -64,7 +66,7 @@
           <span class="font-medium text-gray-700">字段规则表 (一致性映射)</span>
           <span class="text-sm text-gray-500">当前选择: <span class="font-semibold text-gray-700">{{ selectedProfile.name }}</span></span>
         </div>
-        <el-button size="small">导入规则...</el-button>
+        <el-button size="small" @click="$router.push({path:'/exchange/profile-config',query:{profileId:String(selectedProfile.id)}})">维护版本与规则</el-button>
       </div>
       
       <div class="flex-1 overflow-auto p-4">
@@ -178,6 +180,7 @@ import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { exchangeApi, type ExchangeProfile } from '@/api/exchange';
 import { ElMessage } from 'element-plus';
+import { apiErrorMessage } from '@/api/client';
 
 type Profile = ExchangeProfile;
 
@@ -202,7 +205,8 @@ const loadProfiles = async () => {
       selectedProfile.value = res[0] as Profile;
     }
   } catch (err) {
-    console.error('Failed to load profiles', err);
+    profiles.value=[];selectedProfile.value=null;
+    ElMessage.error(apiErrorMessage(err,'规范包查询失败'));
   } finally {
     loading.value = false;
   }
@@ -239,6 +243,8 @@ const saveProfile = async () => {
     profileDialogVisible.value = false;
     ElMessage.success('规范包保存成功');
     await loadProfiles();
+  } catch (err) {
+    ElMessage.error(apiErrorMessage(err,'保存失败'));
   } finally {
     savingProfile.value = false;
   }
@@ -249,6 +255,8 @@ const openVersions = async (row: Profile) => {
   loadingVersions.value = true;
   try {
     versions.value = await exchangeApi.getProfileVersions(row.id);
+  } catch (err) {
+    versions.value=[];ElMessage.error(apiErrorMessage(err,'版本查询失败'));
   } finally {
     loadingVersions.value = false;
   }

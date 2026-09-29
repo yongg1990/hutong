@@ -6,7 +6,7 @@
     />
 
     <FilterBar @search="handleSearch" @reset="handleReset">
-      <el-input-number v-model="eventId" :min="1" placeholder="事件 ID" style="width: 220px" />
+      <el-input v-model="eventId" placeholder="事件 ID" style="width: 220px" />
     </FilterBar>
 
     <div class="panel">
@@ -48,7 +48,7 @@ import { eventsApi } from '@/api/events';
 import type { TrustEvent } from '@/types';
 
 const router = useRouter();
-const eventId = ref<number | undefined>();
+const eventId = ref('');
 const events = ref<TrustEvent[]>([]);
 const loading = ref(false);
 
@@ -70,7 +70,7 @@ const handleSearch = async () => {
 };
 
 const handleReset = async () => {
-  eventId.value = undefined;
+  eventId.value = '';
   events.value = [];
 };
 

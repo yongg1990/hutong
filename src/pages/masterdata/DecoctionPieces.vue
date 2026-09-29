@@ -7,12 +7,6 @@
       </template>
     </PageHeader>
 
-    <div class="summary-strip">
-      <div class="summary-item"><span>饮片品种总数</span><strong>{{ total }}</strong></div>
-      <div class="summary-item"><span>本页启用</span><strong class="active-number">{{ activeCount }}</strong></div>
-      <div class="summary-item"><span>本页停用</span><strong class="inactive-number">{{ inactiveCount }}</strong></div>
-    </div>
-
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-input v-model="filters.productName" clearable placeholder="品种名称" style="width: 170px" @keyup.enter="handleSearch" />
       <el-input v-model="filters.materialName" clearable placeholder="药材名称" style="width: 160px" @keyup.enter="handleSearch" />
@@ -26,7 +20,7 @@
     </FilterBar>
 
     <section class="panel table-panel">
-      <div class="panel-header"><div><h2>饮片品种列表</h2><span class="panel-hint">共 {{ total }} 条记录</span></div></div>
+      <div class="panel-header"><h2>饮片品种列表 ({{ total }})</h2><span v-if="inactiveCount" class="panel-hint">本页停用 {{ inactiveCount }}</span></div>
       <div class="panel-body">
         <el-table :data="pieces" v-loading="loading" row-key="productId" empty-text="暂无饮片品种记录" style="width: 100%">
           <el-table-column prop="productId" label="品种 ID" width="170">
@@ -170,7 +164,6 @@ const page = ref(1);
 const pageSize = ref(20);
 const total = ref(0);
 const filters = reactive({ productName: '', materialName: '', processingMethod: '', medicalInsuranceCode: '', nmpaPieceCode: '', status: '' });
-const activeCount = computed(() => pieces.value.filter(item => item.status === 'ACTIVE').length);
 const inactiveCount = computed(() => pieces.value.filter(item => item.status === 'INACTIVE').length);
 const formVisible = ref(false);
 const formLoading = ref(false);
@@ -313,12 +306,6 @@ onMounted(loadPieces);
 
 <style scoped>
 .piece-page { padding-bottom: 24px; }
-.summary-strip { display: flex; gap: 1px; margin-bottom: 14px; overflow: hidden; background: var(--color-border); border: 1px solid var(--color-border); border-radius: 6px; }
-.summary-item { display: flex; flex: 1; align-items: baseline; gap: 12px; padding: 12px 16px; background: var(--color-surface); }
-.summary-item span { color: var(--color-muted); font-size: 12px; }
-.summary-item strong { color: var(--color-ink); font-size: 20px; font-weight: 700; }
-.summary-item .active-number { color: #15803d; }
-.summary-item .inactive-number { color: #b45309; }
 .panel-header > div { display: flex; align-items: baseline; gap: 10px; }
 .panel-hint { color: var(--color-muted); font-size: 12px; }
 .product-id { color: var(--color-brand); font-weight: 700; }
@@ -337,5 +324,5 @@ onMounted(loadPieces);
 .attribute-json { max-height: 280px; margin: 0; padding: 14px; overflow: auto; white-space: pre-wrap; word-break: break-word; background: #f4f9f7; border: 1px solid var(--color-border); border-radius: 6px; color: #294342; font-size: 12px; line-height: 1.65; }
 :deep(.mono-input input), :deep(.json-input textarea) { font-family: "JetBrains Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 @media (max-width: 1100px) { .code-row { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 760px) { .summary-strip { flex-direction: column; } .form-grid, .form-grid.three, .code-row { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .form-grid, .form-grid.three, .code-row { grid-template-columns: 1fr; } }
 </style>

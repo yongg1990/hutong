@@ -10,6 +10,7 @@
         </el-button>
       </template>
     </PageHeader>
+    <el-alert type="info" :closable="false" title="批次清单为演示数据；品种维护、追溯码登记和赋码事件提交调用正式接口。" style="margin-bottom:12px" />
 
     <div class="grid-two">
       <div class="panel">

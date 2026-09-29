@@ -12,33 +12,6 @@
       </template>
     </PageHeader>
 
-    <!-- Top KPI Row -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <span class="label">用户总数</span>
-        <div class="value">
-          <strong class="mono">{{ total }}</strong>
-          <span class="unit">人</span>
-        </div>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">本页正常可用账号</span>
-        <div class="value">
-          <strong class="mono brand-color">{{ activeUsersCount }}</strong>
-          <span class="unit">人激活</span>
-        </div>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">本页所属协同租户数</span>
-        <div class="value">
-          <strong class="mono">{{ distinctTenantsCount }}</strong>
-          <span class="unit">家机构</span>
-        </div>
-      </div>
-    </div>
-
     <!-- Filter Bar -->
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-select v-model="tenantFilter" placeholder="所属租户机构" style="width: 220px" clearable>
@@ -211,8 +184,6 @@ const rules = {
   tenantId: [{ required: true, message: '请选择所属租户', trigger: 'change' }]
 };
 
-const activeUsersCount = computed(() => users.value.filter(u => u.status === 'ACTIVE').length);
-const distinctTenantsCount = computed(() => new Set(users.value.map(u => u.tenantId)).size);
 const availableRoles = computed(() => roles.value.filter(r =>
   form.value.tenantId == null || form.value.tenantId === '' ||
   r.tenantId == null || String(r.tenantId) === String(form.value.tenantId)

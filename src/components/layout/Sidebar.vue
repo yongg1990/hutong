@@ -115,6 +115,7 @@ const menuGroups = [
       { title: '事件查询', path: '/trust/events', hasApi: false, apiPath: '' },
       { title: '血缘分析图谱', path: '/trust/lineage', hasApi: false, apiPath: '' },
       { title: '证据文件', path: '/trust/evidence', hasApi: false, apiPath: '' },
+      { title: '文件上传与凭证', path: '/trust/files-credentials', hasApi: true, apiPath: '/openapi/v1/files/upload-sessions, /openapi/v1/credentials' },
       { title: '存证单与 Merkle', path: '/trust/proofs', hasApi: false, apiPath: '' }
     ]
   },
@@ -124,6 +125,8 @@ const menuGroups = [
     icon: Share,
     items: [
       { title: '互通规范包', path: '/exchange/profiles', hasApi: false, apiPath: '' },
+      { title: '互通规范配置', path: '/exchange/profile-config', hasApi: true, apiPath: '/exchange-query/profile-versions' },
+      { title: '交换数据查询', path: '/exchange/queries', hasApi: true, apiPath: '/exchange-query/objects, /exchange-query/events' },
       { title: '互通投影与交付', path: '/exchange/projections', hasApi: false, apiPath: '' }
     ]
   },
@@ -136,8 +139,8 @@ const menuGroups = [
       { title: '角色与权限', path: '/settings/roles', hasApi: true, apiPath: '/tenant-access/roles, /permissions' },
       { title: '通用字典', path: '/settings/dictionaries', hasApi: true, apiPath: '/tenant-access/dictionaries' },
       { title: '用户管理', path: '/settings/users', hasApi: true, apiPath: '/tenant-access/users' },
-      { title: '项目协同空间', path: '/settings/tenant-project', hasApi: true, apiPath: '/admin/v1/project-spaces' },
-      { title: '前置节点部署', path: '/settings/deployments-edge', hasApi: true, apiPath: '/admin/v1/deployment-instances' },
+      { title: '项目协同空间', path: '/settings/tenant-project', hasApi: true, apiPath: '/openapi/v1/project-spaces' },
+      { title: '前置节点部署', path: '/settings/deployments-edge', hasApi: true, apiPath: '/openapi/v1/deployment-instances' },
       { title: '订阅与异步任务', path: '/operations/subscriptions-jobs', hasApi: false, apiPath: '' },
       { title: '审计与告警', path: '/operations/audit-alerts', hasApi: false, apiPath: '' }
     ]

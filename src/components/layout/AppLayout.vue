@@ -4,6 +4,10 @@
     <div class="app-body">
       <Sidebar />
       <main class="app-main">
+        <div class="query-progress" :class="{ active: queryActivity.visible }" role="status" :aria-label="queryActivity.pending ? '正在查询数据' : '查询已完成'" :aria-hidden="!queryActivity.visible">
+          <span class="query-progress-bar"></span>
+          <span class="query-progress-label"><el-icon class="is-loading"><Loading /></el-icon> 正在查询数据</span>
+        </div>
         <router-view v-slot="{ Component }">
           <transition name="slide-fade" mode="out-in">
             <div :key="$route.fullPath" class="page-wrapper">
@@ -17,6 +21,8 @@
 </template>
 
 <script setup lang="ts">
+import { Loading } from '@element-plus/icons-vue';
+import { queryActivity } from '@/api/client';
 import Navbar from './Navbar.vue';
 import Sidebar from './Sidebar.vue';
 </script>
@@ -48,6 +54,61 @@ import Sidebar from './Sidebar.vue';
   background-color: var(--color-bg);
   position: relative;
   box-sizing: border-box;
+}
+
+.query-progress {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease;
+}
+
+.query-progress.active { opacity: 1; }
+.query-progress-bar {
+  position: absolute;
+  top: -22px;
+  left: -26px;
+  width: calc(100% + 52px);
+  height: 3px;
+  overflow: hidden;
+  background: #d6e9df;
+}
+.query-progress-bar::after {
+  content: '';
+  display: block;
+  width: 35%;
+  height: 100%;
+  background: var(--color-brand);
+  animation: query-sweep 1.15s ease-in-out infinite;
+}
+.query-progress-label {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid var(--color-brand-border);
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  color: var(--color-brand-dark);
+  font-size: 12px;
+  font-weight: 650;
+}
+@keyframes query-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .query-progress-bar::after { animation: none; width: 100%; }
+}
+@media (max-width: 800px) {
+  .query-progress-bar { top: -14px; left: -14px; width: calc(100% + 28px); }
 }
 
 .page-wrapper {

@@ -5,6 +5,7 @@
       subtitle="数据集投影与外发规范包管理，实时追踪对外数据推送结果与验证状态"
     >
       <template #actions>
+        <el-button :loading="processing" @click="processProjection">执行补偿处理</el-button>
         <el-button type="primary" @click="createDialogVisible = true">
           <el-icon class="mr-1"><RefreshRight /></el-icon>
           新建投影任务
@@ -15,17 +16,16 @@
     <div class="panel flex-1 flex flex-col bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
       <div class="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <div class="flex items-center gap-2 text-sm font-medium text-gray-700">
-          全部投影任务 ({{ projections.length }})
+          当前查询结果 ({{ projections.length }})
         </div>
         <div class="projection-query">
-          <el-input-number
+          <el-input
             v-model="searchQuery" 
             placeholder="投影 ID"
-            :min="1"
             style="width: 180px"
             @keyup.enter="loadProjections"
           />
-          <el-input-number v-model="projectSpaceId" :min="1" placeholder="项目空间 ID" />
+          <el-input v-model="projectSpaceId" placeholder="项目空间 ID" style="width:220px" />
           <el-input v-model="purposeCode" placeholder="访问用途" style="width: 150px" />
           <el-checkbox v-model="includeOutput">输出</el-checkbox>
           <el-checkbox v-model="includeValidationDetails">校验详情</el-checkbox>
@@ -49,7 +49,7 @@
           <el-table-column label="规范版本 ID" prop="profileVersionId" width="140" class-name="mono" />
           <el-table-column label="数据集代码" prop="datasetCode" width="170" class-name="mono" />
           
-          <el-table-column label="规范包 & 数据集 *" min-width="300">
+          <el-table-column label="规范包与数据集" min-width="220">
             <template #default="{ row }">
               <div class="flex flex-col gap-1 py-1">
                 <span class="font-medium text-gray-800">{{ row.profileName }}</span>
@@ -65,13 +65,13 @@
           <el-table-column label="输出摘要" prop="outputDigest" min-width="200" class-name="mono" show-overflow-tooltip />
           <el-table-column label="替代投影 ID" prop="supersedesProjectionId" width="140" class-name="mono" />
           
-          <el-table-column label="输出记录数 *" prop="recordCount" width="120" align="right">
+          <el-table-column label="输出记录数" prop="recordCount" width="120" align="right">
             <template #default="{ row }">
               <span class="font-semibold text-gray-700">{{ row.recordCount }}</span>
             </template>
           </el-table-column>
 
-          <el-table-column label="异常数 *" prop="errorCount" width="90" align="right">
+          <el-table-column label="异常数" prop="errorCount" width="90" align="right">
             <template #default="{ row }">
               <span :class="row.errorCount > 0 ? 'text-red-500 font-bold' : 'text-gray-400'">
                 {{ row.errorCount }}
@@ -90,7 +90,7 @@
               <el-button link type="primary" size="small" @click="viewDetails(row)">
                 任务详情
               </el-button>
-              <el-button link type="primary" size="small" :disabled="row.status !== 'GENERATED'">
+              <el-button link type="primary" size="small" :disabled="row.output == null" @click="downloadOutput(row)">
                 下载
               </el-button>
             </template>
@@ -109,7 +109,7 @@
               <el-option label="EVENT" value="EVENT" /><el-option label="OBJECT" value="OBJECT" /><el-option label="BATCH" value="BATCH" />
             </el-select>
           </el-form-item>
-          <el-form-item label="项目空间 ID" required><el-input-number v-model="createForm.projectSpaceId" :min="1" style="width: 100%" /></el-form-item>
+          <el-form-item label="项目空间 ID" required><el-input v-model="createForm.projectSpaceId" /></el-form-item>
         </div>
         <el-form-item label="主体 ID（逗号分隔）" required><el-input v-model="subjectIdsText" /></el-form-item>
         <el-form-item label="数据集代码（逗号分隔，可选）"><el-input v-model="datasetCodesText" /></el-form-item>
@@ -120,12 +120,14 @@
         <el-button type="primary" :loading="creating" @click="generateNew">提交</el-button>
       </template>
     </el-dialog>
+    <el-drawer v-model="detailVisible" title="投影任务详情" size="min(680px,94vw)"><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{{ formatJson(activeProjection) }}</pre></el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { extendedServices } from '@/api/extendedServices';
 import { RefreshRight } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
@@ -134,9 +136,10 @@ import { apiErrorMessage } from '@/api/client';
 import type { ExchangeProjection } from '@/types';
 
 const projections = ref<ExchangeProjection[]>([]);
-const searchQuery = ref<number | undefined>();
+const searchQuery = ref('');
+const processing=ref(false), detailVisible=ref(false), activeProjection=ref<ExchangeProjection|null>(null);
 const loading = ref(false);
-const projectSpaceId = ref(Number(localStorage.getItem('tcmirp_project_space_id')) || 1);
+const projectSpaceId = ref(localStorage.getItem('tcmirp_project_space_id') || '');
 const purposeCode = ref(localStorage.getItem('tcmirp_purpose_code') || 'TRACE');
 const includeOutput = ref(true);
 const includeValidationDetails = ref(true);
@@ -145,7 +148,7 @@ const creating = ref(false);
 const subjectIdsText = ref('1');
 const datasetCodesText = ref('');
 const createForm = ref({
-  projectSpaceId: Number(localStorage.getItem('tcmirp_project_space_id')) || 1,
+  projectSpaceId: localStorage.getItem('tcmirp_project_space_id') || '',
   profileCode: '', profileVersion: '1.0.0', subjectType: 'BATCH', asOfTime: ''
 });
 
@@ -163,13 +166,13 @@ const loadProjections = async () => {
     const errors = Array.isArray(item.errors) ? item.errors : item.errors ? [item.errors] : [];
     projections.value = [{
       id: String(item.projectionId), projectionNo: String(item.projectionId), profileCode: '', profileName: '',
-      version: '', datasetName: item.datasetCode, asOfTime: item.asOfTime, status: item.status, recordCount: 0,
+      version: '', datasetName: item.datasetCode, asOfTime: item.asOfTime, status: item.status, recordCount: Array.isArray(item.output)?item.output.length:Number(item.recordCount??0),
       outputHash: item.outputDigest, errorCount: errors.length, profileVersionId: item.profileVersionId,
       datasetCode: item.datasetCode, outputDigest: item.outputDigest, output: item.output,
       traceback: item.traceback, errors: item.errors, supersedesProjectionId: item.supersedesProjectionId
     }];
   } catch (err) {
-    console.error('Failed to load projections', err);
+    ElMessage.error(apiErrorMessage(err,'投影查询失败'));
     projections.value = [];
   } finally {
     loading.value = false;
@@ -181,8 +184,8 @@ const filteredProjections = computed(() => {
 });
 
 const generateNew = async () => {
-  const subjectIds = subjectIdsText.value.split(',').map(item => Number(item.trim())).filter(item => Number.isFinite(item) && item > 0);
-  if (!createForm.value.profileCode || !createForm.value.profileVersion || !subjectIds.length) {
+  const subjectIds = subjectIdsText.value.split(',').map(item => item.trim());
+  if (!createForm.value.profileCode || !createForm.value.profileVersion || !/^\d+$/.test(createForm.value.projectSpaceId) || !subjectIds.length || subjectIds.some(id=>!/^\d+$/.test(id))) {
     ElMessage.warning('请填写规范包代码、版本和有效主体 ID');
     return;
   }
@@ -195,7 +198,8 @@ const generateNew = async () => {
     });
     createDialogVisible.value = false;
     if (result?.projectionId) {
-      searchQuery.value = Number(result.projectionId) || undefined;
+      searchQuery.value = String(result.projectionId);
+      projectSpaceId.value = createForm.value.projectSpaceId;
       await loadProjections();
     }
     ElMessage.success('投影任务已受理');
@@ -207,10 +211,12 @@ const generateNew = async () => {
 };
 
 const viewDetails = (row: ExchangeProjection) => {
-  ElMessage.info(`正在查看投影任务 [${row.projectionNo}] 的日志详情...`);
+  activeProjection.value=row;detailVisible.value=true;
 };
 
 const formatJson = (value: any) => JSON.stringify(value ?? null, null, 2);
+function downloadOutput(row:ExchangeProjection){const url=URL.createObjectURL(new Blob([formatJson(row.output)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=`projection-${row.id}.json`;a.click();URL.revokeObjectURL(url);}
+async function processProjection(){if(!/^\d+$/.test(searchQuery.value)||!/^\d+$/.test(projectSpaceId.value)){ElMessage.warning('请填写项目空间和投影 ID');return;}try{await ElMessageBox.confirm('确认对指定投影执行幂等补偿处理？','确认操作',{type:'warning'});}catch{return;}processing.value=true;try{await extendedServices.processProjection(projectSpaceId.value,searchQuery.value);ElMessage.success('补偿处理已执行');await loadProjections();}catch(e){ElMessage.error(apiErrorMessage(e,'补偿处理失败'));}finally{processing.value=false;}}
 </script>
 
 <style scoped>

@@ -99,28 +99,28 @@ const mockAlerts: AuditAlert[] = [
 export const settingsApi = {
   // ================= 1. 项目空间 (APP-01: list/create/find/update) =================
   async createProjectSpace(data: ProjectSpaceCreateRequest): Promise<ProjectSpaceResponse> {
-    return request.post('/admin/v1/project-spaces', data) as unknown as Promise<ProjectSpaceResponse>;
+    return request.post('/openapi/v1/project-spaces', data) as unknown as Promise<ProjectSpaceResponse>;
   },
 
   async listProjectSpaces(params: { projectCode?: string; projectName?: string; status?: string; page: string; size: string }): Promise<ProjectSpacePageResult> {
-    return request.get('/admin/v1/project-spaces', { params }) as unknown as Promise<ProjectSpacePageResult>;
+    return request.get('/openapi/v1/project-spaces', { params }) as unknown as Promise<ProjectSpacePageResult>;
   },
 
   async getProjectSpaceById(id: string): Promise<ProjectSpaceResponse> {
-    return request.get(`/admin/v1/project-spaces/${id}`) as unknown as Promise<ProjectSpaceResponse>;
+    return request.get(`/openapi/v1/project-spaces/${id}`) as unknown as Promise<ProjectSpaceResponse>;
   },
 
   async updateProjectSpace(id: string, data: ProjectSpaceUpdateRequest): Promise<ProjectSpaceResponse> {
-    return request.patch(`/admin/v1/project-spaces/${id}`, data) as unknown as Promise<ProjectSpaceResponse>;
+    return request.patch(`/openapi/v1/project-spaces/${id}`, data) as unknown as Promise<ProjectSpaceResponse>;
   },
 
   // ================= 2. 部署实例 (POST /admin/v1/deployment-instances, GET /admin/v1/deployment-instances/{id}) =================
   async createDeploymentInstance(data: DeploymentInstanceCreateRequest): Promise<DeploymentInstanceResponse> {
-    return request.post('/admin/v1/deployment-instances', data) as unknown as Promise<DeploymentInstanceResponse>;
+    return request.post('/openapi/v1/deployment-instances', data) as unknown as Promise<DeploymentInstanceResponse>;
   },
 
   async getDeploymentInstanceById(id: string): Promise<DeploymentInstanceResponse> {
-    return request.get(`/admin/v1/deployment-instances/${id}`) as unknown as Promise<DeploymentInstanceResponse>;
+    return request.get(`/openapi/v1/deployment-instances/${id}`) as unknown as Promise<DeploymentInstanceResponse>;
   },
 
   // ================= 3. 本地运维演示数据 =================

@@ -11,6 +11,7 @@
         </el-button>
       </template>
     </PageHeader>
+    <el-alert type="info" :closable="false" title="批次列表为本地演示数据；业务事件提交调用正式接口。" style="margin-bottom:12px" />
 
     <!-- Interactive Scenario Stages Header Bar -->
     <div class="stages-bar">
@@ -111,12 +112,13 @@
           <div class="kv-row"><span>最近农事:</span> <b>{{ selectedRow.lastEvent }}</b></div>
 
           <div class="card-actions">
-            <el-button type="primary" size="small" @click="router.push('/business/events/new/PLANTED')">
+            <el-button type="primary" size="small" @click="router.push('/business/events/new/FARMING_OPERATION')">
               记录农事作业
             </el-button>
-            <el-button size="small" @click="router.push('/business/events/new/PLANTED')">
+            <el-button size="small" @click="router.push('/business/events/new/INPUT_APPLIED')">
               记录投入品施用
             </el-button>
+            <el-button size="small" @click="router.push('/business/events/new/HARVESTED')">记录采收</el-button>
           </div>
 
           <el-divider style="margin: 14px 0 10px;" />
@@ -141,7 +143,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
@@ -245,7 +246,9 @@ const handleReset = () => {
 };
 
 const exportData = () => {
-  ElMessage.success(`阶段 [${currentStageName.value}] 田间批次导出一份 CSV 文件！`);
+  const fields=['batchNo','baseName','plotName','herbName','plantDate','lastEvent','status'] as const;
+  const csv=[fields.join(','),...filteredBatches.value.map(row=>fields.map(field=>'"'+String(row[field]??'').replace(/"/g,'""')+'"').join(','))].join('\r\n');
+  const url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='field-demo.csv';a.click();URL.revokeObjectURL(url);
 };
 </script>
 
@@ -375,6 +378,7 @@ const exportData = () => {
 }
 
 .card-actions {
+  flex-wrap: wrap;
   display: flex;
   gap: 10px;
   margin-top: 16px;

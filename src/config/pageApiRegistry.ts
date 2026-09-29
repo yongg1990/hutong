@@ -26,7 +26,7 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     hasApi: true,
     moduleName: '饮片赋码与追溯码登记',
     apiPath: '/openapi/v1/trace-codes',
-    specDoc: 'OpenAPI 3.1.0 / APP-02 主体、对象与监管编码',
+    specDoc: 'OpenAPI 3.1.0 / APP-02 主体、对象与监管编码、APP-05 业务协同',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
@@ -95,7 +95,7 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     hasApi: true,
     moduleName: '数据接入批次与原始记录治理',
     apiPath: '/openapi/v1/batches, /openapi/v1/raw-records',
-    specDoc: 'OpenAPI 3.1.0 / APP-03 来源接入与数据治理',
+    specDoc: 'OpenAPI 3.1.0 / APP-03 来源接入与数据治理、APP-08 批次查询',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
@@ -146,6 +146,9 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     status: 'CONNECTED',
     endpoints: [
       { method: 'POST', path: '/openapi/v1/parties', desc: '主体登记 (registerParty)' }
+      ,{ method: 'GET', path: '/openapi/v1/parties', desc: '分页查询主体' }
+      ,{ method: 'GET', path: '/openapi/v1/parties/{id}', desc: '主体详情' }
+      ,{ method: 'POST', path: '/openapi/v1/parties/{id}', desc: '更新主体' }
     ]
   },
 
@@ -192,7 +195,9 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     endpoints: [
       { method: 'POST', path: '/openapi/v1/identifiers/resolve', desc: '外部标识解析 (resolve)' },
       { method: 'GET', path: '/openapi/v1/identifiers/bindings', desc: '分页查询外部标识绑定' },
-      { method: 'POST', path: '/openapi/v1/identifiers/bindings', desc: '外部标识绑定 (bind)' }
+      { method: 'POST', path: '/openapi/v1/identifiers/bindings', desc: '外部标识绑定 (bind)' },
+      { method: 'GET', path: '/openapi/v1/identifiers/bindings/{id}', desc: '绑定详情' },
+      { method: 'POST', path: '/openapi/v1/identifiers/bindings/{id}', desc: '更新绑定' }
     ]
   },
 
@@ -294,15 +299,15 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
   '/settings/tenant-project': {
     hasApi: true,
     moduleName: '项目协同空间管理',
-    apiPath: '/admin/v1/project-spaces',
+    apiPath: '/openapi/v1/project-spaces',
     specDoc: 'OpenAPI 3.1.0 / APP-01 项目空间',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
-      { method: 'GET', path: '/admin/v1/project-spaces', desc: '分页查询项目空间 (query)' },
-      { method: 'POST', path: '/admin/v1/project-spaces', desc: '创建项目空间 (create)' },
-      { method: 'GET', path: '/admin/v1/project-spaces/{id}', desc: '查询项目空间 (find)' },
-      { method: 'PATCH', path: '/admin/v1/project-spaces/{id}', desc: '更新项目空间 (update)' }
+      { method: 'GET', path: '/openapi/v1/project-spaces', desc: '分页查询项目空间 (query)' },
+      { method: 'POST', path: '/openapi/v1/project-spaces', desc: '创建项目空间 (create)' },
+      { method: 'GET', path: '/openapi/v1/project-spaces/{id}', desc: '查询项目空间 (find)' },
+      { method: 'PATCH', path: '/openapi/v1/project-spaces/{id}', desc: '更新项目空间 (update)' }
     ]
   },
 
@@ -310,13 +315,13 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
   '/settings/deployments-edge': {
     hasApi: true,
     moduleName: '前置节点与部署实例',
-    apiPath: '/admin/v1/deployment-instances',
+    apiPath: '/openapi/v1/deployment-instances',
     specDoc: 'OpenAPI 3.1.0 / APP-01 部署实例',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
-      { method: 'POST', path: '/admin/v1/deployment-instances', desc: '登记部署实例 (register)' },
-      { method: 'GET', path: '/admin/v1/deployment-instances/{id}', desc: '查询部署实例 (find)' }
+      { method: 'POST', path: '/openapi/v1/deployment-instances', desc: '登记部署实例 (register)' },
+      { method: 'GET', path: '/openapi/v1/deployment-instances/{id}', desc: '查询部署实例 (find)' }
     ]
   },
 
@@ -340,9 +345,11 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
 
   '/exchange/profiles': {
     hasApi: true, moduleName: '互通规范包与字段规则', apiPath: '/exchange-query/profiles',
-    specDoc: 'OpenAPI 3.1.0 / 互通查询', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    specDoc: 'OpenAPI 3.1.0 / APP-06 互通查询', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
     endpoints: [
       { method: 'GET', path: '/exchange-query/profiles', desc: '查询启用规范包' },
+      { method: 'POST', path: '/exchange-query/profiles', desc: '创建规范包' },
+      { method: 'POST', path: '/exchange-query/profiles/{id}', desc: '更新规范包' },
       { method: 'GET', path: '/exchange-query/profiles/{id}/versions', desc: '查询规范版本' },
       { method: 'GET', path: '/exchange-query/profile-versions/{id}/datasets', desc: '查询数据集' },
       { method: 'GET', path: '/exchange-query/datasets/{id}/field-rules', desc: '查询字段规则' }
@@ -351,17 +358,97 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
 
   '/exchange/projections': {
     hasApi: true, moduleName: '互通投影', apiPath: '/exchange-query/projections',
-    specDoc: 'OpenAPI 3.1.0 / 互通查询', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    specDoc: 'OpenAPI 3.1.0 / APP-06 互通查询', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
     endpoints: [
       { method: 'POST', path: '/exchange-query/projections', desc: '冻结输入并受理异步投影' },
-      { method: 'GET', path: '/exchange-query/projections/{id}', desc: '查询互通投影结果' }
+      { method: 'GET', path: '/exchange-query/projections/{id}', desc: '查询互通投影结果' },
+      { method: 'POST', path: '/exchange-query/projects/{projectSpaceId}/projections/{id}/process', desc: '幂等投影补偿处理' }
     ]
   },
 
   '/trust/lineage': {
     hasApi: true, moduleName: '有界血缘查询', apiPath: '/exchange-query/lineage/{rootType}/{rootId}',
-    specDoc: 'OpenAPI 3.1.0 / 互通查询', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    specDoc: 'OpenAPI 3.1.0 / APP-06 互通查询', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
     endpoints: [{ method: 'GET', path: '/exchange-query/lineage/{rootType}/{rootId}', desc: '有界血缘查询' }]
+  },
+  '/trust/files-credentials': {
+    hasApi: true, moduleName: '文件上传与凭证', apiPath: '/openapi/v1/files/upload-sessions',
+    specDoc: 'OpenAPI 3.1.0 / APP-07、APP-08', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    endpoints: [
+      { method:'POST', path:'/openapi/v1/files/upload-sessions', desc:'创建上传会话' },
+      { method:'GET', path:'/openapi/v1/files/upload-sessions/{id}', desc:'查询上传会话' },
+      { method:'POST', path:'/openapi/v1/files/upload-sessions/{id}/complete', desc:'确认完成' },
+      { method:'GET', path:'/openapi/v1/files/{id}', desc:'文件元数据' },
+      { method:'POST', path:'/openapi/v1/credentials', desc:'登记凭证' },
+      { method:'GET', path:'/openapi/v1/credentials/{id}', desc:'查询凭证' }
+    ]
+  },
+  '/exchange/profile-config': {
+    hasApi:true, moduleName:'互通规范配置', apiPath:'/exchange-query/profile-versions',
+    specDoc:'OpenAPI 3.1.0 / APP-06', protocol:'RESTful JSON / Axios', status:'CONNECTED',
+    endpoints:[
+      {method:'POST',path:'/exchange-query/profile-versions',desc:'创建版本草稿'},
+      {method:'POST',path:'/exchange-query/profile-versions/{id}/test',desc:'测试版本'},
+      {method:'POST',path:'/exchange-query/profile-versions/{id}/publish',desc:'发布版本'},
+      ...['datasets','field-rules','conformance-cases','bindings'].flatMap(path=>[
+        {method:'POST' as const,path:`/exchange-query/${path}`,desc:'创建配置'},
+        {method:'POST' as const,path:`/exchange-query/${path}/{id}`,desc:'修改配置'}
+      ]),
+      {method:'GET',path:'/exchange-query/profiles/{id}/versions',desc:'查询版本'},
+      {method:'GET',path:'/exchange-query/profile-versions/{id}/datasets',desc:'查询数据集'},
+      {method:'GET',path:'/exchange-query/datasets/{id}/field-rules',desc:'查询字段规则'},
+      {method:'GET',path:'/exchange-query/profile-versions/{id}/conformance-cases',desc:'查询用例'},
+      {method:'GET',path:'/exchange-query/projects/{id}/bindings',desc:'查询项目绑定'}
+    ]
+  },
+  '/exchange/queries': {
+    hasApi:true,moduleName:'交换数据查询',apiPath:'/exchange-query/objects',
+    specDoc:'OpenAPI 3.1.0 / APP-06',protocol:'RESTful JSON / Axios',status:'CONNECTED',
+    endpoints:[
+      {method:'GET',path:'/exchange-query/objects/{id}',desc:'查询对象'},
+      {method:'GET',path:'/exchange-query/events/{id}',desc:'查询事件'},
+      {method:'GET',path:'/exchange-query/events/{id}/status',desc:'处理状态'},
+      {method:'GET',path:'/exchange-query/metadata/profiles/{profileCode}',desc:'已发布元数据'}
+    ]
+  },
+  '/operations/subscriptions-jobs': {
+    hasApi:true,moduleName:'订阅与回调',apiPath:'/admin/v1/subscriptions',
+    specDoc:'OpenAPI 3.1.0 / APP-08',protocol:'RESTful JSON / Axios',status:'CONNECTED',
+    endpoints:[
+      {method:'POST',path:'/admin/v1/subscriptions',desc:'创建订阅'},
+      {method:'GET',path:'/openapi/v1/callback-deliveries/{messageId}',desc:'查询回调'},
+      {method:'POST',path:'/openapi/v1/callback-deliveries/{messageId}/replay',desc:'人工重放'}
+    ]
+  },
+  '/operations/audit-alerts': {
+    hasApi:true,moduleName:'告警处置',apiPath:'/openapi/v1/alerts/{alertId}/actions',
+    specDoc:'OpenAPI 3.1.0 / APP-08',protocol:'RESTful JSON / Axios',status:'CONNECTED',
+    endpoints:[{method:'POST',path:'/openapi/v1/alerts/{alertId}/actions',desc:'确认或关闭告警'}]
+  },
+  '/trust/proofs': {
+    hasApi:true,moduleName:'存证与补偿',apiPath:'/openapi/v1/proofs',
+    specDoc:'OpenAPI 3.1.0 / APP-07',protocol:'RESTful JSON / Axios',status:'CONNECTED',
+    endpoints:[
+      {method:'POST',path:'/openapi/v1/proofs',desc:'创建存证任务'},
+      {method:'GET',path:'/openapi/v1/proofs/{subjectType}/{subjectId}',desc:'查询存证状态'},
+      {method:'POST',path:'/openapi/v1/proofs/verify',desc:'验真'},
+      ...['process','retry','reconcile'].map(action=>({method:'POST' as const,path:`/openapi/v1/proofs/{id}/${action}`,desc:'存证运维操作'}))
+    ]
+  },
+  '/trust/evidence': {
+    hasApi:true,moduleName:'证据登记与查询',apiPath:'/openapi/v1/evidence',
+    specDoc:'OpenAPI 3.1.0 / APP-07',protocol:'RESTful JSON / Axios',status:'CONNECTED',
+    endpoints:[{method:'POST',path:'/openapi/v1/evidence',desc:'登记证据'},{method:'GET',path:'/openapi/v1/evidence/{id}',desc:'查询证据'}]
+  },
+  '/business/events/new': {
+    hasApi:true,moduleName:'事件录入',apiPath:'/openapi/v1/event-fact/events',
+    specDoc:'OpenAPI 3.1.0 / APP-04、APP-05',protocol:'RESTful JSON / Axios',status:'CONNECTED',
+    endpoints:[{method:'POST',path:'/openapi/v1/event-fact/events',desc:'提交规范事件'},{method:'POST',path:'/openapi/v1/event-fact/config/schemas/test',desc:'Schema 预检'}]
+  },
+  '/trust/events': {
+    hasApi:true,moduleName:'事件查询',apiPath:'/openapi/v1/event-fact/events/{id}',
+    specDoc:'OpenAPI 3.1.0 / APP-04、APP-06',protocol:'RESTful JSON / Axios',status:'CONNECTED',
+    endpoints:[{method:'GET',path:'/openapi/v1/event-fact/events/{id}',desc:'查询事件'},{method:'GET',path:'/exchange-query/events/{id}/status',desc:'查询处理状态'}]
   }
 };
 

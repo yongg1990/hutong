@@ -1,6 +1,13 @@
 <template>
   <div class="master-data-page">
     <PageHeader title="标识绑定" subtitle="解析外部系统标识，并将标识绑定到主体或业务对象" />
+    <div class="panel" style="padding:12px; margin-bottom:16px">
+      <div class="form-actions"><el-select v-model="filters.targetType" clearable placeholder="目标类型" style="width:140px"><el-option label="主体" value="PARTY" /><el-option label="对象" value="OBJECT" /></el-select><el-input v-model="filters.targetId" placeholder="目标 ID" clearable style="width:150px" /><el-input v-model="filters.sourceSystemId" placeholder="来源系统 ID" clearable style="width:160px" /><el-input v-model="filters.namespaceCode" placeholder="命名空间" clearable style="width:160px" /><el-select v-model="filters.status" clearable placeholder="状态" style="width:130px"><el-option label="生效" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /><el-option label="已替代" value="REPLACED" /></el-select><el-button type="primary" @click="page = 1; loadBindings()">查询</el-button><el-button @click="resetFilters">重置</el-button></div>
+      <el-table :data="rows" v-loading="listLoading" style="margin-top:12px" empty-text="暂无绑定记录"><el-table-column prop="bindingId" label="绑定 ID" min-width="130" /><el-table-column prop="targetType" label="目标类型" width="110" /><el-table-column prop="targetId" label="目标 ID" min-width="130" /><el-table-column prop="identifierDisplay" label="外部标识" min-width="170" /><el-table-column prop="namespaceCode" label="命名空间" min-width="140" /><el-table-column prop="status" label="状态" width="100" /><el-table-column label="操作" width="130"><template #default="{ row }"><el-button link type="primary" @click="showBinding(row.bindingId)">详情</el-button><el-button link @click="editBinding(row.bindingId)">编辑</el-button></template></el-table-column></el-table>
+      <el-pagination v-model:current-page="page" v-model:page-size="size" :total="total" layout="total, prev, pager, next" @current-change="loadBindings" />
+    </div>
+    <el-drawer v-model="detailVisible" title="标识绑定详情" size="520px"><el-descriptions v-if="detail" :column="1" border><el-descriptions-item v-for="key in detailKeys" :key="key" :label="key">{{ detail[key] ?? '-' }}</el-descriptions-item></el-descriptions><template #footer><el-button v-if="detail" type="primary" @click="editBinding(detail.bindingId)">编辑</el-button></template></el-drawer>
+    <el-dialog v-model="editVisible" title="编辑绑定" width="480px"><el-form label-position="top"><el-form-item label="状态" required><el-select v-model="editForm.status" style="width:100%"><el-option label="生效" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /><el-option label="已替代" value="REPLACED" /></el-select></el-form-item><el-form-item label="失效时间"><el-date-picker v-model="editForm.validTo" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width:100%" /></el-form-item></el-form><template #footer><el-button @click="editVisible = false">取消</el-button><el-button type="primary" :loading="editSaving" @click="saveBinding">保存</el-button></template></el-dialog>
 
     <div class="workspace-grid">
       <section class="panel">
@@ -89,13 +96,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, onMounted } from 'vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import {
   masterDataApi,
   type IdentifierBindingResponse,
+  type IdentifierBindingManagement,
   type IdentifierResolutionResponse
 } from '@/api/masterData';
 import { apiErrorMessage } from '@/api/client';
@@ -123,6 +131,17 @@ const binding = ref(false);
 const resolution = ref<IdentifierResolutionResponse | null>(null);
 const bindingResult = ref<IdentifierBindingResponse | null>(null);
 const boundTargetId = ref('');
+const filters = reactive({ targetType:'', targetId:'', sourceSystemId:'', namespaceCode:'', status:'' });
+const rows = ref<IdentifierBindingManagement[]>([]), detail = ref<IdentifierBindingManagement | null>(null);
+const page = ref(1), size = ref(20), total = ref(0), listLoading = ref(false), detailVisible = ref(false), editVisible = ref(false), editSaving = ref(false), editingId = ref('');
+const editForm = reactive({ status:'ACTIVE', validTo:'' });
+const detailKeys: (keyof IdentifierBindingManagement)[] = ['bindingId','targetType','targetId','sourceSystemId','namespaceCode','identifierDisplay','validFrom','validTo','status','createdAt','updatedAt'];
+async function loadBindings() { listLoading.value=true; try { const res=await masterDataApi.getBindingPage({...filters,page:page.value,size:size.value}); rows.value=res.records || []; total.value=Number(res.total || 0); } catch(e) { ElMessage.error(apiErrorMessage(e,'绑定查询失败')); } finally { listLoading.value=false; } }
+function resetFilters() { Object.assign(filters,{targetType:'',targetId:'',sourceSystemId:'',namespaceCode:'',status:''}); page.value=1; void loadBindings(); }
+async function showBinding(id:string) { try { detail.value=await masterDataApi.getBindingById(String(id)); detailVisible.value=true; } catch(e) { ElMessage.error(apiErrorMessage(e,'绑定详情查询失败')); } }
+async function editBinding(id:string) { try { const item=await masterDataApi.getBindingById(String(id)); editingId.value=String(id); editForm.status=item.status; editForm.validTo=item.validTo || ''; detailVisible.value=false; editVisible.value=true; } catch(e) { ElMessage.error(apiErrorMessage(e,'绑定详情查询失败')); } }
+async function saveBinding() { editSaving.value=true; try { await masterDataApi.updateBinding(editingId.value,{status:editForm.status,validTo:editForm.validTo || undefined}); editVisible.value=false; ElMessage.success('保存成功'); await loadBindings(); } catch(e) { ElMessage.error(apiErrorMessage(e,'更新绑定失败')); } finally { editSaving.value=false; } }
+onMounted(loadBindings);
 
 const numericId = (_rule: unknown, value: string, callback: (error?: Error) => void) => {
   if (/^-?[0-9]+$/.test(value)) callback();
@@ -197,6 +216,7 @@ const bind = async () => {
     });
     boundTargetId.value = form.targetId.trim();
     ElMessage.success('标识绑定成功');
+    await loadBindings();
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, '标识绑定失败'));
   } finally {

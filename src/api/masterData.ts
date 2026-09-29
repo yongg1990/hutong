@@ -14,6 +14,20 @@ export interface PartyResponse {
   status: string;
 }
 
+export interface PartyManagement extends PartyCreateRequest, PartyResponse {
+  tenantId?: string;
+  lockVersion: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface IdentifierBindingManagement extends IdentifierBindingRequest, IdentifierBindingResponse {
+  identifierDisplay?: string;
+  validTo?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface NamespaceDefRequest {
   namespaceCode: string;
   namespaceName: string;
@@ -237,6 +251,24 @@ export interface CodeValidationResponse {
 }
 
 export const masterDataApi = {
+  getPartyPage(params: Record<string, string | number | undefined>): Promise<{ records: PartyManagement[]; total: number }> {
+    return request.get('/openapi/v1/parties', { params });
+  },
+  getPartyById(id: string): Promise<PartyManagement> {
+    return request.get('/openapi/v1/parties/' + encodeURIComponent(id));
+  },
+  updateParty(id: string, data: PartyCreateRequest & { status: string; lockVersion: number }): Promise<PartyManagement> {
+    return request.post('/openapi/v1/parties/' + encodeURIComponent(id), data);
+  },
+  getBindingPage(params: Record<string, string | number | undefined>): Promise<{ records: IdentifierBindingManagement[]; total: number }> {
+    return request.get('/openapi/v1/identifiers/bindings', { params });
+  },
+  getBindingById(id: string): Promise<IdentifierBindingManagement> {
+    return request.get('/openapi/v1/identifiers/bindings/' + encodeURIComponent(id));
+  },
+  updateBinding(id: string, data: { status: string; validTo?: string }): Promise<IdentifierBindingManagement> {
+    return request.post('/openapi/v1/identifiers/bindings/' + encodeURIComponent(id), data);
+  },
   registerParty(data: PartyCreateRequest): Promise<PartyResponse> {
     return request.post<PartyResponse, PartyResponse>('/openapi/v1/parties', data);
   },

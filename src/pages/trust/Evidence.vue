@@ -5,12 +5,13 @@
       subtitle="质检报告 PDF、出入库单据、合同凭证文件检索与哈希校验"
     >
       <template #actions>
+        <el-button @click="$router.push('/trust/files-credentials')">上传文件 / 凭证</el-button>
         <el-button type="primary" @click="createDialogVisible = true">登记证据</el-button>
       </template>
     </PageHeader>
 
     <FilterBar @search="handleSearch" @reset="handleReset">
-      <el-input-number v-model="evidenceId" :min="1" placeholder="证据 ID" style="width: 220px" />
+      <el-input v-model="evidenceId" placeholder="证据 ID" style="width: 220px" />
     </FilterBar>
 
     <div class="panel">
@@ -42,9 +43,9 @@
               <el-option label="FILE" value="FILE" /><el-option label="PROJECTION" value="PROJECTION" />
             </el-select>
           </el-form-item>
-          <el-form-item label="主体 ID" required><el-input-number v-model="createForm.subjectId" :min="1" style="width: 100%" /></el-form-item>
-          <el-form-item label="文件 ID"><el-input-number v-model="createForm.fileId" :min="1" style="width: 100%" /></el-form-item>
-          <el-form-item label="签发方 ID"><el-input-number v-model="createForm.issuerPartyId" :min="1" style="width: 100%" /></el-form-item>
+          <el-form-item label="主体 ID" required><el-input v-model="createForm.subjectId" /></el-form-item>
+          <el-form-item label="文件 ID"><el-input v-model="createForm.fileId" /></el-form-item>
+          <el-form-item label="签发方 ID"><el-input v-model="createForm.issuerPartyId" /></el-form-item>
         </div>
         <el-form-item label="外部 URI 引用"><el-input v-model="createForm.externalUriRef" /></el-form-item>
         <el-form-item label="内容摘要"><el-input v-model="createForm.contentDigest" placeholder="sha256:..." /></el-form-item>
@@ -69,11 +70,11 @@ import FilterBar from '@/components/common/FilterBar.vue';
 import { trustApi, type EvidenceBindRequest, type EvidenceItem } from '@/api/trust';
 import { apiErrorMessage } from '@/api/client';
 
-const evidenceId = ref<number | undefined>();
+const evidenceId = ref('');
 const loading = ref(false);
 const creating = ref(false);
 const createDialogVisible = ref(false);
-const createForm = ref<EvidenceBindRequest>({ evidenceType: '', subjectType: 'EVENT', subjectId: 1 });
+const createForm = ref<EvidenceBindRequest>({ evidenceType: '', subjectType: 'EVENT', subjectId: '' });
 
 const evidences = ref<EvidenceItem[]>([]);
 
@@ -93,20 +94,20 @@ const handleSearch = async () => {
 };
 
 const handleReset = async () => {
-  evidenceId.value = undefined;
+  evidenceId.value = '';
   evidences.value = [];
 };
 
 const createEvidence = async () => {
-  if (!createForm.value.evidenceType || !createForm.value.subjectType || !createForm.value.subjectId) {
+  if (!createForm.value.evidenceType || !createForm.value.subjectType || !/^\d+$/.test(createForm.value.subjectId) || [createForm.value.fileId,createForm.value.issuerPartyId].some(id=>id&&!/^\d+$/.test(id))) {
     ElMessage.warning('请填写证据类型、主体类型和主体 ID');
     return;
   }
   creating.value = true;
   try {
-    const created = await trustApi.createEvidence(createForm.value);
+    const created = await trustApi.createEvidence({...createForm.value,fileId:createForm.value.fileId||undefined,issuerPartyId:createForm.value.issuerPartyId||undefined,validFrom:createForm.value.validFrom||undefined,validTo:createForm.value.validTo||undefined});
     evidences.value = [created];
-    evidenceId.value = Number(created.evidenceId) || undefined;
+    evidenceId.value = created.evidenceId;
     createDialogVisible.value = false;
     ElMessage.success('证据登记成功');
   } catch (err) {

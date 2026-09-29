@@ -5,11 +5,14 @@
       subtitle="医疗机构处方接收、代煎中心加工与包煎配送"
     >
       <template #actions>
+        <el-button @click="router.push('/business/events/new/DECOCTION_PROCESSED')">记录代煎过程</el-button>
+        <el-button @click="router.push('/business/events/new/DECOCTION_DELIVERED')">记录配送</el-button>
         <el-button type="primary" @click="router.push('/business/events/new/PRESCRIPTION_RECEIVED')">
           接收医疗机构处方
         </el-button>
       </template>
     </PageHeader>
+    <el-alert type="info" :closable="false" title="代煎任务队列为演示数据；处方、代煎和配送事件提交调用正式接口。" style="margin-bottom:12px" />
 
     <div class="grid-two">
       <div class="panel">

@@ -28,45 +28,6 @@
       </div>
     </div>
 
-    <!-- KPI Summary Grid -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <span class="label">接入作业总数</span>
-        <div class="value">
-          <strong class="mono">{{ batches.length }}</strong>
-          <span class="unit">批次</span>
-        </div>
-        <span class="sub">当前查询结果</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">累计接入记录数</span>
-        <div class="value">
-          <strong class="mono">{{ totalRecords }}</strong>
-          <span class="unit">条流水</span>
-        </div>
-        <span class="sub">当前查询结果</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">清洗入库成功数</span>
-        <div class="value">
-          <strong class="mono brand-color">{{ totalSuccess }}</strong>
-          <span class="unit">条通过</span>
-        </div>
-        <span class="sub">通过率 {{ successRate }}%</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">拦截异常记录数</span>
-        <div class="value">
-          <strong class="mono text-danger">{{ totalFailed }}</strong>
-          <span class="unit">条待治理</span>
-        </div>
-        <span class="sub">当前查询结果</span>
-      </div>
-    </div>
-
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-input v-model="batchId" placeholder="批量任务 ID（必填）" style="width: 220px" clearable />
       <el-switch v-model="includeFailures" active-text="包含失败明细" />
@@ -75,7 +36,7 @@
     <div class="panel">
       <div class="panel-header">
         <h2>接入作业运行记录 ({{ batches.length }})</h2>
-        <span class="sub-text">按 ID 查询</span>
+        <span v-if="totalFailed !== '0'" class="sub-text">失败记录 {{ totalFailed }} 条</span>
       </div>
       <div class="panel-body">
         <el-table :data="batches" v-loading="loading" style="width: 100%" empty-text="未找到匹配的接入批次">
@@ -329,16 +290,7 @@ const batches = ref<IngestBatch[]>([]);
 const sumCount = (field: 'totalCount' | 'successCount' | 'failCount') =>
   batches.value.reduce((acc, cur) => acc + BigInt(cur[field] || '0'), 0n);
 
-const totalRecords = computed(() => sumCount('totalCount').toString());
-const totalSuccess = computed(() => sumCount('successCount').toString());
 const totalFailed = computed(() => sumCount('failCount').toString());
-
-const successRate = computed(() => {
-  const total = BigInt(totalRecords.value);
-  if (total === 0n) return '0.0';
-  const tenths = (BigInt(totalSuccess.value) * 1000n) / total;
-  return String(tenths / 10n) + '.' + String(tenths % 10n);
-});
 
 const loadBatches = async () => {
   if (!batchId.value.trim()) {

@@ -13,25 +13,6 @@
       </template>
     </PageHeader>
 
-    <!-- Top KPI Row -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <span class="label">角色数</span>
-        <div class="value">
-          <strong class="mono">{{ total }}</strong>
-          <span class="unit">个角色</span>
-        </div>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">全域权限字典节点</span>
-        <div class="value">
-          <strong class="mono brand-color">{{ permissionCount }}</strong>
-          <span class="unit">项</span>
-        </div>
-      </div>
-    </div>
-
     <!-- Filter Bar -->
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-input v-model="tenantFilter" placeholder="租户 ID（留空查询全部）" style="width: 260px" clearable />
@@ -41,6 +22,7 @@
     <div class="panel">
       <div class="panel-header">
         <h2>系统角色权能清单 ({{ total }})</h2>
+        <span class="sub-text">权限字典 {{ permissionCount }} 项</span>
       </div>
       <div class="panel-body">
         <el-table :data="roles" v-loading="loading" style="width: 100%" empty-text="暂无匹配的角色定义">

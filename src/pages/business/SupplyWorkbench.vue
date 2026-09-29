@@ -5,11 +5,16 @@
       subtitle="订单确认、仓储入库、出库、交割与质押统一业务履约视图"
     >
       <template #actions>
+        <el-button @click="router.push('/business/events/new/ORDER_CONFIRMED')">确认订单</el-button>
+        <el-button @click="router.push('/business/events/new/OUTBOUND_COMPLETED')">记录出库</el-button>
+        <el-button @click="router.push('/business/events/new/DELIVERY_COMPLETED')">记录交割</el-button>
+        <el-button @click="router.push('/business/events/new/PLEDGE_CONFIRMED')">确认质押</el-button>
         <el-button type="primary" @click="router.push('/business/events/new/WAREHOUSED')">
           记录入仓事件
         </el-button>
       </template>
     </PageHeader>
+    <el-alert type="info" :closable="false" title="订单、库存与统计为本地演示数据；事件提交调用正式接口。" style="margin-bottom:12px" />
 
     <!-- Stage Progress Indicator Bar (Interactive Stage Switching) -->
     <div class="stages-bar">
@@ -38,7 +43,7 @@
       />
       <el-select v-model="selectedWh" placeholder="全部仓库" clearable style="width: 170px">
         <el-option label="全部仓库" value="" />
-        <option label="昆明中心仓 (WH-KM-001)" value="KM" />
+        <el-option label="昆明中心仓 (WH-KM-001)" value="KM" />
         <el-option label="玉溪协同仓 (WH-YX-002)" value="YX" />
         <el-option label="文山协同仓 (WH-WS-003)" value="WS" />
         <el-option label="楚雄仓 (WH-CX-001)" value="CX" />
@@ -100,7 +105,7 @@
               v-if="row.fulfillmentStatus === 'PENDING_OUT'"
               size="small"
               type="primary"
-              @click.stop="router.push('/business/events/new/WAREHOUSED')"
+              @click.stop="router.push('/business/events/new/OUTBOUND_COMPLETED')"
             >
               出库
             </el-button>

@@ -5,8 +5,7 @@
         <span class="title-accent-bar"></span>
         <h1>{{ title }}</h1>
 
-        <!-- Page API Integration Badge -->
-        <div v-if="showApiBadge && effectiveApiInfo?.hasApi" class="api-status-badge">
+        <div v-if="showApiBadge && effectiveApiInfo?.hasApi && apiLabels.length" class="api-status-badge">
           <el-popover
             placement="bottom-start"
             :width="460"
@@ -15,11 +14,8 @@
             :show-after="100"
           >
             <template #reference>
-              <div class="api-badge-pill" :title="`页面已对接接口: ${effectiveApiInfo.apiPath}`">
-                <span class="api-pulse-dot"></span>
-                <span class="api-badge-label">已对接接口</span>
-                <span class="api-path-chip mono">{{ effectiveApiInfo.apiPath }}</span>
-                <el-icon class="api-arrow-icon"><ArrowRight /></el-icon>
+              <div class="api-badge-pill" :title="`对接接口：${apiLabels.join('、')}`">
+                <span v-for="label in apiLabels" :key="label" class="api-badge-label">{{ label }}</span>
               </div>
             </template>
 
@@ -28,7 +24,7 @@
                 <div class="popover-title-row">
                   <span class="popover-pulse-dot"></span>
                   <span class="popover-title">{{ effectiveApiInfo.moduleName }}</span>
-                  <span class="popover-status-badge">已联调对接</span>
+                  <span class="popover-status-badge">按已发布契约接入</span>
                 </div>
                 <span class="popover-spec-badge">OpenAPI v3</span>
               </div>
@@ -44,7 +40,7 @@
                 </div>
                 <div class="meta-row">
                   <span class="meta-k">网关运行模式:</span>
-                  <span class="meta-v highlight">真实 Swagger API 网关优先 + 降级容灾保障</span>
+                  <span class="meta-v highlight">以接口响应为准；部分页面含本地演示数据</span>
                 </div>
               </div>
 
@@ -70,7 +66,7 @@
 
               <div class="popover-footer-tip">
                 <el-icon style="margin-right: 4px;"><InfoFilled /></el-icon>
-                <span>数据交互已对接实际后端控制器，支持动态数据提交与区块链存证溯源。</span>
+                <span>接口存在不代表已完成登录联调，也不代表事件已完成链上存证。</span>
               </div>
             </div>
           </el-popover>
@@ -87,7 +83,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { ArrowRight, InfoFilled } from '@element-plus/icons-vue';
+import { InfoFilled } from '@element-plus/icons-vue';
 import { getPageApiInfo, type PageApiInfo } from '@/config/pageApiRegistry';
 
 const props = withDefaults(
@@ -98,7 +94,7 @@ const props = withDefaults(
     apiInfo?: PageApiInfo | null;
   }>(),
   {
-    showApiBadge: false,
+    showApiBadge: true,
     apiInfo: undefined
   }
 );
@@ -110,6 +106,16 @@ const effectiveApiInfo = computed(() => {
     return props.apiInfo;
   }
   return getPageApiInfo(route.path);
+});
+const apiLabels = computed(() => {
+  const info = effectiveApiInfo.value;
+  if (!info) return [];
+  const groups = info.specDoc.match(/APP-\d{2}.*$/i)?.[0].split(/、(?=APP-\d{2})/i) ?? [];
+  return groups.map(group => {
+    const code = group.match(/^APP-\d{2}/i)?.[0].toLowerCase();
+    const name = group.replace(/^APP-\d{2}\s*/i, '').trim() || info.moduleName;
+    return `${code} ${name}`;
+  });
 });
 </script>
 
@@ -161,13 +167,11 @@ const effectiveApiInfo = computed(() => {
 .api-badge-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background-color: #ecfdf5;
   border: 1px solid #a7f3d0;
-  border-radius: 16px;
-  padding: 3px 10px 3px 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 4px;
+  padding: 3px 8px;
 }
 
 .api-badge-pill:hover {

@@ -7,12 +7,6 @@
       </template>
     </PageHeader>
 
-    <div class="summary-strip">
-      <div class="summary-item"><span>命名空间总数</span><strong>{{ total }}</strong></div>
-      <div class="summary-item"><span>本页启用</span><strong class="active-number">{{ activeCount }}</strong></div>
-      <div class="summary-item"><span>本页停用</span><strong class="inactive-number">{{ namespaces.length - activeCount }}</strong></div>
-    </div>
-
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-input v-model="filters.namespaceCode" clearable placeholder="编码关键字" style="width: 190px" @keyup.enter="handleSearch" />
       <el-input v-model="filters.namespaceName" clearable placeholder="名称关键字" style="width: 190px" @keyup.enter="handleSearch" />
@@ -25,7 +19,7 @@
     </FilterBar>
 
     <section class="panel table-panel">
-      <div class="panel-header"><div><h2>命名空间列表</h2><span class="panel-hint">共 {{ total }} 条记录</span></div></div>
+      <div class="panel-header"><h2>命名空间列表 ({{ total }})</h2><span v-if="inactiveCount" class="panel-hint">本页停用 {{ inactiveCount }}</span></div>
       <div class="panel-body">
         <el-table :data="namespaces" v-loading="loading" row-key="namespaceId" empty-text="暂无命名空间记录" style="width: 100%">
           <el-table-column prop="namespaceId" label="命名空间 ID" width="170"><template #default="{ row }"><span class="mono">{{ row.namespaceId }}</span></template></el-table-column>
@@ -83,7 +77,7 @@ import { apiErrorMessage } from '@/api/client';
 
 const namespaces = ref<NamespaceDefResponse[]>([]); const loading = ref(false); const page = ref(1); const pageSize = ref(20); const total = ref(0);
 const filters = reactive({ namespaceCode: '', namespaceName: '', targetType: '', status: '' });
-const activeCount = computed(() => namespaces.value.filter(item => item.status === 'ACTIVE').length);
+const inactiveCount = computed(() => namespaces.value.filter(item => item.status === 'INACTIVE').length);
 const dialogVisible = ref(false); const detailVisible = ref(false); const detailLoading = ref(false); const detail = ref<NamespaceDefResponse | null>(null); const editing = ref(false); const editingId = ref(''); const submitting = ref(false); const formRef = ref<FormInstance>();
 const blankForm = () => ({ namespaceCode: '', namespaceName: '', targetType: 'PARTY' as 'PARTY' | 'OBJECT', valuePattern: '', status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE', lockVersion: 0 });
 const form = reactive(blankForm());
@@ -102,8 +96,6 @@ onMounted(loadNamespaces);
 
 <style scoped>
 .namespace-page { padding-bottom: 24px; }
-.summary-strip { display: flex; gap: 1px; margin-bottom: 14px; background: var(--color-border); border: 1px solid var(--color-border); border-radius: 6px; overflow: hidden; }
-.summary-item { display: flex; flex: 1; align-items: baseline; gap: 12px; padding: 12px 16px; background: var(--color-surface); } .summary-item span { color: var(--color-muted); font-size: 12px; } .summary-item strong { color: var(--color-ink); font-size: 20px; font-weight: 700; } .summary-item .active-number { color: #15803d; } .summary-item .inactive-number { color: #b45309; }
 .panel-header > div { display: flex; align-items: baseline; gap: 10px; } .panel-hint { color: var(--color-muted); font-size: 12px; } .code-text { color: var(--color-brand); font-weight: 700; } .pattern-text { color: #475569; font-size: 12px; } .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } .break-all { word-break: break-all; }
-@media (max-width: 760px) { .summary-strip { flex-direction: column; gap: 1px; } .form-grid { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .form-grid { grid-template-columns: 1fr; } }
 </style>

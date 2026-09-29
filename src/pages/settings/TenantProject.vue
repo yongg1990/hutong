@@ -3,18 +3,13 @@
     <PageHeader title="项目协同空间" subtitle="统一管理租户内项目空间、业务授权范围与协同上下文">
       <template #actions><el-button :icon="Refresh" @click="loadSpaces">刷新</el-button><el-button type="primary" :icon="Plus" @click="openCreateDialog">创建项目空间</el-button></template>
     </PageHeader>
-    <div class="overview-grid">
-      <div class="overview-card"><span class="overview-label">项目空间总数</span><strong>{{ total }}</strong><span class="overview-note">当前租户</span></div>
-      <div class="overview-card"><span class="overview-label">本页已启用空间</span><strong class="active-number">{{ activeCount }}</strong><span class="overview-note">可参与业务协同</span></div>
-      <div class="overview-card"><span class="overview-label">当前协同空间</span><strong class="context-name">{{ contextStore.projectName || '尚未选择' }}</strong><span class="overview-note mono">{{ currentProjectId || '请选择项目空间' }}</span></div>
-    </div>
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-input v-model="filters.projectCode" placeholder="项目代码" clearable style="width: 190px" @keyup.enter="handleSearch" />
       <el-input v-model="filters.projectName" placeholder="项目名称" clearable style="width: 220px" @keyup.enter="handleSearch" />
       <el-select v-model="filters.status" placeholder="项目状态" clearable style="width: 150px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
     </FilterBar>
     <div class="panel">
-      <div class="panel-header"><div><h2>协同空间列表</h2><p class="panel-caption">支持按项目代码、项目名称和状态查询，分页数据来自 APP-01 项目空间接口</p></div><span class="result-count">共 {{ total }} 个空间</span></div>
+      <div class="panel-header"><h2>协同空间列表 ({{ total }})</h2><span class="result-count">当前空间：{{ contextStore.projectName || '尚未选择' }}</span></div>
       <div class="panel-body table-body">
         <el-table :data="spaces" v-loading="loading" row-key="projectSpaceId" empty-text="暂无项目空间">
           <el-table-column label="项目空间" min-width="250"><template #default="{ row }"><div class="space-primary"><span class="space-name">{{ row.projectName }}</span><span v-if="String(row.projectSpaceId) === currentProjectId" class="current-mark">当前</span></div><span class="space-code mono">{{ row.projectCode }}</span></template></el-table-column>
@@ -52,7 +47,6 @@ const emptyScope = (): BusinessScope => ({ scenarioCodes: [], regionCodes: [], p
 const emptyForm = (): SpaceForm => ({ projectCode: '', projectName: '', regionCode: '', businessScope: emptyScope(), status: 'ACTIVE', lockVersion: 0 });
 const form = ref<SpaceForm>(emptyForm());
 const currentProjectId = ref(localStorage.getItem('tcmirp_project_space_id') || localStorage.getItem('tcmirp_project_id') || String(contextStore.projectId || ''));
-const activeCount = computed(() => spaces.value.filter(item => item.status === 'ACTIVE').length);
 const rules = { projectCode: [{ required: true, message: '请输入项目代码', trigger: 'blur' }], projectName: [{ required: true, message: '请输入项目名称', trigger: 'blur' }], regionCode: [{ required: true, message: '请输入区域代码', trigger: 'blur' }] };
 const loadSpaces = async () => { loading.value = true; try { const params = { ...(filters.projectCode.trim() ? { projectCode: filters.projectCode.trim() } : {}), ...(filters.projectName.trim() ? { projectName: filters.projectName.trim() } : {}), ...(filters.status ? { status: filters.status } : {}), page: String(page.value), size: String(size.value) }; const result: any = await settingsApi.listProjectSpaces(params); spaces.value = Array.isArray(result?.records) ? result.records : []; total.value = Number(result?.total || 0); } catch (err) { spaces.value = []; total.value = 0; ElMessage.error(apiErrorMessage(err, '项目空间列表加载失败')); } finally { loading.value = false; } };
 const handleSearch = () => { page.value = 1; loadSpaces(); }; const handleReset = () => { filters.projectCode = ''; filters.projectName = ''; filters.status = ''; page.value = 1; loadSpaces(); };

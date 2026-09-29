@@ -11,8 +11,8 @@
         <el-option label="OBJECT" value="OBJECT" />
         <el-option label="BATCH" value="BATCH" />
       </el-select>
-      <el-input-number v-model="rootId" :min="1" placeholder="根主体 ID" style="width: 180px" />
-      <el-input-number v-model="projectSpaceId" :min="1" placeholder="项目空间 ID" style="width: 160px" />
+      <el-input v-model="rootId" placeholder="根主体 ID" style="width: 210px" />
+      <el-input v-model="projectSpaceId" placeholder="项目空间 ID" style="width: 210px" />
       <el-input v-model="purposeCode" placeholder="访问用途" style="width: 160px" />
       <el-select v-model="depth" placeholder="血缘展开深度" style="width: 140px">
         <el-option label="3 层 (推荐)" :value="3" />
@@ -71,8 +71,8 @@ import { trustApi } from '@/api/trust';
 const router = useRouter();
 const route = useRoute();
 const rootType = ref('OBJECT');
-const rootId = ref<number | undefined>(1);
-const projectSpaceId = ref(Number(localStorage.getItem('tcmirp_project_space_id')) || 1);
+const rootId = ref('');
+const projectSpaceId = ref(localStorage.getItem('tcmirp_project_space_id') || '');
 const purposeCode = ref(localStorage.getItem('tcmirp_purpose_code') || 'TRACE');
 const depth = ref(3);
 const maxNodes = ref(100);
@@ -84,14 +84,14 @@ const selectedNode = ref<any>(null);
 onMounted(() => {
   const queryVal = (route.query.batchNo || route.query.code || route.query.eventId) as string;
   if (queryVal) {
-    rootId.value = Number(queryVal) || undefined;
+    rootId.value = /^\d+$/.test(queryVal)?queryVal:'';
     rootType.value = route.query.eventId ? 'EVENT' : route.query.batchNo ? 'BATCH' : 'OBJECT';
     ElMessage.info(`已自动定位溯源标的: ${queryVal}`);
   }
 });
 
 const handleSearch = async () => {
-  if (!rootId.value) {
+  if (!/^\d+$/.test(rootId.value)||!/^\d+$/.test(projectSpaceId.value)||!purposeCode.value.trim()) {
     ElMessage.warning('请输入有效的根主体 ID');
     return;
   }
@@ -101,14 +101,14 @@ const handleSearch = async () => {
       purposeCode: purposeCode.value, maxDepth: depth.value, maxNodes: maxNodes.value
     });
   } catch (err) {
-    // Keep local baseline graph on network failure
+    lineageResult.value=null;ElMessage.error('血缘查询失败，请确认 ID、项目范围和后端状态');
   }
 };
 
 const handleReset = () => {
   rootType.value = 'OBJECT';
-  rootId.value = undefined;
-  projectSpaceId.value = Number(localStorage.getItem('tcmirp_project_space_id')) || 1;
+  rootId.value = '';
+  projectSpaceId.value = localStorage.getItem('tcmirp_project_space_id') || '';
   purposeCode.value = localStorage.getItem('tcmirp_purpose_code') || 'TRACE';
   depth.value = 3;
   maxNodes.value = 100;

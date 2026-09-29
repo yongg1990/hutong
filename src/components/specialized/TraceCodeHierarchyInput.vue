@@ -5,6 +5,9 @@
     </div>
 
     <div class="hierarchy-form-grid">
+      <div class="form-item"><label>编码体系</label><el-input v-model="schemeCode" /></div>
+      <div class="form-item"><label>批次 ID</label><el-input v-model="batchId" /></div>
+      <div class="form-item"><label>包装单元 ID</label><el-input v-model="packageUnitId" /></div>
       <div class="form-item">
         <label>当前层级追溯码</label>
         <el-input v-model="currentCode" placeholder="693000260731080001" />
@@ -49,19 +52,20 @@ const currentCode = ref('693000260731080001');
 const parentCode = ref('69300026073108BOX01');
 const pkgLevel = ref('LEVEL_1');
 const submitting = ref(false);
+const schemeCode=ref('GS1_128'),batchId=ref(''),packageUnitId=ref('');
 
 const submitTraceCode = async () => {
-  if (!currentCode.value) {
-    ElMessage.warning('请输入追溯码');
+  if (!currentCode.value || !schemeCode.value || !/^\d+$/.test(batchId.value) || !/^\d+$/.test(packageUnitId.value)) {
+    ElMessage.warning('请填写追溯码、体系和真实批次、包装单元 ID');
     return;
   }
   submitting.value = true;
   try {
     const res = await codingApi.registerTraceCode({
-      schemeCode: 'GS1_128',
+      schemeCode: schemeCode.value,
       code: currentCode.value,
-      batchId: 101,
-      packageUnitId: 1,
+      batchId: batchId.value,
+      packageUnitId: packageUnitId.value,
       packageLevel: pkgLevel.value,
       parentCode: parentCode.value || undefined
     });

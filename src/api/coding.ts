@@ -29,20 +29,9 @@ export interface TraceCodeHierarchy {
 export const codingApi = {
   // 登记追溯码 POST /openapi/v1/trace-codes
   async registerTraceCode(payload: TraceCodeRequest): Promise<TraceCodeResponse> {
-    return apiCall(
-      request.post('/openapi/v1/trace-codes', {
-        schemeCode: payload.schemeCode || 'GS1_128',
-        code: payload.code,
-        batchId: Number(payload.batchId) || 101,
-        packageUnitId: Number(payload.packageUnitId) || 1,
-        packageLevel: payload.packageLevel || 'LEVEL_1',
-        parentCode: payload.parentCode || undefined
-      }),
-      {
-        traceCodeRecordId: Date.now()
-      },
-      '登记赋码与追溯码'
-    );
+    return request.post('/openapi/v1/trace-codes', {
+      ...payload, batchId:String(payload.batchId),packageUnitId:String(payload.packageUnitId),parentCode:payload.parentCode||undefined
+    });
   },
 
   // 获取赋码清单列表 GET /coding/pieces

@@ -184,3 +184,51 @@ a:hover { color: var(--color-brand-light); }
   .filter-actions { justify-content: flex-end; }
   .business-page .panel-body, .governance-page .panel-body, .master-data-page .panel-body, .settings-page .panel-body, .trust-page .panel-body { padding: 15px !important; }
 }
+
+/* Operational pages: one clear heading, compact filters, and a readable data surface. */
+.business-page > .page-header, .governance-page > .page-header, .master-data-page > .page-header, .settings-page > .page-header, .trust-page > .page-header, .operations-page > .page-header, .workspace-page > .page-header, .exchange-page > .page-header {
+  min-height: 72px;
+  margin-bottom: 18px !important;
+  padding: 8px 2px 16px !important;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.page-header .title-accent-bar { height: 25px !important; width: 4px !important; }
+.page-header .header-titles h1 { font-size: 21px !important; line-height: 28px !important; }
+.page-header .subtitle { margin-top: 3px !important; padding-left: 16px !important; }
+.filter-bar {
+  margin-bottom: 16px !important;
+  padding: 12px 16px !important;
+  border-radius: 6px !important;
+  background: var(--color-surface) !important;
+  box-shadow: none !important;
+}
+.filter-fields { min-width: 0; gap: 10px 12px !important; }
+.filter-actions { margin-left: auto; padding-left: 12px; border-left: 1px solid var(--color-border-subtle); }
+.business-page > .panel, .governance-page > .panel, .master-data-page > .panel, .settings-page > .panel, .trust-page > .panel, .operations-page > .panel, .exchange-page > .panel {
+  border-radius: 6px !important;
+  box-shadow: 0 2px 10px rgba(23, 67, 63, 0.035) !important;
+}
+.business-page .panel-header, .governance-page .panel-header, .master-data-page .panel-header, .settings-page .panel-header, .trust-page .panel-header, .operations-page .panel-header, .exchange-page .panel-header {
+  min-height: 52px;
+  padding: 12px 18px !important;
+  gap: 12px;
+  background: var(--color-surface) !important;
+}
+.business-page .panel-body, .governance-page .panel-body, .master-data-page .panel-body, .settings-page .panel-body, .trust-page .panel-body, .operations-page .panel-body, .exchange-page .panel-body { padding: 14px 18px !important; }
+.panel-header h2 { font-size: 14px; letter-spacing: 0; }
+.panel-header h2::before { height: 14px; width: 3px; }
+.el-table { border-radius: 4px !important; }
+.el-table th.el-table__cell { padding: 10px 0 !important; }
+.el-table td.el-table__cell { padding: 8px 0 !important; }
+.el-table .cell { overflow-wrap: anywhere; }
+.pagination-row { padding: 14px 0 2px; }
+@media (max-width: 800px) {
+  .filter-actions { width: 100%; justify-content: flex-start; margin-left: 0; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--color-border-subtle); }
+  .filter-fields { width: 100%; }
+  .filter-fields > * { max-width: 100%; }
+  .business-page .panel-body, .governance-page .panel-body, .master-data-page .panel-body, .settings-page .panel-body, .trust-page .panel-body, .operations-page .panel-body, .exchange-page .panel-body { padding: 12px !important; }
+}

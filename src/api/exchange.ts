@@ -1,4 +1,4 @@
-import { request, apiCall } from './client';
+import { request } from './client';
 import { mockProjections } from './mockData';
 import type { ExchangeProjection } from '@/types';
 
@@ -75,13 +75,8 @@ async function hydrateProfile(item: any): Promise<ExchangeProfile> {
 
 export const exchangeApi = {
   async getProfiles(params?: { profileCode?: string; limit?: number }): Promise<ExchangeProfile[]> {
-    const fallback = mockProfiles.filter(item => !params?.profileCode || item.profileCode.includes(params.profileCode));
-    return apiCall(
-      request.get('/exchange-query/profiles', { params: { profileCode: params?.profileCode || undefined, limit: params?.limit || 20 } })
-        .then(async (res: any) => Array.isArray(res) ? Promise.all(res.map(hydrateProfile)) : fallback),
-      fallback,
-      '查询启用规范包'
-    );
+    const res: any = await request.get('/exchange-query/profiles', { params: { profileCode: params?.profileCode || undefined, limit: params?.limit || 20 } });
+    return Array.isArray(res) ? Promise.all(res.map(hydrateProfile)) : [];
   },
 
   async createProfile(data: { profileCode: string; profileName: string; profileOwner: string; scenarioCode: string; status: string }): Promise<any> {
@@ -106,14 +101,14 @@ export const exchangeApi = {
   },
 
   async createProjection(payload: {
-    projectSpaceId?: number;
+    projectSpaceId?: string | number;
     profileCode: string; profileVersion?: string; subjectType?: string; subjectIds?: Array<number | string>;
     datasetCodes?: string[]; asOfTime?: string; deliveryMode?: string;
   }): Promise<any> {
-    const projectSpaceId = payload.projectSpaceId || Number(localStorage.getItem('tcmirp_project_space_id') || localStorage.getItem('tcmirp_project_id')) || 1;
+    const projectSpaceId = String(payload.projectSpaceId || localStorage.getItem('tcmirp_project_space_id') || localStorage.getItem('tcmirp_project_id') || '1');
     return request.post('/exchange-query/projections', {
       projectSpaceId, profileCode: payload.profileCode, profileVersion: payload.profileVersion || '1.0.0',
-      subjectType: payload.subjectType || 'BATCH', subjectIds: (payload.subjectIds || [1]).map(Number),
+      subjectType: payload.subjectType || 'BATCH', subjectIds: (payload.subjectIds || []).map(String),
       datasetCodes: payload.datasetCodes || [], asOfTime: payload.asOfTime || undefined,
       deliveryMode: payload.deliveryMode || 'QUERY_ONLY'
     }, { headers: {
@@ -123,10 +118,10 @@ export const exchangeApi = {
   },
 
   async getProjection(id: string | number, params: {
-    projectSpaceId?: number; purposeCode?: string; includeOutput?: boolean; includeValidationDetails?: boolean;
+    projectSpaceId?: string | number; purposeCode?: string; includeOutput?: boolean; includeValidationDetails?: boolean;
   } = {}): Promise<any> {
     return request.get(`/exchange-query/projections/${id}`, { params: {
-      projectSpaceId: params.projectSpaceId || Number(localStorage.getItem('tcmirp_project_space_id')) || 1,
+      projectSpaceId: String(params.projectSpaceId || localStorage.getItem('tcmirp_project_space_id') || '1'),
       purposeCode: params.purposeCode || localStorage.getItem('tcmirp_purpose_code') || 'TRACE',
       includeOutput: params.includeOutput ?? true, includeValidationDetails: params.includeValidationDetails ?? true
     } });

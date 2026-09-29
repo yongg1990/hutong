@@ -149,6 +149,9 @@ const router = createRouter({
           component: () => import('@/pages/trust/Proofs.vue')
         },
         // Exchange
+        { path: 'trust/files-credentials', name: 'TrustFilesCredentials', component: () => import('@/pages/trust/FilesCredentials.vue') },
+        { path: 'exchange/profile-config', name: 'ExchangeProfileConfig', component: () => import('@/pages/exchange/ProfileConfig.vue') },
+        { path: 'exchange/queries', name: 'ExchangeQueries', component: () => import('@/pages/exchange/Queries.vue') },
         {
           path: 'exchange/profiles',
           name: 'ExchangeProfiles',

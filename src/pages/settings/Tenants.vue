@@ -12,25 +12,6 @@
       </template>
     </PageHeader>
 
-    <!-- Top KPI Row -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <span class="label">入驻租户机构总数</span>
-        <div class="value">
-          <strong class="mono">{{ total }}</strong>
-          <span class="unit">家</span>
-        </div>
-      </div>
-
-      <div class="kpi-card">
-        <span class="label">本页正常运行租户</span>
-        <div class="value">
-          <strong class="mono brand-color">{{ activeTenantsCount }}</strong>
-          <span class="unit">家活跃</span>
-        </div>
-      </div>
-    </div>
-
     <!-- Filter Bar -->
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-input
@@ -172,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
@@ -215,7 +196,6 @@ const rules = {
   tenantType: [{ required: true, message: '请选择租户类型', trigger: 'change' }]
 };
 
-const activeTenantsCount = computed(() => tenants.value.filter(t => t.status === 'ACTIVE').length);
 const loadTenants = async () => {
   loading.value = true;
   try {

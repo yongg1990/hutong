@@ -8,13 +8,6 @@
       </template>
     </PageHeader>
 
-    <div class="summary-strip">
-      <div class="summary-item"><span>编码体系总数</span><strong>{{ total }}</strong></div>
-      <div class="summary-item"><span>本页启用</span><strong class="active-number">{{ activeCount }}</strong></div>
-      <div class="summary-item"><span>本页停用</span><strong class="inactive-number">{{ inactiveCount }}</strong></div>
-      <div class="summary-item"><span>发布机构类型</span><strong>{{ issuerTypeCount }}</strong></div>
-    </div>
-
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-input v-model="filters.schemeCode" clearable placeholder="编码体系代码" style="width:210px" @keyup.enter="handleSearch" />
       <el-input v-model="filters.schemeName" clearable placeholder="编码体系名称" style="width:190px" @keyup.enter="handleSearch" />
@@ -26,7 +19,7 @@
     </FilterBar>
 
     <section class="panel table-panel">
-      <div class="panel-header"><div><h2>监管编码体系列表</h2><span class="panel-hint">共 {{ total }} 条记录</span></div></div>
+      <div class="panel-header"><h2>监管编码体系列表 ({{ total }})</h2><span v-if="inactiveCount" class="panel-hint">本页停用 {{ inactiveCount }}</span></div>
       <div class="panel-body">
         <el-table :data="schemes" v-loading="loading" row-key="schemeId" empty-text="暂无监管编码体系" style="width:100%">
           <el-table-column prop="schemeId" label="体系 ID" width="170"><template #default="{ row }"><span class="mono scheme-id">{{ row.schemeId }}</span></template></el-table-column>
@@ -168,9 +161,7 @@ const issuerTypes = ['GOVERNMENT', 'REGULATOR', 'INDUSTRY_ASSOCIATION', 'ENTERPR
 const schemes = ref<CodeSchemeResponse[]>([]);
 const loading = ref(false); const page = ref(1); const pageSize = ref(20); const total = ref(0);
 const filters = reactive({ schemeCode: '', schemeName: '', issuerType: '', status: '' });
-const activeCount = computed(() => schemes.value.filter(item => item.status === 'ACTIVE').length);
 const inactiveCount = computed(() => schemes.value.filter(item => item.status === 'INACTIVE').length);
-const issuerTypeCount = computed(() => new Set(schemes.value.map(item => item.issuerType).filter(Boolean)).size);
 
 const formVisible = ref(false); const formLoading = ref(false); const submitting = ref(false); const editing = ref(false); const editingId = ref(''); const formRef = ref<FormInstance>();
 const blankForm = () => ({ schemeCode: '', schemeName: '', issuerType: '', validationJson: JSON.stringify({ pattern: '' }, null, 2), status: 'ACTIVE' as SchemeStatus, lockVersion: 0 });
