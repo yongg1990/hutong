@@ -6,7 +6,7 @@ import PageLoadError from '@/pages/PageLoadError.vue';
 import { useAuthStore } from '@/stores/authStore';
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/login',

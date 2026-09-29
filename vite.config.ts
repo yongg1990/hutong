@@ -7,6 +7,7 @@ export default defineConfig(({mode}) => {
   const env = loadEnv(mode, process.cwd(), '');
   const backendTarget = 'http://192.168.1.39';
   return {
+    base: '/hutong/',
     plugins: [vue(), tailwindcss()],
     resolve: {
       alias: {
