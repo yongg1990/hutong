@@ -7,23 +7,18 @@
       </template>
     </PageHeader>
 
-    <el-alert
-      type="info"
-      :closable="false"
-      title="接口未提供事件类型或 Schema 列表。请按事件类型和版本查询；下方仅显示本次页面操作结果。"
-      style="margin-bottom: 12px"
-    />
 
     <div class="query-bar">
       <el-input v-model="queryForm.eventType" placeholder="事件类型" clearable />
       <el-input v-model="queryForm.schemaVersion" placeholder="Schema 版本" clearable />
-      <el-button type="primary" :loading="querying" @click="querySchema">查询已发布 Schema</el-button>
+      <el-select v-model="queryForm.status" placeholder="Schema 状态" clearable><el-option label="草稿" value="DRAFT" /><el-option label="已测试" value="TESTED" /><el-option label="已发布" value="PUBLISHED" /></el-select>
+      <el-button type="primary" :loading="querying" @click="searchSchemas">查询 Schema</el-button>
       <el-button @click="resetQuery">重置</el-button>
     </div>
 
     <div class="panel">
-      <div class="panel-header">本次页面 Schema 记录</div>
-      <el-table :data="schemas" empty-text="暂无 Schema 操作记录">
+      <div class="panel-header">Schema 定义</div>
+      <el-table :data="schemas" empty-text="暂无 Schema 定义">
         <el-table-column prop="eventType" label="事件类型" min-width="180" class-name="mono" />
         <el-table-column prop="schemaVersion" label="Schema 版本" width="130" class-name="mono" />
         <el-table-column prop="contentDigest" label="内容摘要" min-width="220" class-name="mono" show-overflow-tooltip />
@@ -38,19 +33,26 @@
           </template>
         </el-table-column>
       </el-table>
+      <div class="pagination-row"><el-pagination v-model:current-page="schemaPage" :page-size="20" :total="schemaTotal" layout="total, prev, pager, next" @current-change="querySchema" /></div>
     </div>
 
     <div class="panel result-panel">
-      <div class="panel-header">本次页面事件类型记录</div>
-      <el-table :data="eventTypes" empty-text="暂无事件类型创建记录">
+      <div class="panel-header">事件类型</div>
+      <FilterBar @search="searchEventTypes" @reset="resetEventTypes">
+        <el-input v-model="eventFilters.eventType" placeholder="事件类型代码" clearable style="width: 180px" />
+        <el-input v-model="eventFilters.scenarioCode" placeholder="场景代码" clearable style="width: 160px" />
+        <el-select v-model="eventFilters.status" placeholder="状态" clearable style="width: 140px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
+      </FilterBar>
+      <el-table :data="eventTypes" empty-text="暂无事件类型">
         <el-table-column prop="id" label="定义 ID" width="150" class-name="mono" />
         <el-table-column prop="eventType" label="事件类型" min-width="180" class-name="mono" />
-        <el-table-column prop="name" label="名称（提交值）" min-width="180" />
-        <el-table-column prop="scenarioCode" label="场景代码（提交值）" min-width="160" class-name="mono" />
+        <el-table-column prop="eventName" label="名称" min-width="180" />
+        <el-table-column prop="scenarioCode" label="场景代码" min-width="160" class-name="mono" />
         <el-table-column label="状态" width="110">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>
       </el-table>
+      <div class="pagination-row"><el-pagination v-model:current-page="eventPage" :page-size="20" :total="eventTotal" layout="total, prev, pager, next" @current-change="loadEventTypes" /></div>
     </div>
 
     <el-dialog v-model="eventTypeVisible" title="创建事件类型" width="520px" :close-on-click-modal="false">
@@ -72,9 +74,8 @@
           <el-form-item label="事件类型" required><el-input v-model="schemaForm.eventType" /></el-form-item>
           <el-form-item label="Schema 版本" required><el-input v-model="schemaForm.schemaVersion" /></el-form-item>
         </div>
-        <el-form-item label="JSON Schema" required><el-input v-model="schemaForm.schemaJson" type="textarea" :rows="12" class="mono-input" /></el-form-item>
-        <el-form-item label="引用提取规则 JSON"><el-input v-model="schemaForm.referenceRulesJson" type="textarea" :rows="4" class="mono-input" /></el-form-item>
-        <el-form-item label="值域引用 JSON"><el-input v-model="schemaForm.valueSetRefsJson" type="textarea" :rows="4" class="mono-input" /></el-form-item>
+        <el-form-item label="字段列表 JSON" required><JsonEditor v-model="schemaForm.fieldsJson" :rows="12" label="字段列表 JSON" /></el-form-item>
+        <el-form-item label="引用规则 JSON"><JsonEditor v-model="schemaForm.referenceRulesJson" :rows="4" label="引用规则 JSON" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="schemaVisible = false">取消</el-button>
@@ -88,7 +89,7 @@
         <el-descriptions-item label="版本">{{ testForm.schemaVersion }}</el-descriptions-item>
       </el-descriptions>
       <el-form label-position="top">
-        <el-form-item label="测试 Payload JSON" required><el-input v-model="testForm.payloadJson" type="textarea" :rows="12" class="mono-input" /></el-form-item>
+        <el-alert type="info" :closable="false" title="测试服务端保存的 Schema 配置；此接口不校验事件 Payload。" />
       </el-form>
       <el-alert v-if="testResult" :type="testResult.valid ? 'success' : 'error'" :closable="false" :title="testResult.valid ? '校验通过' : '校验失败，共 ' + testResult.errors.length + ' 项'">
         <template v-if="!testResult.valid" #default>
@@ -114,16 +115,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
+import FilterBar from '@/components/common/FilterBar.vue';
+import JsonEditor from '@/components/common/JsonEditor.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { apiErrorMessage } from '@/api/client';
-import { eventsApi, type SchemaSnapshot, type SchemaTestResult } from '@/api/events';
+import { eventsApi, type SchemaSnapshot, type SchemaTestResult, type EventSchemaField, type EventSchemaReferenceRule } from '@/api/events';
 
-type EventTypeRow = { id: string; eventType: string; status: string; name: string; scenarioCode: string };
+type EventTypeRow = { id: string; eventType: string; status: string; eventName: string; scenarioCode: string };
 
-const queryForm = ref({ eventType: '', schemaVersion: '' });
+const emptySchemaFilters = () => ({ eventType: '', schemaVersion: '', status: '' });
+const emptyEventFilters = () => ({ eventType: '', scenarioCode: '', status: '' });
+const queryForm = ref(emptySchemaFilters()), appliedSchemaFilters = ref(emptySchemaFilters());
+const eventFilters = ref(emptyEventFilters()), appliedEventFilters = ref(emptyEventFilters());
+const schemaPage = ref(1), schemaTotal = ref(0), eventPage = ref(1), eventTotal = ref(0);
+const paramsFor = (values: Record<string, string>) => Object.fromEntries(Object.entries(values).filter(([, value]) => value.trim()).map(([key, value]) => [key, value.trim()]));
+const searchSchemas = () => { appliedSchemaFilters.value = { ...queryForm.value }; schemaPage.value = 1; void querySchema(); };
+const searchEventTypes = () => { appliedEventFilters.value = { ...eventFilters.value }; eventPage.value = 1; void loadEventTypes(); };
+const resetEventTypes = () => { eventFilters.value = emptyEventFilters(); appliedEventFilters.value = emptyEventFilters(); eventPage.value = 1; void loadEventTypes(); };
 const schemas = ref<SchemaSnapshot[]>([]);
 const eventTypes = ref<EventTypeRow[]>([]);
 const querying = ref(false);
@@ -135,11 +146,11 @@ const eventTypeForm = ref({ eventType: '', eventName: '', scenarioCode: '', desc
 
 const schemaVisible = ref(false);
 const creatingSchema = ref(false);
-const schemaForm = ref({ eventType: '', schemaVersion: '', schemaJson: '{\n  "type": "object",\n  "properties": {}\n}', referenceRulesJson: '', valueSetRefsJson: '' });
+const schemaForm = ref({ eventType: '', schemaVersion: '', fieldsJson: '[\n  {"fieldName":"businessKey","displayName":"业务键","dataType":"STRING","required":true}\n]', referenceRulesJson: '[]' });
 
 const testVisible = ref(false);
 const testing = ref(false);
-const testForm = ref({ eventType: '', schemaVersion: '', payloadJson: '{}' });
+const testForm = ref({ id: '', eventType: '', schemaVersion: '' });
 const testResult = ref<SchemaTestResult | null>(null);
 
 const drawerVisible = ref(false);
@@ -168,14 +179,11 @@ const validateJsonText = (value: string, label: string, required = false) => {
 };
 
 const querySchema = async () => {
-  if (!queryForm.value.eventType.trim() || !queryForm.value.schemaVersion.trim()) {
-    ElMessage.warning('请输入事件类型和 Schema 版本');
-    return;
-  }
   querying.value = true;
   try {
-    const result = await eventsApi.getEventSchema(queryForm.value.eventType.trim(), queryForm.value.schemaVersion.trim());
-    upsertSchema(result);
+    const result = await eventsApi.listSchemaDefinitions({ ...paramsFor(appliedSchemaFilters.value), page: schemaPage.value, size: 20 });
+    schemas.value = result.records;
+    schemaTotal.value = Number(result.total || 0);
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, '查询 Schema 失败'));
   } finally {
@@ -183,7 +191,14 @@ const querySchema = async () => {
   }
 };
 
-const resetQuery = () => { queryForm.value = { eventType: '', schemaVersion: '' }; };
+const resetQuery = () => { queryForm.value = emptySchemaFilters(); appliedSchemaFilters.value = emptySchemaFilters(); schemaPage.value = 1; void querySchema(); };
+const loadEventTypes = async () => {
+  try {
+    const result = await eventsApi.listEventTypes({ ...paramsFor(appliedEventFilters.value), page: eventPage.value, size: 20 });
+    eventTypes.value = result.records || [];
+    eventTotal.value = Number(result.total || 0);
+  } catch (error) { ElMessage.error(apiErrorMessage(error, '查询事件类型失败')); }
+};
 
 const createEventType = async () => {
   const form = eventTypeForm.value;
@@ -199,7 +214,7 @@ const createEventType = async () => {
       scenarioCode: form.scenarioCode.trim(),
       ...(form.description.trim() ? { description: form.description.trim() } : {})
     });
-    eventTypes.value.unshift({ ...result, name: form.eventName.trim(), scenarioCode: form.scenarioCode.trim() });
+    eventTypes.value.unshift({ ...result, eventName: form.eventName.trim(), scenarioCode: form.scenarioCode.trim() });
     eventTypeVisible.value = false;
     schemaForm.value.eventType = result.eventType;
     ElMessage.success('事件类型创建成功');
@@ -214,9 +229,8 @@ const openSchemaDialog = () => {
   schemaForm.value = {
     eventType: queryForm.value.eventType || schemaForm.value.eventType,
     schemaVersion: queryForm.value.schemaVersion,
-    schemaJson: '{\n  "type": "object",\n  "properties": {}\n}',
-    referenceRulesJson: '',
-    valueSetRefsJson: ''
+    fieldsJson: '[\n  {"fieldName":"businessKey","displayName":"业务键","dataType":"STRING","required":true}\n]',
+    referenceRulesJson: '[]'
   };
   schemaVisible.value = true;
 };
@@ -228,9 +242,12 @@ const createSchemaDraft = async () => {
     return;
   }
   try {
-    validateJsonText(form.schemaJson, 'JSON Schema', true);
-    validateJsonText(form.referenceRulesJson, '引用提取规则');
-    validateJsonText(form.valueSetRefsJson, '值域引用');
+    validateJsonText(form.fieldsJson, '字段列表', true);
+    validateJsonText(form.referenceRulesJson, '引用规则', true);
+    const fields: EventSchemaField[] = JSON.parse(form.fieldsJson);
+    const rules: EventSchemaReferenceRule[] = JSON.parse(form.referenceRulesJson);
+    if (!Array.isArray(fields) || !fields.length || fields.some(field => !field.fieldName || !field.displayName || !field.dataType || typeof field.required !== 'boolean')) throw new Error('字段列表须为非空数组，且包含名称、显示名、类型和必填标记');
+    if (!Array.isArray(rules) || rules.some(rule => !rule.fieldName || !rule.targetType || !rule.namespace || typeof rule.required !== 'boolean' || !rule.onNotFound || !rule.onAmbiguous)) throw new Error('引用规则须为数组且填写完整');
   } catch (error) {
     ElMessage.warning((error as Error).message);
     return;
@@ -240,9 +257,8 @@ const createSchemaDraft = async () => {
     const result = await eventsApi.createSchemaDraft({
       eventType: form.eventType.trim(),
       schemaVersion: form.schemaVersion.trim(),
-      schemaJson: form.schemaJson.trim(),
-      ...(form.referenceRulesJson.trim() ? { referenceRulesJson: form.referenceRulesJson.trim() } : {}),
-      ...(form.valueSetRefsJson.trim() ? { valueSetRefsJson: form.valueSetRefsJson.trim() } : {})
+      fields: JSON.parse(form.fieldsJson) as EventSchemaField[],
+      referenceRules: JSON.parse(form.referenceRulesJson) as EventSchemaReferenceRule[]
     });
     upsertSchema(result);
     schemaVisible.value = false;
@@ -255,17 +271,16 @@ const createSchemaDraft = async () => {
 };
 
 const openTestDialog = (row: SchemaSnapshot) => {
-  testForm.value = { eventType: row.eventType, schemaVersion: row.schemaVersion, payloadJson: '{}' };
+  testForm.value = { id: row.id, eventType: row.eventType, schemaVersion: row.schemaVersion };
   testResult.value = null;
   testVisible.value = true;
 };
 
 const testSchema = async () => {
-  try { validateJsonText(testForm.value.payloadJson, '测试 Payload JSON', true); }
-  catch (error) { ElMessage.warning((error as Error).message); return; }
   testing.value = true;
   try {
-    testResult.value = await eventsApi.testEventSchema(testForm.value.eventType, testForm.value.schemaVersion, testForm.value.payloadJson.trim());
+    testResult.value = await eventsApi.testSchemaDefinition(testForm.value.id);
+    await querySchema();
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, '测试 Schema 失败'));
   } finally {
@@ -276,7 +291,7 @@ const testSchema = async () => {
 const publishSchema = async (row: SchemaSnapshot) => {
   publishingKey.value = schemaKey(row);
   try {
-    const result = await eventsApi.publishEventSchema(row.eventType, row.schemaVersion);
+    const result = await eventsApi.publishEventSchema(row.id);
     upsertSchema(result);
     ElMessage.success('Schema 发布成功');
   } catch (error) {
@@ -286,13 +301,20 @@ const publishSchema = async (row: SchemaSnapshot) => {
   }
 };
 
-const viewSchema = (row: SchemaSnapshot) => { selectedSchema.value = row; drawerVisible.value = true; };
+const viewSchema = async (row: SchemaSnapshot) => {
+  try { selectedSchema.value = await eventsApi.getSchemaDefinition(row.id); drawerVisible.value = true; }
+  catch (error) { ElMessage.error(apiErrorMessage(error, '查询 Schema 失败')); }
+};
+onMounted(async () => {
+  await querySchema();
+  await loadEventTypes();
+});
 </script>
 
 <style scoped>
 .query-bar {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(160px, 1fr) auto auto;
+  grid-template-columns: minmax(160px, 1fr) minmax(150px, 1fr) minmax(140px, 0.8fr) auto auto;
   gap: 10px;
   padding: 12px;
   margin-bottom: 12px;

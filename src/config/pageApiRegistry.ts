@@ -86,7 +86,10 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
-      { method: 'POST', path: '/openapi/v1/source-systems', desc: '注册来源系统 (register)' }
+      { method: 'GET', path: '/openapi/v1/source-systems', desc: '分页查询来源系统' },
+      { method: 'POST', path: '/openapi/v1/source-systems', desc: '注册来源系统' },
+      { method: 'GET', path: '/openapi/v1/source-systems/{id}', desc: '查询来源系统详情' },
+      { method: 'POST', path: '/openapi/v1/source-systems/{id}', desc: '更新来源系统' }
     ]
   },
 
@@ -119,20 +122,40 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
     ]
   },
 
+  '/governance/standards': {
+    hasApi: true, moduleName: '数据元与值域标准', apiPath: '/openapi/v1/data-elements, /openapi/v1/value-sets',
+    specDoc: 'OpenAPI 3.1.0 / APP-03 数据元与值域管理', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    endpoints: [
+      { method: 'GET', path: '/openapi/v1/data-elements', desc: '分页查询数据元' },
+      { method: 'POST', path: '/openapi/v1/data-elements', desc: '新增数据元' },
+      { method: 'POST', path: '/openapi/v1/data-elements/{id}', desc: '编辑数据元' },
+      { method: 'POST', path: '/openapi/v1/data-elements/{id}/status', desc: '启停数据元' },
+      { method: 'GET', path: '/openapi/v1/value-sets', desc: '分页查询值域' },
+      { method: 'POST', path: '/openapi/v1/value-sets', desc: '新增值域' },
+      { method: 'POST', path: '/openapi/v1/value-sets/{valueSetId}', desc: '编辑值域' },
+      { method: 'POST', path: '/openapi/v1/value-sets/{valueSetId}/status', desc: '启停值域' },
+      { method: 'GET', path: '/openapi/v1/value-sets/{valueSetId}/items', desc: '分页查询代码项' },
+      { method: 'POST', path: '/openapi/v1/value-sets/{valueSetId}/items', desc: '新增代码项' },
+      { method: 'POST', path: '/openapi/v1/value-sets/{valueSetId}/items/{itemId}', desc: '编辑代码项' },
+      { method: 'POST', path: '/openapi/v1/value-sets/{valueSetId}/items/{itemId}/status', desc: '启停代码项' }
+    ]
+  },
   // 5. 接入治理 - 事件与 Schema 配置 (APP-04 事件配置与事实引擎)
   '/governance/events': {
     hasApi: true,
     moduleName: '事件类型与 Schema 配置',
-    apiPath: '/openapi/v1/event-fact/config/event-types, /openapi/v1/event-fact/config/schemas',
+    apiPath: '/openapi/v1/event-fact/event-types, /openapi/v1/event-fact/schemas/definitions',
     specDoc: 'OpenAPI 3.1.0 / APP-04 事件配置与事实引擎',
     protocol: 'RESTful JSON / Axios',
     status: 'CONNECTED',
     endpoints: [
-      { method: 'POST', path: '/openapi/v1/event-fact/config/event-types', desc: '创建事件类型' },
-      { method: 'GET', path: '/openapi/v1/event-fact/schemas/{eventType}/{schemaVersion}', desc: '查询已发布 Schema (schema)' },
-      { method: 'POST', path: '/openapi/v1/event-fact/config/schemas', desc: '创建 Schema 草稿 (schema)' },
-      { method: 'POST', path: '/openapi/v1/event-fact/config/schemas/test', desc: '测试 Schema (test)' },
-      { method: 'POST', path: '/openapi/v1/event-fact/config/schemas/{eventType}/{schemaVersion}/publish', desc: '发布 Schema (publish)' }
+      { method: 'GET', path: '/openapi/v1/event-fact/event-types', desc: '查询事件类型' },
+      { method: 'POST', path: '/openapi/v1/event-fact/event-types', desc: '创建事件类型' },
+      { method: 'GET', path: '/openapi/v1/event-fact/schemas/definitions', desc: '查询 Schema 定义' },
+      { method: 'GET', path: '/openapi/v1/event-fact/schemas/definitions/{id}', desc: '查询 Schema 详情' },
+      { method: 'POST', path: '/openapi/v1/event-fact/schemas/definitions', desc: '创建 Schema 草稿' },
+      { method: 'POST', path: '/openapi/v1/event-fact/schemas/definitions/{id}/test', desc: '测试 Schema 配置' },
+      { method: 'POST', path: '/openapi/v1/event-fact/schemas/definitions/{id}/publish', desc: '发布 Schema' }
     ]
   },
 
@@ -443,7 +466,7 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
   '/business/events/new': {
     hasApi:true,moduleName:'事件录入',apiPath:'/openapi/v1/event-fact/events',
     specDoc:'OpenAPI 3.1.0 / APP-04、APP-05',protocol:'RESTful JSON / Axios',status:'CONNECTED',
-    endpoints:[{method:'POST',path:'/openapi/v1/event-fact/events',desc:'提交规范事件'},{method:'POST',path:'/openapi/v1/event-fact/config/schemas/test',desc:'Schema 预检'}]
+    endpoints:[{method:'POST',path:'/openapi/v1/event-fact/events',desc:'提交规范事件'},{method:'GET',path:'/openapi/v1/event-fact/schemas/definitions',desc:'查询已发布 Schema'}]
   },
   '/trust/events': {
     hasApi:true,moduleName:'事件查询',apiPath:'/openapi/v1/event-fact/events/{id}',

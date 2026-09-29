@@ -16,7 +16,7 @@
       <el-form-item label="目标事件类型" required><el-input v-model="form.targetEventType" /></el-form-item>
       <el-form-item label="目标 Schema 版本" required><el-input v-model="form.targetSchemaVersion" /></el-form-item>
       <el-form-item label="警告阻断"><el-switch v-model="form.failOnWarning" /></el-form-item>
-      <el-form-item label="来源 JSON 样例" required class="sample-input"><el-input v-model="sampleJson" type="textarea" :rows="8" /></el-form-item>
+      <el-form-item label="来源 JSON 样例" required class="sample-input"><JsonEditor v-model="sampleJson" :rows="8" label="来源 JSON 样例" /></el-form-item>
     </el-form>
 
     <div v-if="previewResult" class="mapping-workbench-grid">
@@ -82,6 +82,7 @@
 import { ref, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
+import JsonEditor from '@/components/common/JsonEditor.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { governanceApi, type MappingIssue } from '@/api/governance';
 import { apiErrorMessage } from '@/api/client';

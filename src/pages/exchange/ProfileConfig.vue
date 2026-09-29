@@ -26,7 +26,8 @@
         <el-select v-if="field.options" v-model="form[field.key]" style="width:100%"><el-option v-for="option in field.options" :key="option" :value="option" :label="option" /></el-select>
         <el-date-picker v-else-if="field.type==='date'" v-model="form[field.key]" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width:100%" />
         <el-input-number v-else-if="field.type==='number'" v-model="form[field.key]" :min="0" :precision="0" />
-        <el-input v-else v-model="form[field.key]" :type="field.type==='json'?'textarea':'text'" :rows="4" />
+        <JsonEditor v-else-if="field.type==='json'" v-model="form[field.key]" :rows="6" :label="field.label" />
+        <el-input v-else v-model="form[field.key]" />
       </el-form-item></el-form>
       <template #footer><el-button @click="formVisible=false">取消</el-button><el-button type="primary" :loading="busy" @click="save">保存</el-button></template>
     </el-dialog>
@@ -39,6 +40,7 @@ import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Search } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
+import JsonEditor from '@/components/common/JsonEditor.vue';
 import { configDefinitions, exchangeConfigApi, type ConfigKind, type ConfigRecord } from '@/api/exchangeConfig';
 import { apiErrorMessage } from '@/api/client';
 const route=useRoute();

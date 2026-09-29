@@ -18,15 +18,18 @@ export interface EventTypeResponse {
 export interface EventSchemaRequest {
   eventType: string;
   schemaVersion: string;
-  schemaJson: string;
-  referenceRulesJson?: string;
-  valueSetRefsJson?: string;
+  fields: EventSchemaField[];
+  referenceRules: EventSchemaReferenceRule[];
 }
 
 export interface SchemaSnapshot {
+  id: string;
   eventType: string;
   schemaVersion: string;
   schemaJson: string;
+  fields: EventSchemaField[];
+  referenceRules: EventSchemaReferenceRule[];
+  lockVersion: number;
   status: 'DRAFT' | 'PUBLISHED' | string;
   contentDigest?: string;
 }
@@ -35,31 +38,53 @@ export interface SchemaTestResult {
   valid: boolean;
   errors: string[];
 }
+export interface EventSchemaField {
+  id?: string; fieldName: string; displayName: string; dataType: string; required: boolean;
+  dataElementCode?: string; valueSetCode?: string; valueSetVersion?: string;
+}
+export interface EventSchemaReferenceRule {
+  id?: string; fieldName: string; targetType: string; namespace: string; required: boolean;
+  onNotFound: string; onAmbiguous: string;
+}
+function snapshot(item: any): SchemaSnapshot {
+  const fields: EventSchemaField[] = item.fields || [];
+  const typeMap: Record<string, string> = { STRING: 'string', DATE: 'string', DATETIME: 'string', INTEGER: 'integer', DECIMAL: 'number', BOOLEAN: 'boolean', OBJECT: 'object', ARRAY: 'array' };
+  const properties = Object.fromEntries(fields.map(field => [field.fieldName, { type: typeMap[field.dataType] || 'string', title: field.displayName }]));
+  return { ...item, fields, referenceRules: item.referenceRules || [], schemaJson: JSON.stringify({ type: 'object', properties, required: fields.filter(field => field.required).map(field => field.fieldName) }) };
+}
 
 /**
  * 可信事件上报与查询接口
  */
 export const eventsApi = {
   async createEventType(data: EventTypeRequest): Promise<EventTypeResponse> {
-    return request.post<EventTypeResponse, EventTypeResponse>('/openapi/v1/event-fact/config/event-types', data);
+    return request.post<EventTypeResponse, EventTypeResponse>('/openapi/v1/event-fact/event-types', { ...data, description: data.description || '' });
   },
 
   async createSchemaDraft(data: EventSchemaRequest): Promise<SchemaSnapshot> {
-    return request.post<SchemaSnapshot, SchemaSnapshot>('/openapi/v1/event-fact/config/schemas', data);
+    const result = await request.post<any, any>('/openapi/v1/event-fact/schemas/definitions', data);
+    return snapshot(result);
   },
 
-  async testEventSchema(eventType: string, schemaVersion: string, payloadJson: string): Promise<SchemaTestResult> {
-    return request.post<SchemaTestResult, SchemaTestResult>('/openapi/v1/event-fact/config/schemas/test', {
-      eventType,
-      schemaVersion,
-      payloadJson
-    });
+  async testSchemaDraft(data: EventSchemaRequest): Promise<SchemaTestResult> {
+    return request.post('/openapi/v1/event-fact/schemas/test', data);
   },
 
-  async publishEventSchema(eventType: string, schemaVersion: string): Promise<SchemaSnapshot> {
-    return request.post<SchemaSnapshot, SchemaSnapshot>(
-      `/openapi/v1/event-fact/config/schemas/${encodeURIComponent(eventType)}/${encodeURIComponent(schemaVersion)}/publish`
-    );
+  async publishEventSchema(id: string): Promise<SchemaSnapshot> {
+    return snapshot(await request.post(`/openapi/v1/event-fact/schemas/definitions/${encodeURIComponent(id)}/publish`));
+  },
+  async listSchemaDefinitions(params: Record<string, string | number> = {}): Promise<{ records: SchemaSnapshot[]; total: string }> {
+    const page: any = await request.get('/openapi/v1/event-fact/schemas/definitions', { params });
+    return { ...page, records: (page.records || []).map(snapshot) };
+  },
+  async getSchemaDefinition(id: string): Promise<SchemaSnapshot> {
+    return snapshot(await request.get(`/openapi/v1/event-fact/schemas/definitions/${encodeURIComponent(id)}`));
+  },
+  async testSchemaDefinition(id: string): Promise<SchemaTestResult> {
+    return request.post(`/openapi/v1/event-fact/schemas/definitions/${encodeURIComponent(id)}/test`);
+  },
+  async listEventTypes(params: Record<string, string | number> = {}): Promise<{ records: any[]; total: string }> {
+    return request.get('/openapi/v1/event-fact/event-types', { params });
   },
   // 当前文档仅支持按事件 ID 查询。
   async queryTrustEvents(params?: {
@@ -144,13 +169,13 @@ export const eventsApi = {
     eventType: string;
     payload: Record<string, any>;
   }): Promise<{ valid: boolean; errors: string[] }> {
-    return this.testEventSchema(payload.eventType,'1.0.0',JSON.stringify(payload.payload));
+    throw new Error('当前接口仅支持 Schema 配置测试，不支持 Payload 预检');
   },
 
   // 获取已发布事件 Schema（Swagger: /openapi/v1/event-fact/schemas/{eventType}/{schemaVersion}）
   async getEventSchema(eventType: string, schemaVersion = '1.0.0'): Promise<SchemaSnapshot> {
-    return request.get<SchemaSnapshot, SchemaSnapshot>(
-      `/openapi/v1/event-fact/schemas/${encodeURIComponent(eventType)}/${encodeURIComponent(schemaVersion)}`
-    );
+    const page = await this.listSchemaDefinitions({ eventType, schemaVersion, status: 'PUBLISHED', page: 1, size: 1 });
+    if (!page.records.length) throw new Error('未找到已发布 Schema');
+    return this.getSchemaDefinition(page.records[0].id);
   }
 };

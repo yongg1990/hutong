@@ -6,7 +6,6 @@
     >
       <template #actions>
         <el-button @click="loadRoles">刷新角色</el-button>
-        <el-button @click="openPermissionManager">编辑权限</el-button>
         <el-button type="primary" @click="openCreateDialog">
           + 新增业务角色
         </el-button>
@@ -22,7 +21,10 @@
     <div class="panel">
       <div class="panel-header">
         <h2>系统角色权能清单 ({{ total }})</h2>
-        <span class="sub-text">权限字典 {{ permissionCount }} 项</span>
+        <div class="dictionary-actions">
+          <span class="sub-text">权限字典 {{ permissionCount }} 项</span>
+          <el-button link @click="openPermissionManager">管理字典</el-button>
+        </div>
       </div>
       <div class="panel-body">
         <el-table :data="roles" v-loading="loading" style="width: 100%" empty-text="暂无匹配的角色定义">
@@ -49,7 +51,7 @@
           <el-table-column label="操作" width="140" fixed="right">
             <template #default="{ row }">
               <el-button size="small" type="primary" link @click="openPermissionDrawer(row)">
-                配置功能权限
+                编辑权限
               </el-button>
             </template>
           </el-table-column>
@@ -71,7 +73,7 @@
     <!-- Permission Assignment Drawer -->
     <el-drawer
       v-model="drawerVisible"
-      :title="'配置角色权限: ' + (activeRole?.roleName || '')"
+      :title="'编辑角色权限: ' + (activeRole?.roleName || '')"
       size="min(960px, 96vw)"
       v-loading="loadingPerms"
       :close-on-click-modal="false"
@@ -631,6 +633,12 @@ const savePermissions = async () => {
   color: var(--color-muted);
 }
 
+.dictionary-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .role-code-text {
   font-weight: 700;
   color: var(--color-brand);
@@ -680,10 +688,6 @@ const savePermissions = async () => {
 .permission-search {
   width: 260px;
   margin-bottom: 12px;
-}
-
-:global(.permission-manager-dialog .el-dialog__body) {
-  overflow-y: hidden !important;
 }
 
 .tree-container :deep(.el-tree-node__content) {

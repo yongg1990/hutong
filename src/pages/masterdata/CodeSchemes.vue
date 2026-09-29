@@ -10,6 +10,7 @@
 
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-input v-model="filters.schemeCode" clearable placeholder="编码体系代码" style="width:210px" @keyup.enter="handleSearch" />
+      <el-input v-model="filters.version" clearable placeholder="版本" style="width:110px" @keyup.enter="handleSearch" />
       <el-input v-model="filters.schemeName" clearable placeholder="编码体系名称" style="width:190px" @keyup.enter="handleSearch" />
       <el-input v-model="filters.issuerType" clearable placeholder="发布机构类型" style="width:170px" @keyup.enter="handleSearch" />
       <el-select v-model="filters.status" clearable placeholder="状态" style="width:130px">
@@ -55,7 +56,7 @@
             </el-form-item>
             <el-form-item v-if="editing" label="状态" prop="status"><el-radio-group v-model="form.status"><el-radio-button label="ACTIVE">启用</el-radio-button><el-radio-button label="INACTIVE">停用</el-radio-button></el-radio-group></el-form-item>
           </div>
-          <el-form-item label="整码校验规则 JSON" prop="validationJson"><el-input v-model="form.validationJson" class="json-input" type="textarea" :rows="9" placeholder='{"pattern":"^[0-9]{16}$"}' /></el-form-item>
+          <el-form-item label="整码校验规则 JSON" prop="validationJson"><JsonEditor v-model="form.validationJson" :rows="9" label="整码校验规则 JSON" placeholder='{"pattern":"^[0-9]{16}$"}' /></el-form-item>
           <div class="json-actions"><span>校验规则将以 JSON 字符串提交</span><el-button text type="primary" @click="formatSchemeRule">格式化 JSON</el-button></div>
         </el-form>
       </div>
@@ -105,7 +106,7 @@
             <el-form-item label="编码段长度" prop="segmentLength"><el-input-number v-model="segmentForm.segmentLength" :min="1" :max="2147483647" controls-position="right" style="width:100%" /></el-form-item>
           </div>
           <el-form-item label="编码段语义代码" prop="semanticCode"><el-input v-model="segmentForm.semanticCode" maxlength="128" placeholder="例如 REGION_CODE" @input="normalizeSemanticCode" /></el-form-item>
-          <el-form-item label="编码段校验规则 JSON" prop="ruleJson"><el-input v-model="segmentForm.ruleJson" class="json-input" type="textarea" :rows="7" placeholder='{"pattern":"^[0-9]+$"}' /></el-form-item>
+          <el-form-item label="编码段校验规则 JSON" prop="ruleJson"><JsonEditor v-model="segmentForm.ruleJson" :rows="7" label="编码段校验规则 JSON" placeholder='{"pattern":"^[0-9]+$"}' /></el-form-item>
           <div class="json-actions"><span>起始位置从 1 开始</span><el-button text type="primary" @click="formatSegmentRule">格式化 JSON</el-button></div>
         </el-form>
       </div>
@@ -151,6 +152,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { CircleCheck, CircleClose, Plus, Refresh } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
+import JsonEditor from '@/components/common/JsonEditor.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { apiErrorMessage } from '@/api/client';
@@ -160,7 +162,7 @@ type SchemeStatus = 'ACTIVE' | 'INACTIVE';
 const issuerTypes = ['GOVERNMENT', 'REGULATOR', 'INDUSTRY_ASSOCIATION', 'ENTERPRISE'];
 const schemes = ref<CodeSchemeResponse[]>([]);
 const loading = ref(false); const page = ref(1); const pageSize = ref(20); const total = ref(0);
-const filters = reactive({ schemeCode: '', schemeName: '', issuerType: '', status: '' });
+const filters = reactive({ schemeCode: '', version: '', schemeName: '', issuerType: '', status: '' });
 const inactiveCount = computed(() => schemes.value.filter(item => item.status === 'INACTIVE').length);
 
 const formVisible = ref(false); const formLoading = ref(false); const submitting = ref(false); const editing = ref(false); const editingId = ref(''); const formRef = ref<FormInstance>();
@@ -187,9 +189,9 @@ const formatJsonValue = (value: string, assign: (formatted: string) => void) => 
 const formatSchemeRule = () => formatJsonValue(form.validationJson, value => { form.validationJson = value; });
 const formatSegmentRule = () => formatJsonValue(segmentForm.ruleJson, value => { segmentForm.ruleJson = value; });
 
-const loadSchemes = async () => { loading.value = true; try { const result = await masterDataApi.getCodeSchemePage({ schemeCode: filters.schemeCode.trim() || undefined, schemeName: filters.schemeName.trim() || undefined, issuerType: filters.issuerType.trim() || undefined, status: filters.status || undefined, page: page.value, size: pageSize.value }); schemes.value = result.records; total.value = result.total; page.value = result.page; pageSize.value = result.size; } catch (error) { schemes.value = []; total.value = 0; ElMessage.error(apiErrorMessage(error, '监管编码体系列表加载失败')); } finally { loading.value = false; } };
+const loadSchemes = async () => { loading.value = true; try { const result = await masterDataApi.getCodeSchemePage({ schemeCode: filters.schemeCode.trim() || undefined, version: filters.version.trim() || undefined, schemeName: filters.schemeName.trim() || undefined, issuerType: filters.issuerType.trim() || undefined, status: filters.status || undefined, page: page.value, size: pageSize.value }); schemes.value = result.records; total.value = result.total; page.value = result.page; pageSize.value = result.size; } catch (error) { schemes.value = []; total.value = 0; ElMessage.error(apiErrorMessage(error, '监管编码体系列表加载失败')); } finally { loading.value = false; } };
 const handleSearch = () => { page.value = 1; loadSchemes(); };
-const handleReset = () => { Object.assign(filters, { schemeCode: '', schemeName: '', issuerType: '', status: '' }); page.value = 1; loadSchemes(); };
+const handleReset = () => { Object.assign(filters, { schemeCode: '', version: '', schemeName: '', issuerType: '', status: '' }); page.value = 1; loadSchemes(); };
 const handleSizeChange = () => { page.value = 1; loadSchemes(); };
 const openCreate = () => { editing.value = false; editingId.value = ''; Object.assign(form, blankForm()); formRef.value?.clearValidate(); formVisible.value = true; };
 const openEdit = async (row: CodeSchemeResponse) => { editing.value = true; editingId.value = String(row.schemeId); Object.assign(form, blankForm(), row, { validationJson: prettyJson(row.validationJson), status: row.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE' }); formVisible.value = true; formLoading.value = true; try { const result = await masterDataApi.getCodeSchemeById(editingId.value); Object.assign(form, result, { validationJson: prettyJson(result.validationJson), status: result.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE', lockVersion: result.lockVersion ?? 0 }); formRef.value?.clearValidate(); } catch (error) { formVisible.value = false; ElMessage.error(apiErrorMessage(error, '监管编码体系详情加载失败')); } finally { formLoading.value = false; } };

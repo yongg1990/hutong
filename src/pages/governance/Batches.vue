@@ -173,7 +173,7 @@
         <el-form-item label="内容类型" required><el-input v-model="rawForm.contentType" placeholder="application/json" /></el-form-item>
         <el-form-item label="内容摘要"><el-input v-model="rawForm.contentDigest" /></el-form-item>
         <el-form-item label="文件片段引用"><el-input v-model="rawForm.fileFragmentRef" /></el-form-item>
-        <el-form-item label="原始内容"><el-input v-model="rawForm.rawPayload" type="textarea" :rows="6" /></el-form-item>
+        <el-form-item label="原始内容"><JsonEditor v-if="/\bjson\b/i.test(rawForm.contentType)" v-model="rawForm.rawPayload" :rows="6" label="原始内容 JSON" /><el-input v-else v-model="rawForm.rawPayload" type="textarea" :rows="6" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="rawVisible = false">取消</el-button><el-button type="primary" :loading="preserving" @click="preserveRaw">提交留存</el-button></template>
     </el-dialog>
@@ -185,6 +185,7 @@ import { ref, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
+import JsonEditor from '@/components/common/JsonEditor.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { governanceApi, type IngestBatch } from '@/api/governance';
 import { apiErrorMessage } from '@/api/client';
@@ -370,6 +371,10 @@ const preserveRaw = async () => {
   if (!form.projectSpaceId || !form.sourceSystemId || !form.sourceBusinessKey.trim() || !form.contentType.trim() || (!form.rawPayload && !form.fileFragmentRef)) {
     ElMessage.warning('请填写必填字段及原始内容或文件片段引用');
     return;
+  }
+  if (/\bjson\b/i.test(form.contentType) && form.rawPayload.trim()) {
+    try { JSON.parse(form.rawPayload); }
+    catch { ElMessage.warning('原始内容必须是有效 JSON'); return; }
   }
   preserving.value = true;
   try {

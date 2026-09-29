@@ -1,8 +1,14 @@
 <template>
   <div class="master-data-page">
     <PageHeader title="标识绑定" subtitle="解析外部系统标识，并将标识绑定到主体或业务对象" />
+    <FilterBar @search="page = 1; loadBindings()" @reset="resetFilters">
+      <el-select v-model="filters.targetType" clearable placeholder="目标类型" style="width:140px"><el-option label="主体" value="PARTY" /><el-option label="对象" value="OBJECT" /></el-select>
+      <el-input v-model="filters.targetId" placeholder="目标 ID" clearable style="width:150px" />
+      <el-input v-model="filters.sourceSystemId" placeholder="来源系统 ID" clearable style="width:160px" />
+      <el-input v-model="filters.namespaceCode" placeholder="命名空间" clearable style="width:160px" />
+      <el-select v-model="filters.status" clearable placeholder="状态" style="width:130px"><el-option label="生效" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /><el-option label="已替代" value="REPLACED" /></el-select>
+    </FilterBar>
     <div class="panel" style="padding:12px; margin-bottom:16px">
-      <div class="form-actions"><el-select v-model="filters.targetType" clearable placeholder="目标类型" style="width:140px"><el-option label="主体" value="PARTY" /><el-option label="对象" value="OBJECT" /></el-select><el-input v-model="filters.targetId" placeholder="目标 ID" clearable style="width:150px" /><el-input v-model="filters.sourceSystemId" placeholder="来源系统 ID" clearable style="width:160px" /><el-input v-model="filters.namespaceCode" placeholder="命名空间" clearable style="width:160px" /><el-select v-model="filters.status" clearable placeholder="状态" style="width:130px"><el-option label="生效" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /><el-option label="已替代" value="REPLACED" /></el-select><el-button type="primary" @click="page = 1; loadBindings()">查询</el-button><el-button @click="resetFilters">重置</el-button></div>
       <el-table :data="rows" v-loading="listLoading" style="margin-top:12px" empty-text="暂无绑定记录"><el-table-column prop="bindingId" label="绑定 ID" min-width="130" /><el-table-column prop="targetType" label="目标类型" width="110" /><el-table-column prop="targetId" label="目标 ID" min-width="130" /><el-table-column prop="identifierDisplay" label="外部标识" min-width="170" /><el-table-column prop="namespaceCode" label="命名空间" min-width="140" /><el-table-column prop="status" label="状态" width="100" /><el-table-column label="操作" width="130"><template #default="{ row }"><el-button link type="primary" @click="showBinding(row.bindingId)">详情</el-button><el-button link @click="editBinding(row.bindingId)">编辑</el-button></template></el-table-column></el-table>
       <el-pagination v-model:current-page="page" v-model:page-size="size" :total="total" layout="total, prev, pager, next" @current-change="loadBindings" />
     </div>
@@ -99,6 +105,7 @@
 import { computed, reactive, ref, onMounted } from 'vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
+import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import {
   masterDataApi,

@@ -50,7 +50,7 @@
           <el-form-item label="区域代码" required><el-input v-model="form.regionCode" /></el-form-item>
         </div>
         <el-form-item label="能力及版本配置 JSON" required>
-          <el-input v-model="capabilitiesText" type="textarea" :rows="7" placeholder="请输入 JSON 对象" />
+          <JsonEditor v-model="capabilitiesText" :rows="7" label="能力及版本配置 JSON" placeholder="请输入 JSON 对象" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -66,6 +66,7 @@ import { computed, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
+import JsonEditor from '@/components/common/JsonEditor.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { settingsApi, type DeploymentInstanceCreateRequest, type DeploymentInstanceResponse } from '@/api/settings';
 import { apiErrorMessage } from '@/api/client';

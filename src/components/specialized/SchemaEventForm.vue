@@ -110,7 +110,7 @@
 
     <!-- Fixed Bottom Submit Bar -->
     <el-button :loading="loadingSchema" @click="loadPublishedSchema">加载已发布 Schema</el-button>
-    <el-form label-position="top" class="event-context-form"><el-form-item label="事件类型代码"><el-input v-model="eventMeta.eventType" /></el-form-item><el-form-item label="Schema 版本" required><el-input v-model="eventMeta.schemaVersion" /></el-form-item><el-form-item label="来源业务键（每次动作唯一）" required><el-input v-model="eventMeta.sourceBusinessKey" /></el-form-item><el-form-item label="发生时间" required><el-date-picker v-model="eventMeta.occurredAt" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" /></el-form-item><el-form-item label="原始记录 ID（事实引擎可选）"><el-input v-model="eventMeta.rawRecordId" /></el-form-item><el-form-item label="提交方式"><el-radio-group v-model="eventMeta.useFactEngine"><el-radio-button :value="false">业务接口</el-radio-button><el-radio-button :value="true">事实引擎</el-radio-button></el-radio-group></el-form-item><el-form-item label="Payload JSON"><el-input v-model="payloadText" type="textarea" :rows="8" /></el-form-item><el-button :loading="testing" @click="testPayload">预检</el-button><el-alert v-if="testResult" :type="testResult.valid?'success':'error'" :closable="false" :title="testResult.valid?'预检通过':'预检失败'">{{ testResult.errors.join('; ') }}</el-alert></el-form>
+    <el-form label-position="top" class="event-context-form"><el-form-item label="事件类型代码"><el-input v-model="eventMeta.eventType" /></el-form-item><el-form-item label="Schema 版本" required><el-input v-model="eventMeta.schemaVersion" /></el-form-item><el-form-item label="来源业务键（每次动作唯一）" required><el-input v-model="eventMeta.sourceBusinessKey" /></el-form-item><el-form-item label="发生时间" required><el-date-picker v-model="eventMeta.occurredAt" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" /></el-form-item><el-form-item label="原始记录 ID（事实引擎可选）"><el-input v-model="eventMeta.rawRecordId" /></el-form-item><el-form-item label="提交方式"><el-radio-group v-model="eventMeta.useFactEngine"><el-radio-button :value="false">业务接口</el-radio-button><el-radio-button :value="true">事实引擎</el-radio-button></el-radio-group></el-form-item><el-form-item label="Payload JSON"><JsonEditor v-model="payloadText" :rows="8" label="Payload JSON" /></el-form-item></el-form>
     <div class="fixed-submit-bar">
       <div class="draft-info">
         <span class="dot-green"></span>
@@ -169,6 +169,7 @@ import { ElMessage } from 'element-plus';
 import { CircleCheckFilled } from '@element-plus/icons-vue';
 import { useMetadataStore } from '@/stores/metadataStore';
 import StatusTag from '@/components/common/StatusTag.vue';
+import JsonEditor from '@/components/common/JsonEditor.vue';
 import EvidencePicker from '@/components/common/EvidenceReference.vue';
 import InspectionIndicatorGrid from '@/components/specialized/InspectionIndicatorGrid.vue';
 import PrescriptionItemGrid from '@/components/specialized/PrescriptionItemGrid.vue';
@@ -215,10 +216,9 @@ const isSubmitting = ref(false);
 const eventMeta=reactive({eventType:props.eventType,schemaVersion:'1.0.0',sourceBusinessKey:'',occurredAt:'',rawRecordId:'',useFactEngine:false});
 const loadingSchema=ref(false);
 async function loadPublishedSchema(){loadingSchema.value=true;try{const snapshot=await eventsApi.getEventSchema(eventMeta.eventType,eventMeta.schemaVersion);const jsonSchema=JSON.parse(snapshot.schemaJson);const fields=Object.keys(jsonSchema.properties||{});const index=metadataStore.schemas.findIndex(s=>s.eventType===eventMeta.eventType);const config={eventType:snapshot.eventType,eventTypeName:snapshot.eventType,schemaVersion:snapshot.schemaVersion,status:snapshot.status,scenarioCode:'SUPPLY_CHAIN',groups:[{code:'BASIC',title:'业务数据',fields}],jsonSchema};if(index>=0)metadataStore.schemas.splice(index,1,config);else metadataStore.schemas.push(config);ElMessage.success('已加载发布版本');}catch(e){ElMessage.error(apiErrorMessage(e,'Schema 加载失败'));}finally{loadingSchema.value=false;}}
-const payloadText=ref(JSON.stringify(formData,null,2)), testing=ref(false), testResult=ref<{valid:boolean;errors:string[]}|null>(null), draftSavedAt=ref('');
-watch(formData,()=>{payloadText.value=JSON.stringify(formData,null,2);testResult.value=null;},{deep:true});
+const payloadText=ref(JSON.stringify(formData,null,2)), draftSavedAt=ref('');
+watch(formData,()=>{payloadText.value=JSON.stringify(formData,null,2);},{deep:true});
 function parsePayload(){const parsed=JSON.parse(payloadText.value);if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('Payload 必须是 JSON 对象');return parsed as Record<string,unknown>;}
-async function testPayload(){testing.value=true;try{testResult.value=await eventsApi.testEventSchema(eventMeta.eventType,eventMeta.schemaVersion,JSON.stringify(parsePayload()));}catch(e){testResult.value=null;ElMessage.error(apiErrorMessage(e,'预检失败，请检查 JSON、事件类型及版本'));}finally{testing.value=false;}}
 
 const getFieldProperty = (key: string) => {
   return schemaConfig.value.jsonSchema?.properties?.[key] || {};
@@ -277,7 +277,7 @@ const goToSupply = () => {
 
 const handleContinue = () => {
   successModalVisible.value = false;
-  eventMeta.sourceBusinessKey='';eventMeta.occurredAt='';eventMeta.rawRecordId='';testResult.value=null;
+  eventMeta.sourceBusinessKey='';eventMeta.occurredAt='';eventMeta.rawRecordId='';
   ElMessage.info('已重置录入，您可以继续提交下一条事件数据。');
 };
 </script>

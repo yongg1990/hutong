@@ -1,19 +1,18 @@
 <template>
   <div class="master-data-page">
     <PageHeader title="主体登记" subtitle="登记生产、加工、仓储、物流及医疗机构主体主数据" />
-    <div class="panel" style="padding:12px; margin-bottom:16px; display:flex; gap:8px; flex-wrap:wrap">
+    <FilterBar @search="page = 1; load()" @reset="resetQuery">
       <el-input v-model="query.partyName" placeholder="主体名称" clearable style="width:180px" />
       <el-select v-model="query.partyType" placeholder="主体类型" clearable style="width:160px"><el-option v-for="item in partyTypes" :key="item.value" :label="item.label" :value="item.value" /></el-select>
       <el-input v-model="query.regionCode" placeholder="行政区划编码" clearable style="width:160px" />
       <el-select v-model="query.status" placeholder="状态" clearable style="width:120px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
-      <el-button type="primary" @click="page = 1; load()">查询</el-button><el-button @click="resetQuery">重置</el-button>
-    </div>
+    </FilterBar>
     <div class="panel" style="margin-bottom:16px">
       <el-table :data="parties" v-loading="loading"><el-table-column prop="partyId" label="主体 ID" min-width="150" /><el-table-column prop="partyName" label="主体名称" min-width="200" /><el-table-column prop="partyType" label="类型" min-width="130" /><el-table-column prop="regionCode" label="地区" min-width="110" /><el-table-column prop="status" label="状态" width="100" /><el-table-column label="操作" width="135"><template #default="{ row }"><el-button link type="primary" @click="viewParty(row.partyId)">详情</el-button><el-button link @click="editParty(row.partyId)">编辑</el-button></template></el-table-column></el-table>
       <el-pagination v-model:current-page="page" v-model:page-size="size" :total="total" layout="total, prev, pager, next" @current-change="load" />
     </div>
     <el-drawer v-model="detailVisible" title="主体详情" size="520px"><el-descriptions v-if="detail" :column="1" border><el-descriptions-item v-for="key in detailKeys" :key="key" :label="key">{{ detail[key] ?? '-' }}</el-descriptions-item></el-descriptions><template #footer><el-button v-if="detail" type="primary" @click="editParty(detail.partyId)">编辑</el-button></template></el-drawer>
-    <el-dialog v-model="editVisible" title="编辑主体" width="620px"><el-form label-position="top"><el-form-item label="主体名称" required><el-input v-model="editForm.partyName" /></el-form-item><el-form-item label="主体类型" required><el-select v-model="editForm.partyType"><el-option v-for="item in partyTypes" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item><el-form-item label="行政区划编码"><el-input v-model="editForm.regionCode" /></el-form-item><el-form-item label="扩展属性 JSON"><el-input v-model="editForm.attributes" type="textarea" :rows="4" /></el-form-item><el-form-item label="状态"><el-select v-model="editForm.status"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select></el-form-item></el-form><template #footer><el-button @click="editVisible = false">取消</el-button><el-button type="primary" :loading="submitting" @click="saveEdit">保存</el-button></template></el-dialog>
+    <el-dialog v-model="editVisible" title="编辑主体" width="620px"><el-form label-position="top"><el-form-item label="主体名称" required><el-input v-model="editForm.partyName" /></el-form-item><el-form-item label="主体类型" required><el-select v-model="editForm.partyType"><el-option v-for="item in partyTypes" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item><el-form-item label="行政区划编码"><el-input v-model="editForm.regionCode" /></el-form-item><el-form-item label="扩展属性 JSON"><JsonEditor v-model="editForm.attributes" :rows="4" label="扩展属性 JSON" /></el-form-item><el-form-item label="状态"><el-select v-model="editForm.status"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select></el-form-item></el-form><template #footer><el-button @click="editVisible = false">取消</el-button><el-button type="primary" :loading="submitting" @click="saveEdit">保存</el-button></template></el-dialog>
 
     <div class="workspace-grid">
       <section class="panel form-panel">
@@ -34,12 +33,7 @@
               <el-input v-model="form.regionCode" maxlength="12" placeholder="例如：532601" />
             </el-form-item>
             <el-form-item label="扩展属性 JSON" prop="attributes">
-              <el-input
-                v-model="form.attributes"
-                type="textarea"
-                :rows="8"
-                placeholder='{"creditCode":"91532600XXXXXXXXXX","contactName":"张三"}'
-              />
+              <JsonEditor v-model="form.attributes" :rows="8" label="扩展属性 JSON" placeholder='{"creditCode":"91532600XXXXXXXXXX"}' />
             </el-form-item>
             <div class="form-actions">
               <el-button @click="resetForm">重置</el-button>
@@ -69,6 +63,8 @@
 import { reactive, ref, onMounted } from 'vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
+import FilterBar from '@/components/common/FilterBar.vue';
+import JsonEditor from '@/components/common/JsonEditor.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { masterDataApi, type PartyResponse, type PartyManagement } from '@/api/masterData';
 import { apiErrorMessage } from '@/api/client';

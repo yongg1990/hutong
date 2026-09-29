@@ -47,6 +47,13 @@ export interface SourceSystemResponse {
   registeredAt?: string;
 }
 
+export interface SourceSystemManagement extends SourceSystemRequest {
+  sourceSystemId: string;
+  lockVersion: number;
+  version?: string;
+  createdAt?: string;
+}
+export type SourceSystemUpdateRequest = Omit<SourceSystemRequest, 'sourceSystemCode'> & { lockVersion: number };
 export interface PreserveRawCommand {
   projectSpaceId: string;
   batchId?: string;
@@ -144,6 +151,18 @@ export const governanceApi = {
   // ================= 1. 注册来源系统 POST /openapi/v1/source-systems =================
   async registerSourceSystem(data: SourceSystemRequest): Promise<SourceSystemResponse> {
     return request.post<SourceSystemResponse, SourceSystemResponse>('/openapi/v1/source-systems', data);
+  },
+
+  async listSourceSystems(params: Record<string, string | number | undefined>): Promise<{ records: SourceSystemManagement[]; total: string }> {
+    return request.get('/openapi/v1/source-systems', { params });
+  },
+
+  async getSourceSystem(id: string): Promise<SourceSystemManagement> {
+    return request.get(`/openapi/v1/source-systems/${encodeURIComponent(id)}`);
+  },
+
+  async updateSourceSystem(id: string, data: SourceSystemUpdateRequest): Promise<SourceSystemManagement> {
+    return request.post(`/openapi/v1/source-systems/${encodeURIComponent(id)}`, data);
   },
 
   // ================= 2. 原始记录留存 POST /openapi/v1/raw-records =================

@@ -23,8 +23,10 @@ defineEmits(['search', 'reset']);
 <style scoped>
 .filter-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 6px;
@@ -35,14 +37,22 @@ defineEmits(['search', 'reset']);
 
 .filter-fields {
   display: flex;
+  flex: 1 1 500px;
+  min-width: 0;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
 }
+.filter-fields :deep(.el-input), .filter-fields :deep(.el-select) { max-width: 100%; }
 
 .filter-actions {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .filter-fields :deep(.el-input), .filter-fields :deep(.el-select) { width: 100% !important; }
+  .filter-actions { width: 100%; }
+  .filter-actions .el-button { flex: 1; }
 }
 </style>

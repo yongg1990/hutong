@@ -301,3 +301,23 @@ X-Purpose-Code: EXCHANGE_OUTPUT
 3. 后端新增列表端点或返回字段后，同步更新页面查询条件、表头及 `*[0m 标识。
 4. 新增正式接口时同步维护接口模块、页面注册配置和 `swaggerEndpointPatterns[0m。
 
+## 2026-09-29 Swagger 接口对接与编辑故障记录
+
+### 编辑故障与处理
+
+- `Standards.vue` 连续编辑失败的根因是一次 `apply_patch_batch` 中对同一路径同时执行 Delete File 和 Add File；该工具不接受这种操作。改用 `apply_patch_update_file` 对单文件做增量修改后，标准页编辑得以继续。
+- 随后的部分增量补丁提示 `Failed to find expected lines`，原因是补丁期望的上下文与文件当前内容不完全匹配，整次调用未应用。处理方式是用 `rg -n` 定位当前行、缩小为精确的单行或小段补丁，并在改动后重新查看相关调用链；不要反复提交同一失败补丁，更不要再对同一路径同时删除和新增。
+- 这次在标准页将代码项的所属值域固定为当前选中值域，避免弹窗选了其他值域、保存却写入原值域；新增和编辑弹窗标题也已区分。
+
+### 当前接口接线
+
+- 参照 `http://192.168.1.39/api/tcmirp/v3/api-docs` 当时的 Swagger。`src/api/standards.ts` 和 `src/pages/governance/Standards.vue` 已接数据元、值域、代码项的分页列表、创建、编辑、启停；标准页在 `src/config/pageApiRegistry.ts` 与 `src/components/layout/Sidebar.vue` 中标记已接线。
+- `src/api/governance.ts`、`src/pages/governance/Sources.vue` 已接来源系统注册、分页列表、详情、编辑；编辑提交乐观锁 `lockVersion`，不再附带只用于注册的来源系统代码。页面接口清单已更新。
+- `src/api/events.ts`、`src/pages/governance/EventConfig.vue` 已把事件类型及 Schema 配置改到 `/openapi/v1/event-fact/event-types` 和 `/openapi/v1/event-fact/schemas/definitions`：服务端列表/详情、创建草稿、按定义 ID 测试与发布。创建请求改用 `fields`、`referenceRules`；页面增加数组基本结构检查。`src/components/specialized/SchemaEventForm.vue` 去除了旧 Payload 预检按钮，因为新版 Schema 测试接口不接受 Payload。页面接口清单与侧栏旧 `/config` 路径已调整。
+- 之前工作区已有多个其他页面和 API 文件的未提交改动，包括 APP-01、APP-02 等模块；本轮没有逐一完成联调核验，不能因页面显示“已对接”就认定其所有操作已通过后端测试。
+
+### 未完成与注意
+
+- 本轮没有执行打包、类型检查或实际业务接口联调，以上“已接线”仅表示代码调用已改为所查 Swagger 契约，不代表后端调用成功。
+- `src/api/events.ts` 仍留有 `validateEvent` 方法，调用会抛出“不支持 Payload 预检”；`src/api/client.ts` 的白名单仍含旧 `/openapi/v1/event-fact/config/*` 规则。这两处旧代码未清理，不要将其标记为可用接口。
+- Schema 页当前列表请求固定第一页最多 200 条，未实现继续翻页；标准页筛选是对当前页数据做本地过滤。后续若需要完整分页搜索，须按 Swagger 的查询参数补齐。

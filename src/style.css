@@ -71,14 +71,16 @@ a:hover { color: var(--color-brand-light); }
 .panel-header h2::before { content: ""; width: 4px; height: 17px; border-radius: 3px; background: var(--color-brand); }
 .panel-body { flex: 1; padding: 18px; }
 
-.el-dialog { max-width: min(94vw, 860px) !important; border: 1px solid var(--color-border) !important; border-radius: 10px !important; box-shadow: var(--shadow-lg) !important; overflow: hidden !important; }
-.el-dialog__header { margin-right: 0 !important; padding: 17px 22px !important; border-bottom: 1px solid var(--color-border-subtle); background: #fbfdfc; }
+.el-overlay-dialog { display: flex; align-items: center; justify-content: center; padding: 5dvh 3vw; overflow-y: auto; }
+.el-dialog { display: flex; flex-direction: column; max-width: min(94vw, 860px) !important; max-height: min(90dvh, 820px); margin: auto !important; border: 1px solid var(--color-border) !important; border-radius: 10px !important; box-shadow: var(--shadow-lg) !important; overflow: hidden !important; }
+.el-dialog__header { flex: none; margin-right: 0 !important; padding: 17px 22px !important; border-bottom: 1px solid var(--color-border-subtle); background: #fbfdfc; }
 .el-dialog__title { color: var(--color-ink) !important; font-size: 16px !important; font-weight: 750 !important; }
-.el-dialog__body { padding: 22px !important; }
-.el-dialog__footer { padding: 13px 22px !important; border-top: 1px solid var(--color-border-subtle); background: #fbfdfc; }
-.el-drawer { background: var(--color-surface) !important; }
-.el-drawer__header { margin-bottom: 0 !important; padding: 18px 22px !important; border-bottom: 1px solid var(--color-border); }
-.el-drawer__body { padding: 20px 22px !important; }
+.el-dialog__body { min-height: 0; max-height: min(70dvh, 680px); overflow-y: auto; overscroll-behavior: contain; padding: 22px !important; }
+.el-dialog__footer { flex: none; padding: 13px 22px !important; border-top: 1px solid var(--color-border-subtle); background: #fbfdfc; }
+.el-drawer { display: flex; flex-direction: column; background: var(--color-surface) !important; }
+.el-drawer__header { flex: none; margin-bottom: 0 !important; padding: 18px 22px !important; border-bottom: 1px solid var(--color-border); }
+.el-drawer__body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px 22px !important; }
+.el-drawer__footer { flex: none; }
 .el-descriptions { --el-descriptions-table-border: var(--color-border) !important; }
 .el-descriptions__label.el-descriptions__cell.is-bordered-label { background: #f4f9f7; color: var(--color-text-secondary); font-weight: 650; }
 .el-descriptions__content.el-descriptions__cell.is-bordered-content { color: var(--color-text); background: #fff; }

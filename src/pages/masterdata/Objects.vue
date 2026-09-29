@@ -190,7 +190,7 @@
               <el-button text type="primary" @click="formatAttributes">格式化 JSON</el-button>
             </div>
             <el-form-item prop="attributes">
-              <el-input v-model="form.attributes" class="json-input" type="textarea" :rows="10" placeholder='{"displayName":"2026 年三七春播批次","batchNo":"CROP-2026-001"}' />
+              <JsonEditor v-model="form.attributes" :rows="10" label="动态属性 JSON" placeholder='{"displayName":"2026 年三七春播批次","batchNo":"CROP-2026-001"}' />
             </el-form-item>
           </div>
         </el-form>
@@ -248,6 +248,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import { Box, EditPen, Plus, Refresh, Search, View } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
+import JsonEditor from '@/components/common/JsonEditor.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import {
   masterDataApi,

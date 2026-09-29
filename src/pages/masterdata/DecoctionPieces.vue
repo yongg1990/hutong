@@ -107,7 +107,7 @@
                 <el-date-picker v-model="form.validTo" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="可选" style="width: 100%" />
               </el-form-item>
               <el-form-item label="监管扩展属性 JSON" prop="regulatoryAttributes">
-                <el-input v-model="form.regulatoryAttributes" type="textarea" :rows="3" class="json-input" placeholder="可选，请输入 JSON 对象" />
+                <JsonEditor v-model="form.regulatoryAttributes" :rows="5" label="监管扩展属性 JSON" placeholder="可选，请输入 JSON 对象" />
               </el-form-item>
             </div>
           </template>
@@ -150,6 +150,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { Delete, Plus, Refresh } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
+import JsonEditor from '@/components/common/JsonEditor.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { apiErrorMessage } from '@/api/client';

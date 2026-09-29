@@ -391,9 +391,9 @@ export const masterDataApi = {
     return request.post<void, void>('/openapi/v1/decoction-piece-products/' + encodeURIComponent(id) + '/delete');
   },
 
-  async getCodeSchemePage(params?: { schemeCode?: string; schemeName?: string; issuerType?: string; status?: string; page?: number; size?: number }): Promise<CodeSchemePage> {
+  async getCodeSchemePage(params?: { schemeCode?: string; version?: string; schemeName?: string; issuerType?: string; status?: string; page?: number; size?: number }): Promise<CodeSchemePage> {
     const query = new URLSearchParams();
-    (['schemeCode', 'schemeName', 'issuerType', 'status'] as const).forEach(key => { if (params?.[key]) query.set(key, params[key] as string); });
+    (['schemeCode', 'version', 'schemeName', 'issuerType', 'status'] as const).forEach(key => { if (params?.[key]) query.set(key, params[key] as string); });
     query.set('page', String(params?.page || 1)); query.set('size', String(params?.size || 20));
     const response: any = await request.get('/openapi/v1/code-schemes?' + query.toString());
     return { records: Array.isArray(response?.records) ? response.records : [], total: Number(response?.total ?? 0), page: Number(response?.page ?? params?.page ?? 1), size: Number(response?.size ?? params?.size ?? 20) };

@@ -90,8 +90,8 @@ const menuGroups = [
       { title: '接入批次与原始记录', path: '/governance/batches', hasApi: true, apiPath: '/openapi/v1/batches, /openapi/v1/raw-records' },
       { title: '字段映射预检', path: '/governance/mappings', hasApi: true, apiPath: '/openapi/v1/mappings/test' },
       { title: '治理异常案卷', path: '/governance/cases', hasApi: false, apiPath: '' },
-      { title: '数据元与值域', path: '/governance/standards', hasApi: false, apiPath: '' },
-      { title: '事件 Schema 配置', path: '/governance/events', hasApi: true, apiPath: '/openapi/v1/event-fact/config' }
+      { title: '数据元与值域', path: '/governance/standards', hasApi: true, apiPath: '/openapi/v1/data-elements, /openapi/v1/value-sets' },
+      { title: '事件 Schema 配置', path: '/governance/events', hasApi: true, apiPath: '/openapi/v1/event-fact/schemas/definitions' }
     ]
   },
   {
