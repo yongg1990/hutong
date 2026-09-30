@@ -154,6 +154,7 @@ export const PAGE_API_MAP: Record<string, PageApiInfo> = {
       { method: 'GET', path: '/openapi/v1/event-fact/schemas/definitions', desc: '查询 Schema 定义' },
       { method: 'GET', path: '/openapi/v1/event-fact/schemas/definitions/{id}', desc: '查询 Schema 详情' },
       { method: 'POST', path: '/openapi/v1/event-fact/schemas/definitions', desc: '创建 Schema 草稿' },
+      { method: 'POST', path: '/openapi/v1/event-fact/schemas/definitions/{id}', desc: '编辑 Schema 草稿' },
       { method: 'POST', path: '/openapi/v1/event-fact/schemas/definitions/{id}/test', desc: '测试 Schema 配置' },
       { method: 'POST', path: '/openapi/v1/event-fact/schemas/definitions/{id}/publish', desc: '发布 Schema' }
     ]

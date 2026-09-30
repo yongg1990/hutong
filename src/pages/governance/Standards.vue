@@ -29,7 +29,7 @@
         <el-table-column prop="status" label="状态" width="100" />
         <el-table-column label="操作" width="130"><template #default="{ row }"><el-button link @click.stop="editValueSet(row)">编辑</el-button><el-button link @click.stop="toggleValueSet(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button></template></el-table-column>
       </el-table>
-      <el-pagination v-model:current-page="valuePage" :page-size="20" :total="valueTotal" layout="total, prev, pager, next" @current-change="loadValueSets" />
+      <div class="pagination-row"><el-pagination v-model:current-page="valuePage" :page-size="20" :total="valueTotal" layout="total, prev, pager, next" @current-change="loadValueSets" /></div>
     </div>
     <div class="standards-banner">
       <div v-for="std in standards" :key="std.code" class="std-card">
@@ -66,7 +66,7 @@
           <el-table-column prop="valueSet" label="关联值域 *" min-width="150" class-name="mono" />
           <el-table-column label="操作" width="130"><template #default="{ row }"><el-button link @click.stop="editElement(row)">编辑</el-button><el-button link @click.stop="toggleElement(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button></template></el-table-column>
         </el-table>
-        <el-pagination v-model:current-page="elementPage" :page-size="20" :total="elementTotal" layout="total, prev, pager, next" @current-change="loadElements" />
+        <div class="pagination-row"><el-pagination v-model:current-page="elementPage" :page-size="20" :total="elementTotal" layout="total, prev, pager, next" @current-change="loadElements" /></div>
       </div>
 
       <div class="panel">
@@ -93,7 +93,7 @@
           </el-table-column>
           <el-table-column label="操作" width="130"><template #default="{ row }"><el-button link @click="editItem(row)">编辑</el-button><el-button link @click="toggleItem(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button></template></el-table-column>
         </el-table>
-        <el-pagination v-if="selectedValueSet" v-model:current-page="itemPage" :page-size="20" :total="itemTotal" layout="total, prev, pager, next" @current-change="loadItems" />
+        <div v-if="selectedValueSet" class="pagination-row"><el-pagination v-model:current-page="itemPage" :page-size="20" :total="itemTotal" layout="total, prev, pager, next" @current-change="loadItems" /></div>
       </div>
     </div>
 

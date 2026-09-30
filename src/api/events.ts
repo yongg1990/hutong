@@ -21,6 +21,11 @@ export interface EventSchemaRequest {
   fields: EventSchemaField[];
   referenceRules: EventSchemaReferenceRule[];
 }
+export interface EventSchemaUpdateRequest {
+  fields: EventSchemaField[];
+  referenceRules: EventSchemaReferenceRule[];
+  lockVersion: number;
+}
 
 export interface SchemaSnapshot {
   id: string;
@@ -40,7 +45,11 @@ export interface SchemaTestResult {
 }
 export interface EventSchemaField {
   id?: string; fieldName: string; displayName: string; dataType: string; required: boolean;
+  minLength?: number; maxLength?: number; pattern?: string;
+  minimum?: number; maximum?: number; exclusiveMinimum?: boolean; exclusiveMaximum?: boolean; multipleOf?: number;
+  description?: string;
   dataElementCode?: string; valueSetCode?: string; valueSetVersion?: string;
+  codeSchemeCode?: string; codeSchemeVersion?: string;
 }
 export interface EventSchemaReferenceRule {
   id?: string; fieldName: string; targetType: string; namespace: string; required: boolean;
@@ -64,6 +73,9 @@ export const eventsApi = {
   async createSchemaDraft(data: EventSchemaRequest): Promise<SchemaSnapshot> {
     const result = await request.post<any, any>('/openapi/v1/event-fact/schemas/definitions', data);
     return snapshot(result);
+  },
+  async updateSchemaDraft(id: string, data: EventSchemaUpdateRequest): Promise<SchemaSnapshot> {
+    return snapshot(await request.post(`/openapi/v1/event-fact/schemas/definitions/${encodeURIComponent(id)}`, data));
   },
 
   async testSchemaDraft(data: EventSchemaRequest): Promise<SchemaTestResult> {

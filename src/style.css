@@ -226,7 +226,7 @@ a:hover { color: var(--color-brand-light); }
 .el-table { border-radius: 4px !important; }
 .el-table th.el-table__cell { padding: 10px 0 !important; }
 .el-table td.el-table__cell { padding: 8px 0 !important; }
-.el-table .cell { overflow-wrap: anywhere; }
+.el-table .cell { overflow-wrap: normal; word-break: normal; }
 .pagination-row { padding: 14px 0 2px; }
 @media (max-width: 800px) {
   .filter-actions { width: 100%; justify-content: flex-start; margin-left: 0; padding: 10px 0 0; border-left: 0; border-top: 1px solid var(--color-border-subtle); }

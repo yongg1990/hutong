@@ -37,7 +37,7 @@
       </el-table>
     </div>
 
-    <el-pagination v-model:current-page="page" :page-size="20" :total="total" layout="total, prev, pager, next" @current-change="loadSources" />
+    <div class="pagination-row"><el-pagination v-model:current-page="page" :page-size="20" :total="total" layout="total, prev, pager, next" @current-change="loadSources" /></div>
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑来源系统' : '注册新接入来源系统'" width="520px" :close-on-click-modal="false">
       <el-form :model="regForm" label-position="top">
         <el-form-item label="系统标识 (Source Code)" required>

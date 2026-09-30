@@ -28,6 +28,7 @@
         <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" link @click="viewSchema(row)">查看</el-button>
+            <el-button v-if="row.status === 'DRAFT'" size="small" link @click="openEditSchema(row)">编辑</el-button>
             <el-button size="small" link @click="openTestDialog(row)">测试</el-button>
             <el-button v-if="row.status !== 'PUBLISHED'" size="small" link :loading="publishingKey === schemaKey(row)" @click="publishSchema(row)">发布</el-button>
           </template>
@@ -44,7 +45,7 @@
         <el-select v-model="eventFilters.status" placeholder="状态" clearable style="width: 140px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
       </FilterBar>
       <el-table :data="eventTypes" empty-text="暂无事件类型">
-        <el-table-column prop="id" label="定义 ID" width="150" class-name="mono" />
+        <el-table-column prop="id" label="定义 ID" width="220" class-name="mono" show-overflow-tooltip />
         <el-table-column prop="eventType" label="事件类型" min-width="180" class-name="mono" />
         <el-table-column prop="eventName" label="名称" min-width="180" />
         <el-table-column prop="scenarioCode" label="场景代码" min-width="160" class-name="mono" />
@@ -68,18 +69,57 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="schemaVisible" title="创建 Schema 草稿" width="680px" :close-on-click-modal="false">
+    <el-dialog v-model="schemaVisible" :title="editingSchemaId ? '编辑 Schema 草稿' : '创建 Schema 草稿'" width="min(960px, 96vw)" :close-on-click-modal="false">
       <el-form :model="schemaForm" label-position="top">
         <div class="form-grid">
-          <el-form-item label="事件类型" required><el-input v-model="schemaForm.eventType" /></el-form-item>
-          <el-form-item label="Schema 版本" required><el-input v-model="schemaForm.schemaVersion" /></el-form-item>
+          <el-form-item label="事件类型" required><el-input v-model="schemaForm.eventType" :disabled="!!editingSchemaId" /></el-form-item>
+          <el-form-item label="Schema 版本" required><el-input v-model="schemaForm.schemaVersion" :disabled="!!editingSchemaId" /></el-form-item>
         </div>
-        <el-form-item label="字段列表 JSON" required><JsonEditor v-model="schemaForm.fieldsJson" :rows="12" label="字段列表 JSON" /></el-form-item>
-        <el-form-item label="引用规则 JSON"><JsonEditor v-model="schemaForm.referenceRulesJson" :rows="4" label="引用规则 JSON" /></el-form-item>
+        <div class="section-heading"><strong>字段列表</strong><el-button size="small" @click="addField">添加字段</el-button></div>
+        <div v-for="(field, index) in schemaForm.fields" :key="fieldKeys[index]" class="entry-row">
+          <div class="entry-heading"><strong>字段 {{ index + 1 }}</strong><el-button type="danger" link :disabled="schemaForm.fields.length === 1" @click="removeField(index)">移除</el-button></div>
+          <div class="form-grid three-columns">
+            <el-form-item label="字段代码" required><el-input v-model="field.fieldName" /></el-form-item>
+            <el-form-item label="显示名称" required><el-input v-model="field.displayName" /></el-form-item>
+            <el-form-item label="数据类型" required><el-select v-model="field.dataType"><el-option v-for="type in dataTypes" :key="type" :label="type" :value="type" /></el-select></el-form-item>
+            <el-form-item label="是否必填"><el-switch v-model="field.required" /></el-form-item>
+            <template v-if="field.dataType === 'STRING'">
+              <el-form-item label="最小长度"><el-input-number v-model="field.minLength" :min="0" :precision="0" controls-position="right" /></el-form-item>
+              <el-form-item label="最大长度"><el-input-number v-model="field.maxLength" :min="0" :precision="0" controls-position="right" /></el-form-item>
+              <el-form-item label="正则表达式"><el-input v-model="field.pattern" /></el-form-item>
+            </template>
+            <template v-if="field.dataType === 'INTEGER' || field.dataType === 'DECIMAL'">
+              <el-form-item label="最小值"><el-input-number v-model="field.minimum" :precision="field.dataType === 'INTEGER' ? 0 : undefined" controls-position="right" /></el-form-item>
+              <el-form-item label="最大值"><el-input-number v-model="field.maximum" :precision="field.dataType === 'INTEGER' ? 0 : undefined" controls-position="right" /></el-form-item>
+              <el-form-item label="是否严格大于最小值"><el-switch v-model="field.exclusiveMinimum" /></el-form-item>
+              <el-form-item label="是否严格小于最大值"><el-switch v-model="field.exclusiveMaximum" /></el-form-item>
+              <el-form-item label="数值步长"><el-input-number v-model="field.multipleOf" :min="0" :precision="field.dataType === 'INTEGER' ? 0 : undefined" controls-position="right" /></el-form-item>
+            </template>
+            <el-form-item label="数据元代码"><el-input v-model="field.dataElementCode" /></el-form-item>
+            <el-form-item label="值域代码"><el-input v-model="field.valueSetCode" /></el-form-item>
+            <el-form-item label="值域版本"><el-input v-model="field.valueSetVersion" /></el-form-item>
+            <el-form-item label="编码体系代码"><el-input v-model="field.codeSchemeCode" /></el-form-item>
+            <el-form-item label="编码体系版本"><el-input v-model="field.codeSchemeVersion" /></el-form-item>
+          </div>
+          <el-form-item label="字段说明"><el-input v-model="field.description" type="textarea" :rows="2" /></el-form-item>
+        </div>
+        <div class="section-heading"><strong>引用规则</strong><el-button size="small" @click="addRule">添加规则</el-button></div>
+        <div v-for="(rule, index) in schemaForm.referenceRules" :key="ruleKeys[index]" class="entry-row">
+          <div class="entry-heading"><strong>规则 {{ index + 1 }}</strong><el-button type="danger" link @click="removeRule(index)">移除</el-button></div>
+          <div class="form-grid three-columns">
+            <el-form-item label="字段代码" required><el-select v-model="rule.fieldName" filterable><el-option v-for="(field, fieldIndex) in schemaForm.fields" :key="fieldKeys[fieldIndex]" :label="field.fieldName" :value="field.fieldName" /></el-select></el-form-item>
+            <el-form-item label="目标类型" required><el-input v-model="rule.targetType" /></el-form-item>
+            <el-form-item label="解析命名空间" required><el-input v-model="rule.namespace" /></el-form-item>
+            <el-form-item label="是否必需"><el-switch v-model="rule.required" /></el-form-item>
+            <el-form-item label="引用不存在策略" required><el-input v-model="rule.onNotFound" /></el-form-item>
+            <el-form-item label="引用不唯一策略" required><el-input v-model="rule.onAmbiguous" /></el-form-item>
+          </div>
+        </div>
+        <el-empty v-if="!schemaForm.referenceRules.length" description="暂无引用规则" :image-size="48" />
       </el-form>
       <template #footer>
         <el-button @click="schemaVisible = false">取消</el-button>
-        <el-button type="primary" :loading="creatingSchema" @click="createSchemaDraft">保存草稿</el-button>
+        <el-button type="primary" :loading="creatingSchema" @click="saveSchemaDraft">保存草稿</el-button>
       </template>
     </el-dialog>
 
@@ -119,7 +159,6 @@ import { computed, ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
-import JsonEditor from '@/components/common/JsonEditor.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { apiErrorMessage } from '@/api/client';
 import { eventsApi, type SchemaSnapshot, type SchemaTestResult, type EventSchemaField, type EventSchemaReferenceRule } from '@/api/events';
@@ -146,7 +185,19 @@ const eventTypeForm = ref({ eventType: '', eventName: '', scenarioCode: '', desc
 
 const schemaVisible = ref(false);
 const creatingSchema = ref(false);
-const schemaForm = ref({ eventType: '', schemaVersion: '', fieldsJson: '[\n  {"fieldName":"businessKey","displayName":"业务键","dataType":"STRING","required":true}\n]', referenceRulesJson: '[]' });
+const dataTypes = ['STRING', 'INTEGER', 'DECIMAL', 'BOOLEAN', 'DATE', 'DATETIME', 'OBJECT', 'ARRAY'];
+const emptyField = (): EventSchemaField => ({ fieldName: '', displayName: '', dataType: 'STRING', required: false });
+const emptyRule = (): EventSchemaReferenceRule => ({ fieldName: '', targetType: '', namespace: '', required: false, onNotFound: '', onAmbiguous: '' });
+const schemaForm = ref({ eventType: '', schemaVersion: '', fields: [emptyField()], referenceRules: [] as EventSchemaReferenceRule[] });
+const editingSchemaId = ref('');
+const editingLockVersion = ref<number | null>(null);
+const fieldKeys = ref([0]);
+const ruleKeys = ref<number[]>([]);
+let nextRowKey = 1;
+const addField = () => { schemaForm.value.fields.push(emptyField()); fieldKeys.value.push(nextRowKey++); };
+const addRule = () => { schemaForm.value.referenceRules.push(emptyRule()); ruleKeys.value.push(nextRowKey++); };
+const removeField = (index: number) => { schemaForm.value.fields.splice(index, 1); fieldKeys.value.splice(index, 1); };
+const removeRule = (index: number) => { schemaForm.value.referenceRules.splice(index, 1); ruleKeys.value.splice(index, 1); };
 
 const testVisible = ref(false);
 const testing = ref(false);
@@ -169,13 +220,30 @@ const upsertSchema = (schema: SchemaSnapshot) => {
   else schemas.value.unshift(schema);
 };
 
-const validateJsonText = (value: string, label: string, required = false) => {
-  if (!value.trim()) {
-    if (required) throw new Error('请填写' + label);
-    return;
+const optionalText = (value?: string) => value?.trim() || undefined;
+const numeric = (value?: number) => value == null ? undefined : value;
+const normalizeField = (field: EventSchemaField): EventSchemaField => ({
+  ...(field.id ? { id: field.id } : {}),
+  fieldName: field.fieldName.trim(), displayName: field.displayName.trim(), dataType: field.dataType, required: field.required,
+  ...(field.dataType === 'STRING' ? { minLength: numeric(field.minLength), maxLength: numeric(field.maxLength), pattern: optionalText(field.pattern) } : {}),
+  ...(['INTEGER', 'DECIMAL'].includes(field.dataType) ? { minimum: numeric(field.minimum), maximum: numeric(field.maximum), exclusiveMinimum: field.exclusiveMinimum, exclusiveMaximum: field.exclusiveMaximum, multipleOf: numeric(field.multipleOf) } : {}),
+  description: optionalText(field.description), dataElementCode: optionalText(field.dataElementCode),
+  valueSetCode: optionalText(field.valueSetCode), valueSetVersion: optionalText(field.valueSetVersion),
+  codeSchemeCode: optionalText(field.codeSchemeCode), codeSchemeVersion: optionalText(field.codeSchemeVersion)
+});
+const normalizeRule = (rule: EventSchemaReferenceRule): EventSchemaReferenceRule => ({
+  ...(rule.id ? { id: rule.id } : {}), fieldName: rule.fieldName.trim(), targetType: rule.targetType.trim(),
+  namespace: rule.namespace.trim(), required: rule.required, onNotFound: rule.onNotFound.trim(), onAmbiguous: rule.onAmbiguous.trim()
+});
+const validateSchema = (fields: EventSchemaField[], rules: EventSchemaReferenceRule[]) => {
+  if (!fields.length || fields.some(field => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(field.fieldName) || !field.displayName || !dataTypes.includes(field.dataType))) throw new Error('请填写有效的字段代码、显示名称和数据类型');
+  if (new Set(fields.map(field => field.fieldName)).size !== fields.length) throw new Error('字段代码不能重复');
+  for (const field of fields) {
+    if (field.minLength != null && field.maxLength != null && field.minLength > field.maxLength) throw new Error(`${field.fieldName} 的最小长度不能大于最大长度`);
+    if (field.minimum != null && field.maximum != null && field.minimum > field.maximum) throw new Error(`${field.fieldName} 的最小值不能大于最大值`);
+    if (field.multipleOf != null && field.multipleOf <= 0) throw new Error(`${field.fieldName} 的数值步长必须大于 0`);
   }
-  try { JSON.parse(value); }
-  catch { throw new Error(label + '必须是有效 JSON'); }
+  if (rules.some(rule => !fields.some(field => field.fieldName === rule.fieldName) || !rule.targetType || !rule.namespace || !rule.onNotFound || !rule.onAmbiguous)) throw new Error('引用规则须选择已有字段并填写目标类型、命名空间和处理策略');
 };
 
 const querySchema = async () => {
@@ -226,45 +294,55 @@ const createEventType = async () => {
 };
 
 const openSchemaDialog = () => {
+  editingSchemaId.value = '';
+  editingLockVersion.value = null;
   schemaForm.value = {
     eventType: queryForm.value.eventType || schemaForm.value.eventType,
     schemaVersion: queryForm.value.schemaVersion,
-    fieldsJson: '[\n  {"fieldName":"businessKey","displayName":"业务键","dataType":"STRING","required":true}\n]',
-    referenceRulesJson: '[]'
+    fields: [emptyField()], referenceRules: []
   };
+  fieldKeys.value = [nextRowKey++];
+  ruleKeys.value = [];
   schemaVisible.value = true;
 };
+const openEditSchema = async (row: SchemaSnapshot) => {
+  try {
+    const detail = await eventsApi.getSchemaDefinition(row.id);
+    if (detail.status !== 'DRAFT') throw new Error('只有草稿状态可以编辑');
+    editingSchemaId.value = detail.id;
+    editingLockVersion.value = detail.lockVersion;
+    schemaForm.value = { eventType: detail.eventType, schemaVersion: detail.schemaVersion, fields: detail.fields.map(field => ({ ...field })), referenceRules: detail.referenceRules.map(rule => ({ ...rule })) };
+    fieldKeys.value = detail.fields.map(() => nextRowKey++);
+    ruleKeys.value = detail.referenceRules.map(() => nextRowKey++);
+    schemaVisible.value = true;
+  } catch (error) { ElMessage.error(apiErrorMessage(error, '加载 Schema 草稿失败')); }
+};
 
-const createSchemaDraft = async () => {
+const saveSchemaDraft = async () => {
   const form = schemaForm.value;
   if (!form.eventType.trim() || !form.schemaVersion.trim()) {
     ElMessage.warning('请输入事件类型和 Schema 版本');
     return;
   }
+  const fields = form.fields.map(normalizeField);
+  const rules = form.referenceRules.map(normalizeRule);
   try {
-    validateJsonText(form.fieldsJson, '字段列表', true);
-    validateJsonText(form.referenceRulesJson, '引用规则', true);
-    const fields: EventSchemaField[] = JSON.parse(form.fieldsJson);
-    const rules: EventSchemaReferenceRule[] = JSON.parse(form.referenceRulesJson);
-    if (!Array.isArray(fields) || !fields.length || fields.some(field => !field.fieldName || !field.displayName || !field.dataType || typeof field.required !== 'boolean')) throw new Error('字段列表须为非空数组，且包含名称、显示名、类型和必填标记');
-    if (!Array.isArray(rules) || rules.some(rule => !rule.fieldName || !rule.targetType || !rule.namespace || typeof rule.required !== 'boolean' || !rule.onNotFound || !rule.onAmbiguous)) throw new Error('引用规则须为数组且填写完整');
+    validateSchema(fields, rules);
+    if (editingSchemaId.value && editingLockVersion.value == null) throw new Error('草稿缺少乐观锁版本，请重新打开编辑');
   } catch (error) {
     ElMessage.warning((error as Error).message);
     return;
   }
   creatingSchema.value = true;
   try {
-    const result = await eventsApi.createSchemaDraft({
-      eventType: form.eventType.trim(),
-      schemaVersion: form.schemaVersion.trim(),
-      fields: JSON.parse(form.fieldsJson) as EventSchemaField[],
-      referenceRules: JSON.parse(form.referenceRulesJson) as EventSchemaReferenceRule[]
-    });
+    const result = editingSchemaId.value
+      ? await eventsApi.updateSchemaDraft(editingSchemaId.value, { fields, referenceRules: rules, lockVersion: editingLockVersion.value! })
+      : await eventsApi.createSchemaDraft({ eventType: form.eventType.trim(), schemaVersion: form.schemaVersion.trim(), fields, referenceRules: rules });
     upsertSchema(result);
     schemaVisible.value = false;
-    ElMessage.success('Schema 草稿创建成功');
+    ElMessage.success(editingSchemaId.value ? 'Schema 草稿保存成功' : 'Schema 草稿创建成功');
   } catch (error) {
-    ElMessage.error(apiErrorMessage(error, '创建 Schema 草稿失败'));
+    ElMessage.error(apiErrorMessage(error, '保存 Schema 草稿失败'));
   } finally {
     creatingSchema.value = false;
   }
@@ -339,7 +417,12 @@ onMounted(async () => {
 }
 
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.mono-input :deep(textarea) { font-family: Consolas, monospace; }
+.three-columns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.section-heading, .entry-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.section-heading { margin: 10px 0; }
+.entry-row { padding: 12px 0; border-top: 1px solid var(--color-border); }
+.entry-heading { margin-bottom: 8px; }
+.entry-row :deep(.el-input-number), .entry-row :deep(.el-select) { width: 100%; }
 
 .json-code {
   margin: 0;
@@ -356,6 +439,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 760px) {
-  .query-bar, .form-grid { grid-template-columns: 1fr; }
+  .query-bar, .form-grid, .three-columns { grid-template-columns: 1fr; }
 }
 </style>
