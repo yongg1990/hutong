@@ -99,7 +99,7 @@
       </div>
     </div>
 
-    <el-dialog v-model="createDialogVisible" title="新建投影任务" width="620px" :close-on-click-modal="false">
+    <el-dialog v-model="createDialogVisible" title="新建投影任务" width="min(620px,94vw)" :close-on-click-modal="false">
       <el-form :model="createForm" label-position="top">
         <div class="form-grid">
           <el-form-item label="规范包代码" required><el-input v-model="createForm.profileCode" /></el-form-item>
@@ -125,7 +125,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { demo, isStaticMode } from '@/stores/demoStore';
+const route=useRoute();
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { extendedServices } from '@/api/extendedServices';
 import { RefreshRight } from '@element-plus/icons-vue';
@@ -153,6 +156,7 @@ const createForm = ref({
 });
 
 const loadProjections = async () => {
+  if(isStaticMode() && !searchQuery.value && demo.projections.length) searchQuery.value=demo.projections[0].projectionId;
   if (!searchQuery.value) {
     projections.value = [];
     return;
@@ -165,8 +169,8 @@ const loadProjections = async () => {
     });
     const errors = Array.isArray(item.errors) ? item.errors : item.errors ? [item.errors] : [];
     projections.value = [{
-      id: String(item.projectionId), projectionNo: String(item.projectionId), profileCode: '', profileName: '',
-      version: '', datasetName: item.datasetCode, asOfTime: item.asOfTime, status: item.status, recordCount: Array.isArray(item.output)?item.output.length:Number(item.recordCount??0),
+      id: String(item.projectionId), projectionNo: String(item.projectionId), profileCode: item.profileCode || '', profileName: isStaticMode() ? demo.collections.profiles.find(r=>r.profileCode===item.profileCode)?.profileName || '' : '',
+      version: item.profileVersion || '', datasetName: item.datasetCode, asOfTime: item.asOfTime, status: item.status, recordCount: Array.isArray(item.output)?item.output.length:Number(item.recordCount??0),
       outputHash: item.outputDigest, errorCount: errors.length, profileVersionId: item.profileVersionId,
       datasetCode: item.datasetCode, outputDigest: item.outputDigest, output: item.output,
       traceback: item.traceback, errors: item.errors, supersedesProjectionId: item.supersedesProjectionId
@@ -182,10 +186,11 @@ const loadProjections = async () => {
 const filteredProjections = computed(() => {
   return projections.value;
 });
+onMounted(()=>{if(isStaticMode()){createForm.value.projectSpaceId='1';createForm.value.profileCode=demo.collections.profiles[0]?.profileCode||'';subjectIdsText.value=String(route.query.eventId||route.query.batchNo||demo.fields[0].id);if(route.query.eventId||route.query.batchNo){createForm.value.subjectType=route.query.eventId?'EVENT':'BATCH';createDialogVisible.value=true;}void loadProjections();}});
 
 const generateNew = async () => {
   const subjectIds = subjectIdsText.value.split(',').map(item => item.trim());
-  if (!createForm.value.profileCode || !createForm.value.profileVersion || !/^\d+$/.test(createForm.value.projectSpaceId) || !subjectIds.length || subjectIds.some(id=>!/^\d+$/.test(id))) {
+  if (!createForm.value.profileCode || !createForm.value.profileVersion || !/^\d+$/.test(createForm.value.projectSpaceId) || !subjectIds.length || subjectIds.some(id=>isStaticMode()&&createForm.value.subjectType==='BATCH'?!id:!/^\d+$/.test(id))) {
     ElMessage.warning('请填写规范包代码、版本和有效主体 ID');
     return;
   }

@@ -5,16 +5,17 @@
       subtitle="订单确认、仓储入库、出库、交割与质押统一业务履约视图"
     >
       <template #actions>
-        <el-button @click="router.push('/business/events/new/ORDER_CONFIRMED')">确认订单</el-button>
-        <el-button @click="router.push('/business/events/new/OUTBOUND_COMPLETED')">记录出库</el-button>
-        <el-button @click="router.push('/business/events/new/DELIVERY_COMPLETED')">记录交割</el-button>
-        <el-button @click="router.push('/business/events/new/PLEDGE_CONFIRMED')">确认质押</el-button>
-        <el-button type="primary" @click="router.push('/business/events/new/WAREHOUSED')">
+        <el-button @click="openEvent('ORDER_CONFIRMED')">确认订单</el-button>
+        <el-button @click="openEvent('OUTBOUND_COMPLETED')">记录出库</el-button>
+        <el-button @click="openEvent('DELIVERY_COMPLETED')">记录交割</el-button>
+        <el-button @click="openEvent('PLEDGE_CONFIRMED')">确认质押</el-button>
+        <el-button v-if="isStaticMode() && selectedOrder?.stage==='PLEDGED'" @click="releasePledge">解除质押</el-button>
+        <el-button type="primary" @click="openEvent('WAREHOUSED')">
           记录入仓事件
         </el-button>
       </template>
     </PageHeader>
-    <el-alert type="info" :closable="false" title="订单、库存与统计为本地演示数据；事件提交调用正式接口。" style="margin-bottom:12px" />
+    <el-alert v-if="isStaticMode()" type="info" :closable="false" :title="'当前批次：' + (incomingBatch() || selectedOrder?.batchNo || '未选择')" style="margin-bottom:12px" />
 
     <!-- Stage Progress Indicator Bar (Interactive Stage Switching) -->
     <div class="stages-bar">
@@ -102,10 +103,10 @@
         <el-table-column label="下一步协同 / 操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button
-              v-if="row.fulfillmentStatus === 'PENDING_OUT'"
+              v-if="row.stage === 'WAREHOUSED'"
               size="small"
               type="primary"
-              @click.stop="router.push('/business/events/new/OUTBOUND_COMPLETED')"
+              @click.stop="openEvent('OUTBOUND_COMPLETED', row.batchNo)"
             >
               出库
             </el-button>
@@ -154,10 +155,10 @@
 
       <div class="info-card">
         <strong>仓储交割证据与区块链存证</strong>
-        <p>电子合同、检验报告、入出仓单据 3 / 3 齐全核验</p>
+        <p>关联证据 {{ relatedEvidenceCount }} 份</p>
         <div style="display: flex; gap: 8px;">
-          <el-button size="small" @click="router.push('/trust/evidence')">关联证据库</el-button>
-          <el-button size="small" type="primary" plain @click="router.push('/trust/proofs')">区块存证单</el-button>
+          <el-button size="small" @click="router.push({path:'/trust/evidence',query:{batchNo:selectedOrder?.batchNo||incomingBatch()}})">关联证据库</el-button>
+          <el-button size="small" type="primary" plain @click="router.push({path:'/trust/proofs',query:{subjectType:'BATCH',subjectId:selectedOrder?.batchNo||incomingBatch()}})">区块存证单</el-button>
         </div>
       </div>
     </div>
@@ -172,6 +173,8 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { supplyApi } from '@/api/supply';
+import { demo, isStaticMode, activity } from '@/stores/demoStore';
+import { useBusinessFlow } from '@/composables/useBusinessFlow';
 import type { SupplyOrder } from '@/types';
 
 const router = useRouter();
@@ -182,18 +185,21 @@ const loading = ref(false);
 
 const allOrders = ref<SupplyOrder[]>([]);
 const selectedOrder = ref<SupplyOrder | null>(null);
+const { incomingBatch, openEvent } = useBusinessFlow(() => selectedOrder.value?.batchNo);
+const relatedEvidenceCount = computed(() => demo.evidences.filter(r => r.batchNo === (selectedOrder.value?.batchNo || incomingBatch())).length);
+function releasePledge() { const row = demo.orders.find(r => r.id === selectedOrder.value?.id); if (!row) return; Object.assign(row, { stage:'WAREHOUSED',stockStatus:'WAREHOUSED',pledgeAmount:0 }); activity('解除质押',row.orderNo); void loadOrders(); }
 
 const loadOrders = async () => {
   loading.value = true;
   try {
-    const res = await supplyApi.getSupplyOrders({
+    const res = isStaticMode() ? demo.orders : await supplyApi.getSupplyOrders({
       keyword: orderNoKey.value,
       warehouse: selectedWh.value,
       stage: currentStage.value
     });
-    allOrders.value = res;
+    allOrders.value = incomingBatch() ? res.filter(r => r.batchNo === incomingBatch()) : res;
     if (res.length > 0 && !selectedOrder.value) {
-      selectedOrder.value = res[0];
+      selectedOrder.value = allOrders.value[0] || null;
     }
   } catch (err) {
     console.error('Failed to load supply orders', err);

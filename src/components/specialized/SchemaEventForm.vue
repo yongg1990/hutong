@@ -36,10 +36,10 @@
             <template v-for="fieldKey in group.fields" :key="fieldKey">
               <!-- Special Grid overrides -->
               <div v-if="fieldKey === 'indicatorsGrid'" class="field-item full-width">
-                <InspectionIndicatorGrid />
+                <InspectionIndicatorGrid v-model="formData.indicators" />
               </div>
               <div v-else-if="fieldKey === 'prescriptionItemsGrid'" class="field-item full-width">
-                <PrescriptionItemGrid />
+                <PrescriptionItemGrid v-model="formData.items" />
               </div>
               <div v-else-if="fieldKey === 'traceCodeHierarchy'" class="field-item full-width">
                 <TraceCodeHierarchyInput />
@@ -98,10 +98,10 @@
       <aside class="evidence-side-panel" id="group-EVIDENCE">
         <div class="side-card">
           <div class="side-card-title">关联追溯凭证</div>
-          <EvidencePicker />
+          <EvidencePicker v-model="formData.evidenceIds" />
         </div>
 
-        <div class="side-notice">
+        <div v-if="!isStaticMode()" class="side-notice">
           <strong>生产提交合规规则：</strong>
           <p>表单将显式锁定并提交 {{ schemaConfig.eventType }} 的 Schema v{{ schemaConfig.schemaVersion }}，提交时自动附带 <code>X-Idempotency-Key</code> 幂等标头。</p>
         </div>
@@ -109,7 +109,7 @@
     </div>
 
     <!-- Fixed Bottom Submit Bar -->
-    <el-button :loading="loadingSchema" @click="loadPublishedSchema">加载已发布 Schema</el-button>
+    <el-button v-if="!isStaticMode()" :loading="loadingSchema" @click="loadPublishedSchema">加载已发布 Schema</el-button>
     <el-form label-position="top" class="event-context-form"><el-form-item label="事件类型代码"><el-input v-model="eventMeta.eventType" /></el-form-item><el-form-item label="Schema 版本" required><el-input v-model="eventMeta.schemaVersion" /></el-form-item><el-form-item label="来源业务键（每次动作唯一）" required><el-input v-model="eventMeta.sourceBusinessKey" /></el-form-item><el-form-item label="发生时间" required><el-date-picker v-model="eventMeta.occurredAt" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" /></el-form-item><el-form-item label="原始记录 ID（事实引擎可选）"><el-input v-model="eventMeta.rawRecordId" /></el-form-item><el-form-item label="提交方式"><el-radio-group v-model="eventMeta.useFactEngine"><el-radio-button :value="false">业务接口</el-radio-button><el-radio-button :value="true">事实引擎</el-radio-button></el-radio-group></el-form-item><el-form-item label="Payload JSON"><JsonEditor v-model="payloadText" :rows="8" label="Payload JSON" /></el-form-item></el-form>
     <div class="fixed-submit-bar">
       <div class="draft-info">
@@ -119,6 +119,7 @@
       <div class="submit-actions">
         <el-button @click="handleCancel">取消</el-button>
         <el-button @click="saveDraft">保存本地草稿</el-button>
+        <el-button @click="restoreDraft">恢复草稿</el-button>
         <el-button type="primary" :loading="isSubmitting" @click="handleSubmit">
           提交事件
         </el-button>
@@ -139,7 +140,7 @@
         <div class="info-table">
           <div class="info-row"><span>事件全局 ID:</span> <b class="mono">{{ submittedResult?.eventId }}</b></div>
           <div class="info-row"><span>事件内容摘要:</span> <span class="mono hash-text">{{ submittedResult?.payloadDigest || '-' }}</span></div>
-          <div class="info-row"><span>链上状态:</span><el-button link @click="successModalVisible=false;router.push('/trust/proofs')">查看存证状态</el-button></div>
+          <div class="info-row"><span>{{ isStaticMode() ? '模拟存证状态:' : '链上状态:' }}</span><el-button link @click="successModalVisible=false;router.push({path:'/trust/proofs',query:{subjectType:'EVENT',subjectId:submittedResult?.eventId}})">查看存证状态</el-button></div>
         </div>
 
         <div class="next-action-title">您接下来可以进行以下跨模块协同联动：</div>
@@ -151,7 +152,7 @@
             查看事件详情与原始报文
           </el-button>
           <el-button @click="goToSupply">
-            前往供销交割工作台
+            返回业务流程
           </el-button>
         </div>
       </div>
@@ -164,7 +165,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
+import { isStaticMode, staticSchema, eventDefaults, nextId, now } from '@/stores/demoStore';
 import { ElMessage } from 'element-plus';
 import { CircleCheckFilled } from '@element-plus/icons-vue';
 import { useMetadataStore } from '@/stores/metadataStore';
@@ -182,9 +184,11 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
+const route = useRoute();
 const metadataStore = useMetadataStore();
 
 const schemaConfig = computed(() => {
+  if (isStaticMode()) return staticSchema(props.eventType);
   return metadataStore.getSchemaByType(props.eventType);
 });
 
@@ -213,7 +217,13 @@ const formData = reactive<Record<string, any>>({
 });
 
 const isSubmitting = ref(false);
+if (isStaticMode()) {
+  Object.assign(formData, eventDefaults(props.eventType, String(route.query.batchNo || route.query.sourceBatchNo || ''), String(route.query.prescriptionId || '')));
+  if (props.eventType === 'PLANTED') formData.batchNo = `CB-STATIC-${nextId()}`;
+  if (props.eventType === 'PRESCRIPTION_RECEIVED') { formData.prescriptionNoToken = `PRE-${nextId()}****`; delete formData.prescriptionId; }
+}
 const eventMeta=reactive({eventType:props.eventType,schemaVersion:'1.0.0',sourceBusinessKey:'',occurredAt:'',rawRecordId:'',useFactEngine:false});
+if (isStaticMode()) Object.assign(eventMeta, { sourceBusinessKey: `${props.eventType}-${nextId()}`, occurredAt: now() });
 const loadingSchema=ref(false);
 async function loadPublishedSchema(){loadingSchema.value=true;try{const snapshot=await eventsApi.getEventSchema(eventMeta.eventType,eventMeta.schemaVersion);const jsonSchema=JSON.parse(snapshot.schemaJson);const fields=Object.keys(jsonSchema.properties||{});const index=metadataStore.schemas.findIndex(s=>s.eventType===eventMeta.eventType);const config={eventType:snapshot.eventType,eventTypeName:snapshot.eventType,schemaVersion:snapshot.schemaVersion,status:snapshot.status,scenarioCode:'SUPPLY_CHAIN',groups:[{code:'BASIC',title:'业务数据',fields}],jsonSchema};if(index>=0)metadataStore.schemas.splice(index,1,config);else metadataStore.schemas.push(config);ElMessage.success('已加载发布版本');}catch(e){ElMessage.error(apiErrorMessage(e,'Schema 加载失败'));}finally{loadingSchema.value=false;}}
 const payloadText=ref(JSON.stringify(formData,null,2)), draftSavedAt=ref('');
@@ -242,9 +252,15 @@ const saveDraft = () => {
 };
 
 const successModalVisible = ref(false);
+function restoreDraft(){try{const raw=sessionStorage.getItem(`tcmirp_event_draft_${props.eventType}`);if(!raw){ElMessage.info('暂无草稿');return;}const draft=JSON.parse(raw);Object.assign(formData,draft.payload);payloadText.value=JSON.stringify(formData,null,2);eventMeta.schemaVersion=draft.schemaVersion;ElMessage.success('草稿已恢复');}catch{ElMessage.error('草稿无法读取');}}
 const submittedResult = ref<any>(null);
 
 const handleSubmit = async () => {
+  try {
+    const payload = parsePayload();
+    const missing = (schemaConfig.value.jsonSchema?.required || []).filter((key: string) => payload[key] == null || payload[key] === '');
+    if (missing.length) { ElMessage.warning('请填写：' + missing.map(getFieldTitle).join('、')); return; }
+  } catch { ElMessage.warning('请检查 Payload JSON'); return; }
   if(!eventMeta.eventType.trim()||!eventMeta.schemaVersion.trim()||!eventMeta.sourceBusinessKey.trim()||!eventMeta.occurredAt||(eventMeta.rawRecordId&&!/^\d+$/.test(eventMeta.rawRecordId))){ElMessage.warning('请填写事件类型、版本、唯一业务键和时间，原始记录 ID 须为数字字符串');return;}
   isSubmitting.value = true;
   try {
@@ -272,12 +288,15 @@ const goToEventDetail = () => {
 
 const goToSupply = () => {
   successModalVisible.value = false;
-  router.push('/business/supply');
+  const destinations: Record<string, string> = { PLANTED:'/business/field',FARMING_OPERATION:'/business/field',INPUT_APPLIED:'/business/field',HARVESTED:'/business/process-quality',PRIMARY_PROCESSED:'/business/process-quality',QUALITY_INSPECTED:'/business/coding',TRACE_CODE_ASSIGNED:'/business/supply',ORDER_CONFIRMED:'/business/supply',WAREHOUSED:'/business/supply',OUTBOUND_COMPLETED:'/business/supply',DELIVERY_COMPLETED:'/business/decoction',PLEDGE_CONFIRMED:'/business/supply',PRESCRIPTION_RECEIVED:'/business/decoction',DECOCTION_PROCESSED:'/business/decoction',DECOCTION_DELIVERED:'/trust/lineage' };
+  router.push({ path: destinations[props.eventType] || '/business/supply', query: { batchNo: submittedResult.value?.payload?.batchNo || formData.batchNo } });
 };
 
 const handleContinue = () => {
   successModalVisible.value = false;
-  eventMeta.sourceBusinessKey='';eventMeta.occurredAt='';eventMeta.rawRecordId='';
+  if (isStaticMode() && props.eventType === 'PLANTED') formData.batchNo = `CB-STATIC-${nextId()}`;
+  if (isStaticMode() && props.eventType === 'PRESCRIPTION_RECEIVED') { formData.prescriptionNoToken = `PRE-${nextId()}****`; delete formData.prescriptionId; }
+  eventMeta.sourceBusinessKey=isStaticMode()?`${props.eventType}-${nextId()}`:'';eventMeta.occurredAt=isStaticMode()?now():'';eventMeta.rawRecordId='';
   ElMessage.info('已重置录入，您可以继续提交下一条事件数据。');
 };
 </script>
@@ -539,5 +558,16 @@ const handleContinue = () => {
 .next-action-buttons .el-button {
   justify-content: flex-start;
   padding-left: 14px;
+}
+@media (max-width: 800px) {
+  .schema-form-wrapper { padding-bottom:150px; }
+  .form-layout-grid, .fields-grid { grid-template-columns:minmax(0,1fr); }
+  .form-sections-col, .evidence-side-panel, .field-item { min-width:0; }
+  .anchor-nav-bar, .nav-links { flex-wrap:wrap;gap:8px; }
+  .fixed-submit-bar { left:8px;right:8px;padding:8px;flex-wrap:wrap;gap:6px; }
+  .submit-actions { display:flex;flex-wrap:wrap;gap:4px; }
+  .submit-actions .el-button { margin-left:0; }
+  .field-item.full-width { overflow-x:auto; }
+  .field-item.full-width :deep(table) { min-width:650px; }
 }
 </style>

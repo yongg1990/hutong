@@ -1,4 +1,5 @@
 import { request } from './client';
+import { demo, isStaticMode } from '../stores/demoStore';
 
 export interface EvidenceItem {
   evidenceId: string;
@@ -70,6 +71,7 @@ export const trustApi = {
 
   // 当前文档仅支持按证据 ID 查询。
   async getEvidenceList(params?: { evidenceId?: string | number }): Promise<EvidenceItem[]> {
+    if (isStaticMode()) return demo.evidences.filter(r => !params?.evidenceId || r.evidenceId === String(params.evidenceId)) as EvidenceItem[];
     if (params?.evidenceId) {
       return request.get(`/openapi/v1/evidence/${params.evidenceId}`).then((item: any) => [{
           evidenceId: String(item.id),
@@ -108,7 +110,7 @@ export const trustApi = {
   ): Promise<{ success: boolean; hashMatched: boolean; evidenceId: string }> {
     const subjectType = params.subjectType || (params.fileId ? 'FILE' : undefined);
     const subjectId = String(params.subjectId ?? params.fileId ?? '');
-    if (!subjectType || !/^\d+$/.test(subjectId)) {
+    if (!subjectType || !(isStaticMode() && subjectType === 'BATCH' ? Boolean(subjectId.trim()) : /^\d+$/.test(subjectId))) {
       throw new Error('缺少可验真的主体 ID');
     }
     const normalizedDigest = params.digest

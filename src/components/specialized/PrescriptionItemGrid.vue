@@ -42,7 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { defaultItems } from '@/stores/demoStore';
 
 interface PrescriptionItem {
   pieceName: string;
@@ -52,11 +52,7 @@ interface PrescriptionItem {
   usage: string;
 }
 
-const items = ref<PrescriptionItem[]>([
-  { pieceName: '三七饮片', spec: '蒸制', qty: '15g', insuranceCode: '8691234567890123', usage: '冲服' },
-  { pieceName: '酒当归片', spec: '酒制', qty: '10g', insuranceCode: '8691234567890124', usage: '煎服' },
-  { pieceName: '蜜黄芪', spec: '蜜制', qty: '20g', insuranceCode: '8691234567890125', usage: '煎服' }
-]);
+const items = defineModel<PrescriptionItem[]>({ default: defaultItems });
 
 const addRow = () => {
   items.value.push({ pieceName: '', spec: '', qty: '', insuranceCode: '', usage: '煎服' });

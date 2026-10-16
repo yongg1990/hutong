@@ -5,15 +5,15 @@
       subtitle="产地初加工(趁鲜切制)、精深加工、饮片炮制与质量检验综合协同工作台"
     >
       <template #actions>
-        <el-button @click="router.push('/business/events/new/PRIMARY_PROCESSED')">
+        <el-button @click="openEvent('PRIMARY_PROCESSED')">
           记录初加工事件
         </el-button>
-        <el-button type="primary" @click="router.push('/business/events/new/QUALITY_INSPECTED')">
+        <el-button type="primary" @click="openEvent('QUALITY_INSPECTED')">
           录入质检报告
         </el-button>
       </template>
     </PageHeader>
-    <el-alert type="info" :closable="false" title="加工清单和统计为演示数据；正式记录通过事件录入提交，查询使用返回的事件 ID。" style="margin-bottom:12px" />
+    <el-alert v-if="isStaticMode()" type="info" :closable="false" :title="'当前批次：' + (incomingBatch() || selectedPrimaryRow?.primaryBatchNo || '未选择')" style="margin-bottom:12px" />
 
     <!-- Active Tab Selector -->
     <div class="tab-bar">
@@ -107,10 +107,10 @@
           <div class="kv-row"><span>加工完成时间:</span> <b>{{ selectedPrimaryRow.processedAt }}</b></div>
 
           <div class="card-actions">
-            <el-button type="primary" size="small" @click="router.push('/business/events/new/PRIMARY_PROCESSED')">
+            <el-button type="primary" size="small" @click="openEvent('PRIMARY_PROCESSED', selectedPrimaryRow.primaryBatchNo)">
               录入趁鲜切制事件
             </el-button>
-            <el-button size="small" @click="router.push('/business/events/new/QUALITY_INSPECTED')">
+            <el-button size="small" @click="openEvent('QUALITY_INSPECTED', selectedPrimaryRow.primaryBatchNo)">
               发起初加工检验
             </el-button>
           </div>
@@ -168,8 +168,8 @@
         <div class="panel-body" v-if="inspectEvents.length > 0">
           <div class="kv-row"><span>质检报告单号:</span> <b class="mono">{{ inspectEvents[0].businessKey }}</b></div>
           <div class="kv-row"><span>关联饮片批次:</span> <b class="mono">{{ inspectEvents[0].payload?.batchNo }}</b></div>
-          <div class="kv-row"><span>检验类型:</span> <b>中国药典全检 (ChP 2025)</b></div>
-          <div class="kv-row"><span>检验结论:</span> <b><el-tag type="success">合格 (QUALIFIED)</el-tag></b></div>
+          <div class="kv-row"><span>检验类型:</span> <b>{{ inspectEvents[0].payload?.inspectType }}</b></div>
+          <div class="kv-row"><span>检验结论:</span> <StatusTag :code="inspectEvents[0].payload?.conclusion" /></div>
 
           <el-divider style="margin: 12px 0;" />
           <h4 style="font-size: 13px; margin-bottom: 8px;">包含实测指标项:</h4>
@@ -208,6 +208,8 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import InspectionIndicatorGrid from '@/components/specialized/InspectionIndicatorGrid.vue';
 import { processQualityApi } from '@/api/processQuality';
+import { isStaticMode } from '@/stores/demoStore';
+import { useBusinessFlow } from '@/composables/useBusinessFlow';
 import { eventsApi } from '@/api/events';
 import type { PrimaryProcessingBatch, TrustEvent } from '@/types';
 
@@ -218,6 +220,7 @@ const loading = ref(false);
 const primaryBatches = ref<PrimaryProcessingBatch[]>([]);
 const selectedPrimaryRow = ref<PrimaryProcessingBatch | null>(null);
 const inspectEvents = ref<TrustEvent[]>([]);
+const { incomingBatch, openEvent } = useBusinessFlow(() => selectedPrimaryRow.value?.primaryBatchNo);
 
 const loadData = async () => {
   loading.value = true;
@@ -226,11 +229,11 @@ const loadData = async () => {
       processQualityApi.getPrimaryBatches(),
       eventsApi.queryTrustEvents({ eventType: 'QUALITY_INSPECTED' })
     ]);
-    primaryBatches.value = batches;
+    primaryBatches.value = incomingBatch() ? batches.filter(r => r.primaryBatchNo === incomingBatch() || r.harvestBatchNo === incomingBatch()) : batches;
     if (batches.length > 0) {
-      selectedPrimaryRow.value = batches[0];
+      selectedPrimaryRow.value = primaryBatches.value[0] || null;
     }
-    inspectEvents.value = allEvts;
+    inspectEvents.value = incomingBatch() ? allEvts.filter(r => r.payload.batchNo === incomingBatch()) : allEvts;
   } catch (err) {
     console.error('Failed to load process quality data', err);
   } finally {

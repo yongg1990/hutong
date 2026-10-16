@@ -1,4 +1,5 @@
 <template>
+  <div v-if="isStaticMode()" style="position:fixed;top:12px;right:16px;z-index:10"><el-tag type="warning">静态协同数据</el-tag></div>
   <div class="login-container">
     <div class="login-bg-decorations">
       <div class="decor-circle circle-1"></div>
@@ -161,6 +162,7 @@
 </template>
 
 <script setup lang="ts">
+import { isStaticMode } from '@/stores/demoStore';
 import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus';

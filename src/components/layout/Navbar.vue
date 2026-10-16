@@ -30,10 +30,11 @@
         </div>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="PRJ-YN-TCM-2026">
+            <el-dropdown-item v-if="isStaticMode()" command="1">中药互认协同空间 (1)</el-dropdown-item>
+            <el-dropdown-item v-if="!isStaticMode()" command="PRJ-YN-TCM-2026">
               云南中药全产业链追溯示范项目 (PRJ-YN-TCM-2026)
             </el-dropdown-item>
-            <el-dropdown-item command="PRJ-WS-SANQI-01">
+            <el-dropdown-item v-if="!isStaticMode()" command="PRJ-WS-SANQI-01">
               文山三七专线合规追溯项目 (PRJ-WS-SANQI-01)
             </el-dropdown-item>
           </el-dropdown-menu>
@@ -42,6 +43,8 @@
     </div>
 
     <div class="header-actions">
+      <el-tag v-if="isStaticMode()" type="warning">静态协同</el-tag>
+      <el-button size="small" @click="changeDataMode">{{ isStaticMode() ? '切换真实数据' : '切换静态数据' }}</el-button>
       <el-button type="primary" size="small" @click="router.push('/business/events/new')">
         <el-icon style="margin-right: 4px;"><Plus /></el-icon> 录入业务事件
       </el-button>
@@ -172,6 +175,8 @@
 </template>
 
 <script setup lang="ts">
+import { isStaticMode } from '@/stores/demoStore';
+function changeDataMode() { localStorage.setItem('tcmirp_data_mode', isStaticMode() ? 'backend' : 'static'); window.location.assign(`${import.meta.env.BASE_URL}login`); }
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ArrowDown, Plus, SwitchButton } from '@element-plus/icons-vue';
@@ -201,7 +206,9 @@ const saveAndTestBaseUrl = async () => {
 };
 
 const handleProjectChange = (projId: string) => {
-  if (projId === 'PRJ-WS-SANQI-01') {
+  if (isStaticMode()) {
+    contextStore.switchProject('1', '中药互认协同空间');
+  } else if (projId === 'PRJ-WS-SANQI-01') {
     contextStore.switchProject('PRJ-WS-SANQI-01', '文山三七专线合规追溯项目');
   } else {
     contextStore.switchProject('PRJ-YN-TCM-2026', '云南中药全产业链追溯示范项目');

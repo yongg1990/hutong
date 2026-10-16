@@ -1,4 +1,5 @@
 import { request } from './client';
+import { demo, isStaticMode } from '../stores/demoStore';
 import { mockGovernanceCases } from './mockData';
 import type { GovernanceCase } from '@/types';
 
@@ -220,6 +221,7 @@ export const governanceApi = {
   },
 
   async getCases(params?: { status?: string; ruleCode?: string }): Promise<GovernanceCase[]> {
+    if (isStaticMode()) return demo.cases.filter(c => (!params?.status || c.status === params.status) && (!params?.ruleCode || c.ruleCode.includes(params.ruleCode)));
     return mockGovernanceCases.filter(c => {
         if (params?.status && c.status !== params.status) return false;
         if (params?.ruleCode && !(c.ruleCode || '').includes(params.ruleCode)) return false;

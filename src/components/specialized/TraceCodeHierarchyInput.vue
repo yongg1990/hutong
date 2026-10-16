@@ -44,6 +44,8 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { demo, isStaticMode, nextId } from '@/stores/demoStore';
+const props = defineProps<{ batchNo?: string }>();
 import { ElMessage } from 'element-plus';
 import { codingApi } from '@/api/coding';
 import { apiErrorMessage } from '@/api/client';
@@ -53,6 +55,7 @@ const parentCode = ref('69300026073108BOX01');
 const pkgLevel = ref('LEVEL_1');
 const submitting = ref(false);
 const schemeCode=ref('GS1_128'),batchId=ref(''),packageUnitId=ref('');
+if (isStaticMode()) { batchId.value = demo.fields.find(r => r.batchNo === props.batchNo)?.id || ''; packageUnitId.value = nextId(); currentCode.value = `STATIC-${nextId()}`; parentCode.value = ''; }
 
 const submitTraceCode = async () => {
   if (!currentCode.value || !schemeCode.value || !/^\d+$/.test(batchId.value) || !/^\d+$/.test(packageUnitId.value)) {

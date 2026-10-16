@@ -40,7 +40,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { defaultIndicators } from '@/stores/demoStore';
 
 interface IndicatorItem {
   name: string;
@@ -50,11 +50,7 @@ interface IndicatorItem {
   status: 'PASS' | 'FAIL';
 }
 
-const items = ref<IndicatorItem[]>([
-  { name: '浸出物', result: '32.4', unit: '%', limit: '≥28.0%', status: 'PASS' },
-  { name: '人参皂苷Rg1+Rb1', result: '6.8', unit: '%', limit: '≥5.0%', status: 'PASS' },
-  { name: '重金属(铅)', result: '0.2', unit: 'mg/kg', limit: '≤5.0 mg/kg', status: 'PASS' }
-]);
+const items = defineModel<IndicatorItem[]>({ default: defaultIndicators });
 
 const addRow = () => {
   items.value.push({ name: '', result: '', unit: '', limit: '', status: 'PASS' });

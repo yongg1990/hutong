@@ -75,6 +75,7 @@
               <el-button size="small" link @click="viewRecord(row)">
                 链记录
               </el-button>
+              <el-button v-if="isStaticMode() && row.proofNo" size="small" link @click="completeStaticProof(row)">模拟存证 / 对账</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -143,7 +144,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { demo, isStaticMode } from '@/stores/demoStore';
+const route=useRoute();
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Delete, Plus } from '@element-plus/icons-vue';
 import { extendedServices } from '@/api/extendedServices';
@@ -161,13 +165,16 @@ const createVisible=ref(false), operationVisible=ref(false), operationResultVisi
 const proofForm=ref({projectSpaceId:localStorage.getItem('tcmirp_project_space_id')||'',proofPolicyId:'',subjectType:'EVENT',subjectId:''});
 const targets=ref([{chainType:'CHANGAN_CHAIN',networkCode:''}]);
 const operation=ref<'process'|'retry'|'reconcile'>('process'), operationId=ref(''), operationResult=ref<Record<string,unknown>>({});
-async function createProof(){if(![proofForm.value.projectSpaceId,proofForm.value.proofPolicyId,proofForm.value.subjectId].every(v=>/^\d+$/.test(v))||targets.value.some(v=>!v.networkCode.trim())){ElMessage.warning('请填写有效 ID 和目标网络代码');return;}operating.value=true;try{operationResult.value=await extendedServices.createProof({...proofForm.value,targets:targets.value});createVisible.value=false;operationResultVisible.value=true;ElMessage.success('存证任务已受理');}catch(e){ElMessage.error(apiErrorMessage(e,'创建失败'));}finally{operating.value=false;}}
+async function createProof(){const validSubject=isStaticMode()&&proofForm.value.subjectType==='BATCH'?Boolean(proofForm.value.subjectId.trim()):/^\d+$/.test(proofForm.value.subjectId);if(![proofForm.value.projectSpaceId,proofForm.value.proofPolicyId].every(v=>/^\d+$/.test(v))||!validSubject||targets.value.some(v=>!v.networkCode.trim())){ElMessage.warning('请填写有效 ID 和目标网络代码');return;}operating.value=true;try{operationResult.value=await extendedServices.createProof({...proofForm.value,targets:targets.value});createVisible.value=false;operationResultVisible.value=true;ElMessage.success('存证任务已受理');}catch(e){ElMessage.error(apiErrorMessage(e,'创建失败'));}finally{operating.value=false;}}
 async function runOperation(){if(!/^\d+$/.test(operationId.value.trim())){ElMessage.warning('请输入有效 ID');return;}try{await ElMessageBox.confirm('确认对当前项目中的指定任务或链记录执行操作？','确认操作',{type:'warning'});}catch{return;}operating.value=true;try{const actions={process:extendedServices.processProof,retry:extendedServices.retryProof,reconcile:extendedServices.reconcileProof};operationResult.value=await actions[operation.value](operationId.value.trim());operationVisible.value=false;operationResultVisible.value=true;ElMessage.success('操作已提交');}catch(e){ElMessage.error(apiErrorMessage(e,'存证操作失败'));}finally{operating.value=false;}}
 const chainType = ref('');
 const includeReceipts = ref(false);
 
 const drawerVisible = ref(false);
 const activeProof = ref<ProofMerkleItem | null>(null);
+watch(operationResult, () => { if(isStaticMode()) { subjectType.value=proofForm.value.subjectType;subjectId.value=proofForm.value.subjectId;void loadProofs(); } });
+async function completeStaticProof(row:ProofMerkleItem) { try{ await extendedServices.processProof(row.proofNo); await loadProofs();ElMessage.success('静态存证已完成');}catch(e){ElMessage.error(apiErrorMessage(e,'处理失败'));} }
+onMounted(() => { if(isStaticMode()){subjectType.value=String(route.query.subjectType||'EVENT');subjectId.value=String(route.query.subjectId||demo.events[0]?.eventId||'');Object.assign(proofForm.value,{projectSpaceId:'1',proofPolicyId:'1',subjectType:subjectType.value,subjectId:subjectId.value});targets.value[0].networkCode='STATIC';void loadProofs();} });
 
 const failedCount = computed(() => proofs.value.filter(item => /FAILED/.test(item.chainStatus || item.status)).length);
 
@@ -216,7 +223,7 @@ const verifyProof = async (row: ProofMerkleItem) => {
 };
 
 const canVerify = (row: ProofMerkleItem) => {
-  return ['EVENT', 'OBJECT', 'FILE', 'PROJECTION'].includes(row.subjectType || '') && Boolean(row.subjectId);
+  return ['EVENT', 'OBJECT', 'FILE', 'PROJECTION', 'BATCH'].includes(row.subjectType || '') && Boolean(row.subjectId);
 };
 
 const viewRecord = (row: ProofMerkleItem) => {

@@ -190,18 +190,22 @@ const runPrecheck = async () => {
 }
 
 .rule-table th {
-  background: #f6f8f7;
+  background: #f0f6f4;
+  color: #244b49;
+  font-weight: 700;
   padding: 8px 12px;
   font-size: 12px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid #e3ece9;
   text-align: left;
 }
 
 .rule-table td {
   padding: 8px 12px;
   font-size: 12px;
-  border-bottom: 1px solid #edf0ee;
+  border-bottom: 1px solid #e3ece9;
 }
+
+.rule-table tbody tr:hover td { background: #f5faf8; }
 
 .preview-box {
   padding: 12px;

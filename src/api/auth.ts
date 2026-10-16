@@ -1,4 +1,5 @@
 import { request, apiCall } from './client';
+import { isStaticMode } from '../stores/demoStore';
 import B from '@/utils/Secret/BigInt';
 import R from '@/utils/Secret/RSA';
 
@@ -68,7 +69,7 @@ export const authApi = {
     localStorage.setItem('tcmirp_user', JSON.stringify(user));
     localStorage.setItem('tcmirp_tenant_id', user.tenantId);
     localStorage.setItem('tcmirp_tenant_name', user.tenantName);
-    localStorage.setItem('tcmirp_session_source', 'backend');
+    localStorage.setItem('tcmirp_session_source', isStaticMode() ? 'static' : 'backend');
     return { token, tokenType: 'Bearer', expiresIn: Number(res?.expiresIn || 86400), user };
   },
 

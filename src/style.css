@@ -234,3 +234,38 @@ a:hover { color: var(--color-brand-light); }
   .filter-fields > * { max-width: 100%; }
   .business-page .panel-body, .governance-page .panel-body, .master-data-page .panel-body, .settings-page .panel-body, .trust-page .panel-body, .operations-page .panel-body, .exchange-page .panel-body { padding: 12px !important; }
 }
+
+/* Consistent data-list presentation across pages and detail views. */
+.el-table {
+  --el-table-header-bg-color: #f0f6f4 !important;
+  --el-table-header-text-color: #244b49 !important;
+  --el-table-border-color: #e3ece9 !important;
+  --el-table-row-hover-bg-color: #f5faf8 !important;
+  width: 100%;
+  color: var(--color-ink);
+}
+.el-table th.el-table__cell {
+  height: 44px;
+  padding: 8px 0 !important;
+  background: #f0f6f4 !important;
+  color: #244b49 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+.el-table td.el-table__cell {
+  height: 50px;
+  padding: 9px 0 !important;
+  border-bottom: 1px solid #e3ece9 !important;
+  color: var(--color-ink) !important;
+}
+.el-table .el-table__row:hover > td.el-table__cell { background: #f5faf8; }
+.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell { background: #fff; }
+.el-table--striped .el-table__body tr.el-table__row--striped:hover td.el-table__cell { background: #f5faf8; }
+.el-table .cell { line-height: 22px; }
+.el-table--border .el-table__cell { border-right: 0 !important; }
+.el-table--border::after, .el-table--border::before { display: none; }
+.el-table .el-button.is-link { padding: 4px 3px; font-size: 12px; font-weight: 600; }
+.el-table .el-button.is-link + .el-button.is-link { margin-left: 8px; }
+.pagination-row .el-pagination { flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.pagination-row .el-pagination__total { color: var(--color-text-secondary); }
+.pagination-row .el-pager li.is-active { color: var(--color-brand); font-weight: 700; }

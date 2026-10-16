@@ -63,7 +63,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { isStaticMode } from '@/stores/demoStore';
+const route = useRoute();
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
@@ -77,11 +80,13 @@ const createDialogVisible = ref(false);
 const createForm = ref<EvidenceBindRequest>({ evidenceType: '', subjectType: 'EVENT', subjectId: '' });
 
 const evidences = ref<EvidenceItem[]>([]);
+onMounted(() => { evidenceId.value=String(route.query.evidenceId||''); if(isStaticMode()||evidenceId.value) void loadEvidences(); });
 
 const loadEvidences = async () => {
   loading.value = true;
   try {
-    evidences.value = await trustApi.getEvidenceList({ evidenceId: evidenceId.value });
+    const rows = await trustApi.getEvidenceList({ evidenceId: evidenceId.value });
+    evidences.value = route.query.batchNo ? rows.filter((r:any)=>r.batchNo===route.query.batchNo) : rows;
   } catch (err) {
     console.error('Failed to load evidence', err);
   } finally {
@@ -132,7 +137,6 @@ const verifyHash = async (row: any) => {
   }
 };
 </script>
-
 <style scoped>
 .panel {
   background: var(--color-surface);

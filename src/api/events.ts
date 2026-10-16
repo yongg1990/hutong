@@ -1,4 +1,5 @@
 import { request } from './client';
+import { demo, isStaticMode, submitStaticEvent } from '../stores/demoStore';
 import type { TrustEvent } from '@/types';
 import { submitSupplyChainEvent } from './supplyChain';
 
@@ -106,6 +107,7 @@ export const eventsApi = {
     processStatus?: string;
     proofStatus?: string;
   }): Promise<TrustEvent[]> {
+    if (isStaticMode()) return demo.events.filter(r => (!params?.eventId || r.eventId === String(params.eventId)) && (!params?.eventType || r.eventType === params.eventType) && (!params?.businessKey || String(r.businessKey || '').includes(params.businessKey)) && (!params?.processStatus || r.processStatus === params.processStatus) && (!params?.proofStatus || r.proofStatus === params.proofStatus));
     if (params?.eventId) {
       return request.get(`/openapi/v1/event-fact/events/${params.eventId}`).then((item: any) => [{
           eventId: String(item.id),
@@ -126,6 +128,7 @@ export const eventsApi = {
 
   // GET /openapi/v1/event-fact/events/{id}
   async getTrustEventDetail(eventId: string): Promise<TrustEvent | null> {
+    if (isStaticMode()) return demo.events.find(r => r.eventId === eventId) || null;
     return request.get(`/openapi/v1/event-fact/events/${eventId}`).then((item: any) => ({
         eventId: String(item.id),
         eventType: item.eventType,
@@ -145,6 +148,7 @@ export const eventsApi = {
   async submitEvent(payload: {
     eventType: string; payload: Record<string, any>; schemaVersion?: string; sourceBusinessKey?: string; occurredAt?: string; rawRecordId?: string; useFactEngine?: boolean;
   }): Promise<{ success: boolean; eventId: string; payloadDigest?: string; status?: string }> {
+    if (isStaticMode()) { const result = submitStaticEvent(payload); return { ...result, success: true }; }
     const projectSpaceId = localStorage.getItem('tcmirp_project_space_id') || localStorage.getItem('tcmirp_project_id') || '1';
     const sourceSystemId = localStorage.getItem('tcmirp_source_system_id') || '1';
     const schemaVersion = payload.schemaVersion || '1.0.0';

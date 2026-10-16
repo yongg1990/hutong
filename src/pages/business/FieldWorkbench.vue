@@ -11,7 +11,7 @@
         </el-button>
       </template>
     </PageHeader>
-    <el-alert type="info" :closable="false" title="批次列表为本地演示数据；业务事件提交调用正式接口。" style="margin-bottom:12px" />
+    <el-alert v-if="isStaticMode()" type="info" :closable="false" title="静态协同数据" style="margin-bottom:12px" />
 
     <!-- Interactive Scenario Stages Header Bar -->
     <div class="stages-bar">
@@ -112,13 +112,13 @@
           <div class="kv-row"><span>最近农事:</span> <b>{{ selectedRow.lastEvent }}</b></div>
 
           <div class="card-actions">
-            <el-button type="primary" size="small" @click="router.push('/business/events/new/FARMING_OPERATION')">
+            <el-button type="primary" size="small" @click="openEvent('FARMING_OPERATION')">
               记录农事作业
             </el-button>
-            <el-button size="small" @click="router.push('/business/events/new/INPUT_APPLIED')">
+            <el-button size="small" @click="openEvent('INPUT_APPLIED')">
               记录投入品施用
             </el-button>
-            <el-button size="small" @click="router.push('/business/events/new/HARVESTED')">记录采收</el-button>
+            <el-button size="small" @click="openEvent('HARVESTED')">记录采收</el-button>
           </div>
 
           <el-divider style="margin: 14px 0 10px;" />
@@ -147,6 +147,8 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { fieldApi } from '@/api/field';
+import { demo, isStaticMode } from '@/stores/demoStore';
+import { useBusinessFlow } from '@/composables/useBusinessFlow';
 import type { FieldCropBatch } from '@/types';
 
 const router = useRouter();
@@ -158,6 +160,7 @@ const loading = ref(false);
 const allBatches = ref<FieldCropBatch[]>([]);
 
 const loadBatches = async () => {
+  if(isStaticMode()) { allBatches.value=demo.fields; selectedRow.value=demo.fields.find(r=>r.batchNo===incomingBatch()) || selectedRow.value || demo.fields[0] || null; return; }
   loading.value = true;
   try {
     const res = await fieldApi.getFieldBatches({
@@ -220,6 +223,8 @@ const filteredBatches = computed(() => {
 });
 
 const selectedRow = ref<FieldCropBatch | null>(filteredBatches.value[0] || null);
+const { incomingBatch, openEvent } = useBusinessFlow(() => selectedRow.value?.batchNo);
+if (isStaticMode()) { allBatches.value = demo.fields; selectedRow.value = demo.fields.find(r => r.batchNo === incomingBatch()) || demo.fields[0]; }
 
 watch(filteredBatches, (newList) => {
   if (newList.length > 0) {

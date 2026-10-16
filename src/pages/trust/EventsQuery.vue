@@ -39,7 +39,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { isStaticMode } from '@/stores/demoStore';
 import { useRouter } from 'vue-router';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
@@ -77,6 +78,7 @@ const handleReset = async () => {
 const viewDetail = (row: any) => {
   router.push(`/trust/events/${row.eventId}`);
 };
+onMounted(() => { if(isStaticMode()) void loadEvents(); });
 </script>
 
 <style scoped>

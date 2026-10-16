@@ -5,12 +5,12 @@
       subtitle="品种、饮片批次、医保编码与追溯码赋码登记"
     >
       <template #actions>
-        <el-button type="primary" @click="router.push('/business/events/new/TRACE_CODE_ASSIGNED')">
+        <el-button type="primary" @click="openEvent('TRACE_CODE_ASSIGNED')">
           赋码登记与绑定
         </el-button>
       </template>
     </PageHeader>
-    <el-alert type="info" :closable="false" title="批次清单为演示数据；品种维护、追溯码登记和赋码事件提交调用正式接口。" style="margin-bottom:12px" />
+    <el-alert v-if="isStaticMode()" type="info" :closable="false" :title="'当前批次：' + (incomingBatch() || selectedBatch)" style="margin-bottom:12px" />
 
     <div class="grid-two">
       <div class="panel">
@@ -23,7 +23,7 @@
             查看中药饮片标准库 ➔
           </el-button>
         </div>
-        <el-table :data="herbPieces">
+        <el-table :data="herbPieces" highlight-current-row @row-click="selectedBatch=$event.batchNo">
           <el-table-column prop="speciesName" label="品种 *" width="85" />
           <el-table-column prop="batchNo" label="批次号 *" width="130" class-name="mono" />
           <el-table-column prop="medicalInsuranceCode" label="国家医保饮片编码 (16位) *" min-width="170" class-name="mono" />
@@ -46,7 +46,7 @@
           <h2>追溯码层次结构定义器</h2>
         </div>
         <div class="panel-body">
-          <TraceCodeHierarchyInput />
+          <TraceCodeHierarchyInput :key="selectedBatch" :batch-no="selectedBatch" />
         </div>
       </div>
     </div>
@@ -59,16 +59,22 @@ import { useRouter } from 'vue-router';
 import PageHeader from '@/components/common/PageHeader.vue';
 import TraceCodeHierarchyInput from '@/components/specialized/TraceCodeHierarchyInput.vue';
 import { codingApi } from '@/api/coding';
+import { demo, isStaticMode } from '@/stores/demoStore';
+import { useBusinessFlow } from '@/composables/useBusinessFlow';
 import type { HerbPiece } from '@/types';
 
 const router = useRouter();
 const herbPieces = ref<HerbPiece[]>([]);
 const loading = ref(false);
+const selectedBatch = ref('');
+const { incomingBatch, openEvent } = useBusinessFlow(() => selectedBatch.value);
 
 const loadData = async () => {
   loading.value = true;
   try {
-    herbPieces.value = await codingApi.getCodingPieces();
+    const rows = isStaticMode() ? demo.pieces : await codingApi.getCodingPieces();
+    herbPieces.value = incomingBatch() ? rows.filter(r => r.batchNo === incomingBatch()) : rows;
+    selectedBatch.value = incomingBatch() || herbPieces.value[0]?.batchNo || '';
   } catch (err) {
     console.error('Failed to load coding pieces', err);
   } finally {

@@ -5,10 +5,11 @@
       :subtitle="eventDetail.eventTypeName + ' · 发生时间: ' + eventDetail.occurredAt"
     >
       <template #actions>
-        <el-button @click="router.push('/trust/proofs')">
+        <el-button @click="router.push({path:'/exchange/projections',query:{eventId:eventDetail.eventId}})">生成互通投影</el-button>
+        <el-button @click="router.push({path:'/trust/proofs',query:{subjectType:'EVENT',subjectId:eventDetail.eventId}})">
           查看区块链存证单
         </el-button>
-        <el-button @click="router.push('/trust/evidence')">
+        <el-button @click="router.push({path:'/trust/evidence',query:{batchNo:eventDetail.payload?.batchNo}})">
           合规证据库
         </el-button>
         <el-button type="primary" @click="router.push('/trust/lineage?eventId=' + eventDetail.eventId)">
@@ -57,6 +58,7 @@
           <div class="kv-row"><span>事件类型:</span> <b class="mono">{{ eventDetail.eventType }}</b></div>
           <div class="kv-row"><span>发生时间:</span> <b>{{ eventDetail.occurredAt }}</b></div>
           <div class="kv-row"><span>Payload 摘要:</span> <b class="mono digest">{{ eventDetail.payloadDigest || '-' }}</b></div>
+          <div class="kv-row"><span>关联证据:</span><b>{{ (eventDetail.payload?.evidenceIds || []).join('、') || '无' }}</b></div>
         </div>
       </div>
     </div>

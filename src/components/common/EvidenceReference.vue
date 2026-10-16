@@ -1,5 +1,6 @@
 <template>
   <div>
+    <el-select v-if="isStaticMode()" v-model="selected" multiple placeholder="关联证据" style="width:100%"><el-option v-for="item in demo.evidences" :key="item.evidenceId" :value="item.evidenceId" :label="item.name || item.type" /></el-select>
     <el-input v-model="id" placeholder="真实证据 ID" />
     <div class="actions"><el-button :icon="Search" :loading="loading" @click="lookup">查询证据</el-button><el-button @click="$router.push('/trust/evidence')">登记证据</el-button></div>
     <el-descriptions v-if="record" :column="1" border>
@@ -13,6 +14,8 @@
 </template>
 <script setup lang="ts">
 import { ref } from 'vue';
+import { demo, isStaticMode } from '@/stores/demoStore';
+const selected = defineModel<string[]>({ default: () => [] });
 import { ElMessage } from 'element-plus';
 import { Search } from '@element-plus/icons-vue';
 import { trustApi, type EvidenceItem } from '@/api/trust';

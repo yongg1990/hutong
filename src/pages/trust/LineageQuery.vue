@@ -67,6 +67,7 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import GraphvizLineageCanvas from '@/components/specialized/GraphvizLineageCanvas.vue';
 import { trustApi } from '@/api/trust';
+import { demo, isStaticMode, findBatch } from '@/stores/demoStore';
 
 const router = useRouter();
 const route = useRoute();
@@ -84,14 +85,15 @@ const selectedNode = ref<any>(null);
 onMounted(() => {
   const queryVal = (route.query.batchNo || route.query.code || route.query.eventId) as string;
   if (queryVal) {
-    rootId.value = /^\d+$/.test(queryVal)?queryVal:'';
+    rootId.value = isStaticMode() ? queryVal : /^\d+$/.test(queryVal)?queryVal:'';
     rootType.value = route.query.eventId ? 'EVENT' : route.query.batchNo ? 'BATCH' : 'OBJECT';
     ElMessage.info(`已自动定位溯源标的: ${queryVal}`);
+    if(isStaticMode()) void handleSearch();
   }
 });
 
 const handleSearch = async () => {
-  if (!/^\d+$/.test(rootId.value)||!/^\d+$/.test(projectSpaceId.value)||!purposeCode.value.trim()) {
+  if ((!isStaticMode() && (!/^\d+$/.test(rootId.value)||!/^\d+$/.test(projectSpaceId.value))) || !rootId.value || !purposeCode.value.trim()) {
     ElMessage.warning('请输入有效的根主体 ID');
     return;
   }
@@ -122,17 +124,18 @@ const handleNodeClick = (node: any) => {
 
 const goToEvent = () => {
   drawerVisible.value = false;
-  router.push(`/trust/events/${selectedNode.value?.id || 'EVT-20260808-001'}`);
+  const node=selectedNode.value; const id=node?.eventId || (node?.type==='EVENT'?node.id:demo.events.find(r=>r.payload.batchNo===findBatch(node?.batchNo||node?.id))?.eventId);
+  router.push(id?`/trust/events/${id}`:'/trust/events');
 };
 
 const goToProof = () => {
   drawerVisible.value = false;
-  router.push('/trust/proofs');
+  const node=selectedNode.value;router.push({path:'/trust/proofs',query:{subjectType:node?.type==='EVENT'?'EVENT':'BATCH',subjectId:node?.subjectId||node?.id}});
 };
 
 const goToEvidence = () => {
   drawerVisible.value = false;
-  router.push('/trust/evidence');
+  router.push({path:'/trust/evidence',query:{evidenceId:selectedNode.value?.type==='EVIDENCE'?selectedNode.value.subjectId:undefined,batchNo:selectedNode.value?.batchNo}});
 };
 
 </script>

@@ -1,6 +1,8 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { ElMessage } from 'element-plus';
 import { reactive } from 'vue';
+import { isStaticMode } from '../stores/demoStore';
+import { staticAdapter } from './staticAdapter';
 
 // Default requests use the local proxy for the documented intranet API.
 export const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/tcmirp';
@@ -135,6 +137,11 @@ const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
 request.interceptors.request.use((config) => {
   const method = (config.method || 'get').toUpperCase();
   const rawUrl = String(config.url || '').split('?')[0];
+  if (isStaticMode()) {
+    config.adapter = staticAdapter;
+    if (method === 'GET') beginQuery(config);
+    return config;
+  }
   if (!swaggerEndpointPatterns.some(item => item.method === method && item.pattern.test(rawUrl))) {
     return Promise.reject(Object.assign(new Error('该接口未在当前 Swagger 文档发布，已使用本地演示数据'), { code: 'UNSUPPORTED_ENDPOINT' }));
   }
@@ -259,6 +266,7 @@ export async function apiCall<T>(
     return result as T;
   } catch (err: any) {
     // 401 Unauthorized token expired
+    if (isStaticMode()) throw err;
     if (err?.response?.status === 401 || err?.response?.status === 403) {
       throw err;
     }
@@ -282,6 +290,7 @@ export async function apiCall<T>(
 
 // Check backend connectivity to Swagger/Health API
 export async function checkBackendHealth(): Promise<boolean> {
+  if (isStaticMode()) return true;
   try {
     // Try pinging Swagger docs or health endpoint
     await axios.get(`${apiStatus.baseUrl}/v3/api-docs`, { timeout: 3000 });

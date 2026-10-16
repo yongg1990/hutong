@@ -13,11 +13,18 @@ import { ref } from 'vue';
 import axios from 'axios';
 import { Upload } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
+import { demo, isStaticMode } from '@/stores/demoStore';
 const props=defineProps<{uploadUrl:string}>();
 const emit=defineEmits<{uploaded:[objectVersion:string]}>();
 const file=ref<File|null>(null),method=ref<'PUT'|'POST'>('PUT'),uploading=ref(false),progress=ref(0);
 function selectFile(event:Event){file.value=(event.target as HTMLInputElement).files?.[0]||null;emit('uploaded','');}
 async function transfer(){if(!file.value||!props.uploadUrl)return;uploading.value=true;progress.value=0;try{
+  if(isStaticMode() && props.uploadUrl.startsWith('static://')) {
+    const id=props.uploadUrl.split('/').at(-1),session=demo.uploadSessions.find(r=>r.uploadSessionId===id);
+    if(!session)throw new Error('上传会话不存在');
+    const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await file.value.arrayBuffer()))).map(b=>b.toString(16).padStart(2,'0')).join('');
+    Object.assign(session,{transferred:true,fileName:file.value.name,sizeBytes:String(file.value.size),contentDigest:`sha256:${digest}`,uploadStatus:'TRANSFERRED'});progress.value=100;emit('uploaded',`static-${digest}`);ElMessage.success('静态文件传输完成');return;
+  }
   const url=new URL(props.uploadUrl,window.location.origin);if(!['http:','https:'].includes(url.protocol))throw new Error('上传 URL 不合法');
   // Storage requests intentionally bypass platform authentication interceptors.
   const response=await axios.request({url:url.href,method:method.value,data:file.value,headers:{'Content-Type':file.value.type||'application/octet-stream'},onUploadProgress:e=>{progress.value=e.total?Math.round(e.loaded/e.total*100):0;}});
