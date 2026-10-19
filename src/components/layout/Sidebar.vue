@@ -87,11 +87,14 @@ const menuGroups = [
     icon: Filter,
     items: [
       { title: '来源系统', path: '/governance/sources', hasApi: true, apiPath: '/openapi/v1/source-systems' },
+      { title: '来源系统密钥管理', path: '/governance/source-keys', hasApi: true, apiPath: '/ingestion-governance/source-systems/{sourceSystemId}/keys' },
+      { title: '对接助手', path: '/governance/integration-assistant', hasApi: true, apiPath: '/ingestion-governance/integration-assistant' },
       { title: '接入批次与原始记录', path: '/governance/batches', hasApi: true, apiPath: '/openapi/v1/batches, /openapi/v1/raw-records' },
       { title: '字段映射预检', path: '/governance/mappings', hasApi: true, apiPath: '/openapi/v1/mappings/test' },
       { title: '治理异常案卷', path: '/governance/cases', hasApi: false, apiPath: '' },
       { title: '数据元与值域', path: '/governance/standards', hasApi: true, apiPath: '/openapi/v1/data-elements, /openapi/v1/value-sets' },
-      { title: '事件 Schema 配置', path: '/governance/events', hasApi: true, apiPath: '/openapi/v1/event-fact/schemas/definitions' }
+      { title: '事件 Schema 配置', path: '/governance/events', hasApi: true, apiPath: '/openapi/v1/event-fact/schemas/definitions' },
+      { title: '事件类型授权', path: '/governance/event-authorizations', hasApi: true, apiPath: '/openapi/v1/event-fact/event-type-authorizations' }
     ]
   },
   {

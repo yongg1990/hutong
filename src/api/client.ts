@@ -68,6 +68,12 @@ const finishQuery = (config?: object) => {
 // additional offline/demo views whose endpoints are not present in this backend;
 // those calls intentionally fall through to apiCall's local fallback.
 const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
+  { method: 'GET', pattern: /^\/ingestion-governance\/source-systems\/\d+\/keys$/ },
+  { method: 'POST', pattern: /^\/ingestion-governance\/(?:source-systems\/\d+\/keys(?:\/\d+\/status)?|admin\/tenants\/\d+\/source-systems\/\d+\/keys)$/ },
+  { method: 'GET', pattern: /^\/ingestion-governance\/integration-assistant\/(tenants|project-spaces|source-systems|source-system-keys|event-types|schemas)$/ },
+  { method: 'POST', pattern: /^\/ingestion-governance\/integration-assistant\/(request-examples|validate)$/ },
+  { method: 'GET', pattern: /^\/openapi\/v1\/event-fact\/event-type-authorizations\/tenants\/\d+\/project-spaces\/\d+\/event-types$/ },
+  { method: 'POST', pattern: /^\/openapi\/v1\/event-fact\/event-type-authorizations\/tenants\/\d+\/project-spaces\/\d+\/event-types$/ },
   { method: 'POST', pattern: /^\/tenant-access\/auth\/(login|logout)$/ },
   { method: 'GET', pattern: /^\/tenant-access\/(tenants|users|permissions)$/ },
   { method: 'GET', pattern: /^\/tenant-access\/permissions\/tree$/ },
@@ -137,7 +143,9 @@ const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
 request.interceptors.request.use((config) => {
   const method = (config.method || 'get').toUpperCase();
   const rawUrl = String(config.url || '').split('?')[0];
-  if (isStaticMode()) {
+  // Key material and authorization changes must never be simulated.
+  const liveIntegration = rawUrl.startsWith('/ingestion-governance/') || rawUrl.startsWith('/openapi/v1/event-fact/event-type-authorizations/');
+  if (isStaticMode() && !liveIntegration) {
     config.adapter = staticAdapter;
     if (method === 'GET') beginQuery(config);
     return config;

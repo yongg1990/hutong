@@ -61,6 +61,9 @@ const router = createRouter({
           component: () => import('@/pages/business/EventEntry.vue')
         },
         // Governance
+        { path: 'governance/source-keys', name: 'GovernanceSourceKeys', component: () => import('@/pages/governance/SourceKeys.vue') },
+        { path: 'governance/event-authorizations', name: 'GovernanceEventAuthorizations', component: () => import('@/pages/governance/EventAuthorizations.vue') },
+        { path: 'governance/integration-assistant', name: 'GovernanceIntegrationAssistant', component: () => import('@/pages/governance/IntegrationAssistant.vue') },
         {
           path: 'governance/sources',
           name: 'GovernanceSources',

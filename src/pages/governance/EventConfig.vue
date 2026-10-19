@@ -2,6 +2,7 @@
   <div class="governance-page">
     <PageHeader title="事件与 Schema 配置" subtitle="事件类型定义、Schema 草稿、测试与发布">
       <template #actions>
+        <el-button @click="$router.push('/governance/event-authorizations')">事件类型授权</el-button>
         <el-button @click="eventTypeVisible = true">创建事件类型</el-button>
         <el-button type="primary" @click="openSchemaDialog">创建 Schema 草稿</el-button>
       </template>

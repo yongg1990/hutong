@@ -21,6 +21,35 @@ export interface PageApiInfo {
 }
 
 export const PAGE_API_MAP: Record<string, PageApiInfo> = {
+  '/governance/source-keys': {
+    hasApi: true, moduleName: '来源系统密钥管理', apiPath: '/ingestion-governance/source-systems/{sourceSystemId}/keys',
+    specDoc: 'OpenAPI / APP-03 来源系统密钥管理（2026-10-19）', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    endpoints: [
+      { method: 'GET', path: '/ingestion-governance/source-systems/{sourceSystemId}/keys', desc: '当前租户来源密钥列表' },
+      { method: 'POST', path: '/ingestion-governance/source-systems/{sourceSystemId}/keys', desc: '登记对接方公钥并生成平台密钥' },
+      { method: 'POST', path: '/ingestion-governance/source-systems/{sourceSystemId}/keys/{keyId}/status', desc: '启用或停用密钥' },
+      { method: 'POST', path: '/ingestion-governance/admin/tenants/{tenantId}/source-systems/{sourceSystemId}/keys', desc: '平台管理员为指定租户生成密钥' }
+    ]
+  },
+  '/governance/event-authorizations': {
+    hasApi: true, moduleName: '事件类型授权', apiPath: '/openapi/v1/event-fact/event-type-authorizations',
+    specDoc: 'OpenAPI / APP-04 事件类型授权（2026-10-10）', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    endpoints: [
+      { method: 'GET', path: '/openapi/v1/event-fact/event-type-authorizations/tenants/{tenantId}/project-spaces/{projectSpaceId}/event-types', desc: '查询全部事件类型授权状态' },
+      { method: 'POST', path: '/openapi/v1/event-fact/event-type-authorizations/tenants/{tenantId}/project-spaces/{projectSpaceId}/event-types', desc: '保存授权目标集合及逐事件有效期' }
+    ]
+  },
+  '/governance/integration-assistant': {
+    hasApi: true, moduleName: '对接助手', apiPath: '/ingestion-governance/integration-assistant',
+    specDoc: 'OpenAPI / APP-03 对接助手（2026-10-19）', protocol: 'RESTful JSON / Axios', status: 'CONNECTED',
+    endpoints: [
+      ...['tenants', 'project-spaces', 'source-systems', 'source-system-keys', 'event-types', 'schemas'].map(path => ({
+        method: 'GET' as const, path: `/ingestion-governance/integration-assistant/${path}`, desc: '分页查询级联配置选项'
+      })),
+      { method: 'POST', path: '/ingestion-governance/integration-assistant/request-examples', desc: '生成标准事件明文模板与 SDK 配置' },
+      { method: 'POST', path: '/ingestion-governance/integration-assistant/validate', desc: '只读校验 SDK 明文输入' }
+    ]
+  },
   // 1. 业务协同场景 - 饮片赋码 (APP-02 主体、对象与监管编码)
   '/business/coding': {
     hasApi: true,

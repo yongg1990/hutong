@@ -30,7 +30,7 @@
         <el-table-column prop="purposeCodes" label="默认用途代码 *" min-width="160" class-name="mono" />
         <el-table-column prop="version" label="配置版本" width="110" class-name="mono" />
         <el-table-column prop="registeredAt" label="注册时间" width="170" />
-        <el-table-column label="操作" width="90"><template #default="{ row }"><el-button link @click="openEdit(row.id)">编辑</el-button></template></el-table-column>
+        <el-table-column label="操作" width="150" fixed="right"><template #default="{ row }"><el-button link @click="openEdit(row.id)">编辑</el-button><el-button link @click="$router.push({ path: '/governance/source-keys', query: { sourceSystemId: row.id } })">密钥管理</el-button></template></el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>
