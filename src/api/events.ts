@@ -15,6 +15,11 @@ export interface EventTypeResponse {
   eventType: string;
   status: string;
 }
+export interface EventTypeDetail extends EventTypeResponse, EventTypeRequest {
+  lockVersion: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface EventSchemaRequest {
   eventType: string;
@@ -67,6 +72,15 @@ function snapshot(item: any): SchemaSnapshot {
  * 可信事件上报与查询接口
  */
 export const eventsApi = {
+  async getEventType(id: string): Promise<EventTypeDetail> {
+    return request.get<EventTypeDetail, EventTypeDetail>(`/openapi/v1/event-fact/event-types/${encodeURIComponent(id)}`);
+  },
+  async updateEventType(id: string, data: Omit<EventTypeRequest, 'eventType'> & { lockVersion: number }): Promise<EventTypeDetail> {
+    return request.put<EventTypeDetail, EventTypeDetail>(`/openapi/v1/event-fact/event-types/${encodeURIComponent(id)}`, { ...data, description: data.description || '' });
+  },
+  async setEventTypeStatus(id: string, status: string, lockVersion: number): Promise<EventTypeDetail> {
+    return request.patch<EventTypeDetail, EventTypeDetail>(`/openapi/v1/event-fact/event-types/${encodeURIComponent(id)}/status`, { status, lockVersion });
+  },
   async createEventType(data: EventTypeRequest): Promise<EventTypeResponse> {
     return request.post<EventTypeResponse, EventTypeResponse>('/openapi/v1/event-fact/event-types', { ...data, description: data.description || '' });
   },
@@ -80,7 +94,7 @@ export const eventsApi = {
   },
 
   async testSchemaDraft(data: EventSchemaRequest): Promise<SchemaTestResult> {
-    return request.post('/openapi/v1/event-fact/schemas/test', data);
+    return request.post<SchemaTestResult, SchemaTestResult>('/openapi/v1/event-fact/schemas/test', data);
   },
 
   async publishEventSchema(id: string): Promise<SchemaSnapshot> {
@@ -94,10 +108,10 @@ export const eventsApi = {
     return snapshot(await request.get(`/openapi/v1/event-fact/schemas/definitions/${encodeURIComponent(id)}`));
   },
   async testSchemaDefinition(id: string): Promise<SchemaTestResult> {
-    return request.post(`/openapi/v1/event-fact/schemas/definitions/${encodeURIComponent(id)}/test`);
+    return request.post<SchemaTestResult, SchemaTestResult>(`/openapi/v1/event-fact/schemas/definitions/${encodeURIComponent(id)}/test`);
   },
   async listEventTypes(params: Record<string, string | number> = {}): Promise<{ records: any[]; total: string }> {
-    return request.get('/openapi/v1/event-fact/event-types', { params });
+    return request.get<{ records: EventTypeDetail[]; total: string }, { records: EventTypeDetail[]; total: string }>('/openapi/v1/event-fact/event-types', { params });
   },
   // 当前文档仅支持按事件 ID 查询。
   async queryTrustEvents(params?: {

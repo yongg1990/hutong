@@ -9,7 +9,6 @@
       </template>
     </PageHeader>
 
-    <el-alert v-if="loadError" type="error" :closable="false" :title="loadError" style="margin-bottom: 12px" />
     <FilterBar @search="searchSources" @reset="resetSources">
       <el-input v-model="filters.sourceSystemCode" placeholder="系统标识" clearable style="width: 160px" />
       <el-input v-model="filters.sourceSystemName" placeholder="系统名称" clearable style="width: 180px" />
@@ -23,11 +22,11 @@
       <el-table :data="sources" empty-text="暂无来源系统">
         <el-table-column prop="id" label="来源系统 ID" width="130" class-name="mono" />
         <el-table-column prop="code" label="系统标识" width="140" class-name="mono" />
-        <el-table-column prop="name" label="系统名称 *" min-width="180" />
-        <el-table-column prop="systemType" label="来源类型 *" width="120" />
-        <el-table-column prop="endpointType" label="接入方式 *" width="110" />
-        <el-table-column prop="ownerPartyId" label="所属主体 ID *" width="150" class-name="mono" />
-        <el-table-column prop="purposeCodes" label="默认用途代码 *" min-width="160" class-name="mono" />
+        <el-table-column prop="name" label="系统名称" min-width="180" />
+        <el-table-column prop="systemType" label="来源类型" width="120" />
+        <el-table-column prop="endpointType" label="接入方式" width="110" />
+        <el-table-column prop="ownerPartyId" label="所属主体 ID" width="150" class-name="mono" />
+        <el-table-column prop="purposeCodes" label="默认用途代码" min-width="160" class-name="mono" />
         <el-table-column prop="version" label="配置版本" width="110" class-name="mono" />
         <el-table-column prop="registeredAt" label="注册时间" width="170" />
         <el-table-column label="操作" width="150" fixed="right"><template #default="{ row }"><el-button link @click="openEdit(row.id)">编辑</el-button><el-button link @click="$router.push({ path: '/governance/source-keys', query: { sourceSystemId: row.id } })">密钥管理</el-button></template></el-table-column>
@@ -47,17 +46,17 @@
           <el-input v-model="regForm.systemName" placeholder="如: 昆明二号仓储管理系统" />
         </el-form-item>
         <el-form-item label="来源系统类型" required><el-input v-model="regForm.systemType" placeholder="如 WMS、LIMS、ERP" /></el-form-item>
-        <el-form-item label="所属主体 ID" required><el-input v-model="regForm.ownerPartyId" placeholder="数字 ID 字符串" /></el-form-item>
-        <el-form-item label="接入方式" required>
+        <el-form-item label="所属主体 ID" :required="!!editingId"><el-input v-model="regForm.ownerPartyId" placeholder="数字 ID 字符串" /></el-form-item>
+        <el-form-item label="接入方式">
           <el-select v-model="regForm.endpointType" style="width: 100%">
             <el-option v-for="item in ['API', 'FILE', 'MESSAGE', 'DATABASE']" :key="item" :label="item" :value="item" />
           </el-select>
         </el-form-item>
         <el-form-item label="API 基础地址"><el-input v-model="regForm.baseUrl" placeholder="https://example.com/api" /></el-form-item>
-        <el-form-item label="签名公钥或证书引用" required><el-input v-model="regForm.signaturePublicKey" /></el-form-item>
-        <el-form-item label="签名算法" required><el-input v-model="regForm.signatureAlgorithm" placeholder="如 SM2" /></el-form-item>
-        <el-form-item label="信任级别" required><el-input v-model="regForm.trustLevel" placeholder="如 HIGH" /></el-form-item>
-        <el-form-item label="默认用途代码" required><el-input v-model="regForm.purposeCodes" placeholder="多个代码用逗号分隔" /></el-form-item>
+        <el-form-item label="签名公钥或证书引用"><el-input v-model="regForm.signaturePublicKey" /></el-form-item>
+        <el-form-item label="签名算法"><el-input v-model="regForm.signatureAlgorithm" placeholder="如 SM2" /></el-form-item>
+        <el-form-item label="信任级别"><el-input v-model="regForm.trustLevel" placeholder="如 HIGH" /></el-form-item>
+        <el-form-item label="默认用途代码"><el-input v-model="regForm.purposeCodes" placeholder="多个代码用逗号分隔" /></el-form-item>
         <el-form-item label="初始状态" required><el-select v-model="regForm.status" style="width: 100%"><el-option label="启用 ACTIVE" value="ACTIVE" /><el-option label="停用 INACTIVE" value="INACTIVE" /></el-select></el-form-item>
       </el-form>
       <template #footer>
@@ -88,7 +87,7 @@ const emptyForm = () => ({
 });
 const regForm = ref(emptyForm());
 const sources = ref<any[]>([]);
-const page = ref(1), total = ref(0), loadError = ref('');
+const page = ref(1), total = ref(0);
 const emptyFilters = () => ({ sourceSystemCode: '', sourceSystemName: '', sourceSystemType: '', ownerPartyId: '', endpointType: '', status: '' });
 const filters = ref(emptyFilters());
 const appliedFilters = ref(emptyFilters());
@@ -100,16 +99,16 @@ async function loadSources() {
   try {
     const params = Object.fromEntries(Object.entries(appliedFilters.value).filter(([, value]) => value.trim()).map(([key, value]) => [key, value.trim()]));
     const result = await governanceApi.listSourceSystems({ ...params, page: page.value, size: 20 });
-    sources.value = (result.records || []).map(toRow); total.value = Number(result.total || 0); loadError.value = '';
+    sources.value = (result.records || []).map(toRow); total.value = Number(result.total || 0);
   }
-  catch (error) { loadError.value = apiErrorMessage(error, '查询来源系统失败'); }
+  catch (error) { ElMessage.error(apiErrorMessage(error, '查询来源系统失败')); }
 }
 onMounted(loadSources);
 async function openEdit(id: string) {
   try {
     const item = await governanceApi.getSourceSystem(id);
     editingId.value = id; lockVersion.value = item.lockVersion;
-    regForm.value = { systemCode: item.sourceSystemCode, systemName: item.sourceSystemName, systemType: item.sourceSystemType, ownerPartyId: item.ownerPartyId, endpointType: item.endpointType, baseUrl: item.baseUrl || '', signaturePublicKey: item.signaturePublicKey || '', signatureAlgorithm: item.signatureAlgorithm || '', trustLevel: item.trustLevel || '', purposeCodes: (item.defaultPurposeCodes || []).join(', '), status: item.status };
+    regForm.value = { systemCode: item.sourceSystemCode, systemName: item.sourceSystemName, systemType: item.sourceSystemType, ownerPartyId: item.ownerPartyId || '', endpointType: item.endpointType || '', baseUrl: item.baseUrl || '', signaturePublicKey: item.signaturePublicKey || '', signatureAlgorithm: item.signatureAlgorithm || '', trustLevel: item.trustLevel || '', purposeCodes: (item.defaultPurposeCodes || []).join(', '), status: item.status };
     dialogVisible.value = true;
   } catch (error) { ElMessage.error(apiErrorMessage(error, '查询来源系统失败')); }
 }
@@ -126,7 +125,7 @@ const confirmRegister = async () => {
     ElMessage.warning('所属主体 ID 必须是数字字符串');
     return;
   }
-  if (!form.systemCode || !form.systemName || !form.systemType || !form.ownerPartyId || !form.signaturePublicKey || !form.signatureAlgorithm || !form.trustLevel || !purposeCodes.length) {
+  if (!form.systemCode.trim() || !form.systemName.trim() || !form.systemType.trim() || (editingId.value && !form.ownerPartyId.trim())) {
     ElMessage.warning('请填写所有必填字段');
     return;
   }
@@ -134,14 +133,14 @@ const confirmRegister = async () => {
   try {
     const payload: SourceSystemRequest = {
       sourceSystemCode: form.systemCode, sourceSystemName: form.systemName, sourceSystemType: form.systemType,
-      ownerPartyId: form.ownerPartyId, endpointType: form.endpointType,
+      ownerPartyId: form.ownerPartyId.trim() || undefined, endpointType: form.endpointType || undefined,
       ...(form.baseUrl ? { baseUrl: form.baseUrl } : {}), signaturePublicKey: form.signaturePublicKey,
       signatureAlgorithm: form.signatureAlgorithm, trustLevel: form.trustLevel, defaultPurposeCodes: purposeCodes, status: form.status
     };
     const created = editingId.value
       ? await governanceApi.updateSourceSystem(editingId.value, {
           sourceSystemName: payload.sourceSystemName, sourceSystemType: payload.sourceSystemType,
-          ownerPartyId: payload.ownerPartyId, endpointType: payload.endpointType,
+          ownerPartyId: form.ownerPartyId.trim(), endpointType: payload.endpointType,
           baseUrl: payload.baseUrl, signaturePublicKey: payload.signaturePublicKey,
           signatureAlgorithm: payload.signatureAlgorithm, trustLevel: payload.trustLevel,
           defaultPurposeCodes: payload.defaultPurposeCodes, status: payload.status, lockVersion: lockVersion.value

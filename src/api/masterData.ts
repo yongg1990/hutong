@@ -186,6 +186,9 @@ export interface PieceProductUpdateRequest extends PieceProductRequest {
 export interface CodeSchemeResponse {
   schemeId: string;
   schemeCode: string;
+  version: string;
+  contentDigest?: string;
+  publishedAt?: string;
   schemeName: string;
   issuerType: string;
   validationJson: string;
@@ -204,6 +207,7 @@ export interface CodeSchemePage {
 
 export interface CodeSchemeCreateRequest {
   schemeCode: string;
+  version: string;
   schemeName: string;
   issuerType: string;
   validationJson: string;
@@ -375,8 +379,8 @@ export const masterDataApi = {
     return { records: Array.isArray(response?.records) ? response.records : [], total: Number(response?.total ?? 0), page: Number(response?.page ?? params?.page ?? 1), size: Number(response?.size ?? params?.size ?? 20) };
   },
 
-  createPieceProduct(data: PieceProductRequest): Promise<PieceProductDetailResponse> {
-    return request.post<PieceProductDetailResponse, PieceProductDetailResponse>('/openapi/v1/decoction-piece-products', data);
+  createPieceProduct(data: PieceProductRequest): Promise<PieceProductResponse> {
+    return request.post<PieceProductResponse, PieceProductResponse>('/openapi/v1/decoction-piece-products', data);
   },
 
   getPieceProductById(id: string): Promise<PieceProductDetailResponse> {
@@ -437,7 +441,7 @@ export const masterDataApi = {
     return request.post<void, void>('/openapi/v1/code-schemes/' + encodeURIComponent(schemeId) + '/segments/' + encodeURIComponent(segmentId) + '/delete');
   },
 
-  validateCode(data: { schemeCode: string; rawCode: string; effectiveAt?: string }): Promise<CodeValidationResponse> {
+  validateCode(data: { schemeCode: string; version?: string; rawCode: string; effectiveAt?: string }): Promise<CodeValidationResponse> {
     return request.post<CodeValidationResponse, CodeValidationResponse>('/openapi/v1/code-schemes/validate', data);
   },
 

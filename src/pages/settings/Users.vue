@@ -88,7 +88,7 @@
         </div>
 
         <el-form-item label="所属租户" prop="tenantId">
-          <el-select v-model="form.tenantId" placeholder="选择所属租户" style="width: 100%" @change="selectedRoleIds = []">
+          <el-select v-model="form.tenantId" clearable placeholder="留空创建非租户用户" style="width: 100%" @change="selectedRoleIds = []">
             <el-option
               v-for="t in tenants"
               :key="t.id"
@@ -180,8 +180,7 @@ const form = ref<Partial<UserItem>>({
 
 const rules = {
   username: [{ required: true, message: '请输入登录账号', trigger: 'blur' }],
-  displayName: [{ required: true, message: '请输入显示名称', trigger: 'blur' }],
-  tenantId: [{ required: true, message: '请选择所属租户', trigger: 'change' }]
+  displayName: [{ required: true, message: '请输入显示名称', trigger: 'blur' }]
 };
 
 const availableRoles = computed(() => roles.value.filter(r =>
@@ -194,7 +193,7 @@ const loadData = async () => {
   try {
     const [result, tList, rList] = await Promise.all([
       rbacApi.getUserPage({ tenantId: appliedTenantId.value || undefined, page: page.value, size: pageSize.value }),
-      rbacApi.getTenants({ page: 1, size: 100 }),
+      rbacApi.getPermittedTenants(),
       rbacApi.getRoles()
     ]);
     total.value = result.total;
@@ -245,7 +244,7 @@ const openCreateDialog = () => {
   form.value = {
     username: '',
     displayName: '',
-    tenantId: tenants.value[0]?.id || '',
+    tenantId: '',
     status: 'ACTIVE'
   };
   password.value = '';

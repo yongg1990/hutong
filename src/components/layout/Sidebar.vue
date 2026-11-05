@@ -47,6 +47,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
+import { getPageApiInfo } from '@/config/pageApiRegistry';
 import {
   DataBoard,
   Goods,
@@ -67,18 +68,18 @@ const workspaceMenu = {
   apiPath: ''
 };
 
-const menuGroups = [
+const menuDefinitions = [
   {
     title: '业务协同场景',
     index: 'business',
     icon: Goods,
     items: [
-      { title: '田间种植', path: '/business/field', hasApi: false, apiPath: '' },
-      { title: '加工与质量', path: '/business/process-quality', hasApi: false, apiPath: '' },
-      { title: '饮片赋码', path: '/business/coding', hasApi: true, apiPath: '/openapi/v1/trace-codes' },
-      { title: '供销交割', path: '/business/supply', hasApi: false, apiPath: '' },
-      { title: '处方代煎', path: '/business/decoction', hasApi: false, apiPath: '' },
-      { title: '通用事件录入', path: '/business/events/new', hasApi: false, apiPath: '' }
+      { title: '田间种植', path: '/business/field' },
+      { title: '加工与质量', path: '/business/process-quality' },
+      { title: '饮片赋码', path: '/business/coding' },
+      { title: '供销交割', path: '/business/supply' },
+      { title: '处方代煎', path: '/business/decoction' },
+      { title: '通用事件录入', path: '/business/events/new' }
     ]
   },
   {
@@ -86,15 +87,15 @@ const menuGroups = [
     index: 'governance',
     icon: Filter,
     items: [
-      { title: '来源系统', path: '/governance/sources', hasApi: true, apiPath: '/openapi/v1/source-systems' },
-      { title: '来源系统密钥管理', path: '/governance/source-keys', hasApi: true, apiPath: '/ingestion-governance/source-systems/{sourceSystemId}/keys' },
-      { title: '对接助手', path: '/governance/integration-assistant', hasApi: true, apiPath: '/ingestion-governance/integration-assistant' },
-      { title: '接入批次与原始记录', path: '/governance/batches', hasApi: true, apiPath: '/openapi/v1/batches, /openapi/v1/raw-records' },
-      { title: '字段映射预检', path: '/governance/mappings', hasApi: true, apiPath: '/openapi/v1/mappings/test' },
-      { title: '治理异常案卷', path: '/governance/cases', hasApi: false, apiPath: '' },
-      { title: '数据元与值域', path: '/governance/standards', hasApi: true, apiPath: '/openapi/v1/data-elements, /openapi/v1/value-sets' },
-      { title: '事件 Schema 配置', path: '/governance/events', hasApi: true, apiPath: '/openapi/v1/event-fact/schemas/definitions' },
-      { title: '事件类型授权', path: '/governance/event-authorizations', hasApi: true, apiPath: '/openapi/v1/event-fact/event-type-authorizations' }
+      { title: '来源系统', path: '/governance/sources' },
+      { title: '来源系统密钥管理', path: '/governance/source-keys' },
+      { title: '对接助手', path: '/governance/integration-assistant' },
+      { title: '接入批次与原始记录', path: '/governance/batches' },
+      { title: '字段映射预检', path: '/governance/mappings' },
+      { title: '治理异常案卷', path: '/governance/cases' },
+      { title: '数据元与值域', path: '/governance/standards' },
+      { title: '事件 Schema 配置', path: '/governance/events' },
+      { title: '事件类型授权', path: '/governance/event-authorizations' }
     ]
   },
   {
@@ -102,12 +103,12 @@ const menuGroups = [
     index: 'master-data',
     icon: OfficeBuilding,
     items: [
-      { title: '主体', path: '/master-data/parties', hasApi: true, apiPath: '/openapi/v1/parties' },
-      { title: '标识命名空间', path: '/master-data/identifier-namespaces', hasApi: true, apiPath: '/openapi/v1/identifiers/namespaces' },
-      { title: '业务对象登记', path: '/master-data/objects', hasApi: true, apiPath: '/openapi/v1/business-objects' },
-      { title: '标识绑定', path: '/master-data/identifier-bindings', hasApi: true, apiPath: '/openapi/v1/identifiers/resolve, /openapi/v1/identifiers/bindings' },
-      { title: '监管编码主数据', path: '/master-data/code-schemes', hasApi: true, apiPath: '/openapi/v1/code-schemes' },
-      { title: '饮片品种管理', path: '/master-data/decoction-pieces', hasApi: true, apiPath: '/openapi/v1/decoction-piece-products' }
+      { title: '主体', path: '/master-data/parties' },
+      { title: '标识命名空间', path: '/master-data/identifier-namespaces' },
+      { title: '业务对象登记', path: '/master-data/objects' },
+      { title: '标识绑定', path: '/master-data/identifier-bindings' },
+      { title: '监管编码主数据', path: '/master-data/code-schemes' },
+      { title: '饮片品种管理', path: '/master-data/decoction-pieces' }
     ]
   },
   {
@@ -115,11 +116,11 @@ const menuGroups = [
     index: 'trust',
     icon: Connection,
     items: [
-      { title: '事件查询', path: '/trust/events', hasApi: false, apiPath: '' },
-      { title: '血缘分析图谱', path: '/trust/lineage', hasApi: false, apiPath: '' },
-      { title: '证据文件', path: '/trust/evidence', hasApi: false, apiPath: '' },
-      { title: '文件上传与凭证', path: '/trust/files-credentials', hasApi: true, apiPath: '/openapi/v1/files/upload-sessions, /openapi/v1/credentials' },
-      { title: '存证单与 Merkle', path: '/trust/proofs', hasApi: false, apiPath: '' }
+      { title: '事件查询', path: '/trust/events' },
+      { title: '血缘分析图谱', path: '/trust/lineage' },
+      { title: '证据文件', path: '/trust/evidence' },
+      { title: '文件上传与凭证', path: '/trust/files-credentials' },
+      { title: '存证单与 Merkle', path: '/trust/proofs' }
     ]
   },
   {
@@ -127,10 +128,10 @@ const menuGroups = [
     index: 'exchange',
     icon: Share,
     items: [
-      { title: '互通规范包', path: '/exchange/profiles', hasApi: false, apiPath: '' },
-      { title: '互通规范配置', path: '/exchange/profile-config', hasApi: true, apiPath: '/exchange-query/profile-versions' },
-      { title: '交换数据查询', path: '/exchange/queries', hasApi: true, apiPath: '/exchange-query/objects, /exchange-query/events' },
-      { title: '互通投影与交付', path: '/exchange/projections', hasApi: false, apiPath: '' }
+      { title: '互通规范包', path: '/exchange/profiles' },
+      { title: '互通规范配置', path: '/exchange/profile-config' },
+      { title: '交换数据查询', path: '/exchange/queries' },
+      { title: '互通投影与交付', path: '/exchange/projections' }
     ]
   },
   {
@@ -138,17 +139,25 @@ const menuGroups = [
     index: 'platform',
     icon: Tools,
     items: [
-      { title: '租户管理', path: '/settings/tenants', hasApi: true, apiPath: '/tenant-access/tenants' },
-      { title: '角色与权限', path: '/settings/roles', hasApi: true, apiPath: '/tenant-access/roles, /permissions' },
-      { title: '通用字典', path: '/settings/dictionaries', hasApi: true, apiPath: '/tenant-access/dictionaries' },
-      { title: '用户管理', path: '/settings/users', hasApi: true, apiPath: '/tenant-access/users' },
-      { title: '项目协同空间', path: '/settings/tenant-project', hasApi: true, apiPath: '/openapi/v1/project-spaces' },
-      { title: '前置节点部署', path: '/settings/deployments-edge', hasApi: true, apiPath: '/openapi/v1/deployment-instances' },
-      { title: '订阅与异步任务', path: '/operations/subscriptions-jobs', hasApi: false, apiPath: '' },
-      { title: '审计与告警', path: '/operations/audit-alerts', hasApi: false, apiPath: '' }
+      { title: '租户管理', path: '/settings/tenants' },
+      { title: '角色与权限', path: '/settings/roles' },
+      { title: '通用字典', path: '/settings/dictionaries' },
+      { title: '用户管理', path: '/settings/users' },
+      { title: '项目协同空间', path: '/settings/tenant-project' },
+      { title: '前置节点部署', path: '/settings/deployments-edge' },
+      { title: '订阅与异步任务', path: '/operations/subscriptions-jobs' },
+      { title: '审计与告警', path: '/operations/audit-alerts' }
     ]
   }
 ];
+const menuGroups = menuDefinitions.map(group => ({
+  ...group,
+  items: group.items.map(item => ({
+    ...item,
+    hasApi: !!getPageApiInfo(item.path),
+    apiPath: getPageApiInfo(item.path)?.apiPath || ''
+  }))
+}));
 </script>
 
 <style scoped>

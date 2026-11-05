@@ -6,7 +6,6 @@
       <el-form-item label="项目空间 ID" required><el-input v-model="projectSpaceId" @input="clear" /></el-form-item>
       <el-form-item><el-button :icon="Search" type="primary" :loading="loading" @click="load">查询</el-button></el-form-item>
     </el-form>
-    <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <div v-if="loaded" class="toolbar"><span>已选 {{ selectedCount }} / {{ rows.length }}</span><el-button type="primary" :icon="Check" :loading="saving" @click="save">保存授权集合</el-button></div>
     <el-table :data="rows" v-loading="loading" empty-text="暂无事件类型授权状态">
       <el-table-column label="保持启用" width="100"><template #default="{ row }"><el-checkbox v-model="row.selected" :disabled="saving" :aria-label="`授权 ${row.eventName}`" /></template></el-table-column>
@@ -35,9 +34,9 @@ import { apiErrorMessage } from '@/api/client';
 const tenantId = ref(localStorage.getItem('tcmirp_tenant_id') || '');
 const projectSpaceId = ref(localStorage.getItem('tcmirp_project_space_id') || '');
 const rows = ref<(EventAuthorization & { selected: boolean })[]>([]);
-const loading = ref(false), saving = ref(false), loaded = ref(false), error = ref('');
+const loading = ref(false), saving = ref(false), loaded = ref(false);
 const selectedCount = computed(() => rows.value.filter(row => row.selected).length);
-function clear() { rows.value = []; loaded.value = false; error.value = ''; }
+function clear() { rows.value = []; loaded.value = false; }
 function setRows(result: EventAuthorization[]) {
   // Preserve scheduled and expired ACTIVE records as well as currently effective grants.
   rows.value = result.map(row => ({ ...row, selected: row.authorizationStatus === 'ACTIVE' })); loaded.value = true;
@@ -46,7 +45,7 @@ async function load() {
   if (!/^[1-9]\d*$/.test(tenantId.value.trim()) || !/^[1-9]\d*$/.test(projectSpaceId.value.trim())) { ElMessage.warning('请填写有效的租户和项目空间数字 ID'); return; }
   loading.value = true; clear();
   try { setRows(await eventAuthorizationsApi.list(tenantId.value.trim(), projectSpaceId.value.trim())); }
-  catch (cause) { error.value = apiErrorMessage(cause, '查询授权状态失败'); }
+  catch (cause) { ElMessage.error(apiErrorMessage(cause, '查询授权状态失败')); }
   finally { loading.value = false; }
 }
 async function save() {

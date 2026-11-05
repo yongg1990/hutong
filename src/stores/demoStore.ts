@@ -3,7 +3,7 @@ import { mockFieldBatches, mockPrimaryProcessingBatches, mockHerbPieces, mockSup
 
 type RecordData = Record<string, any>;
 const storageKey = 'tcmirp_static_workflow_v1';
-export const isStaticMode = () => localStorage.getItem('tcmirp_data_mode') !== 'backend';
+export const isStaticMode = () => localStorage.getItem('tcmirp_data_mode') === 'static';
 export const now = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
 export const eventNames: Record<string, string> = {
   PLANTED: '种植建档', FARMING_OPERATION: '农事作业', INPUT_APPLIED: '投入品施用', HARVESTED: '采收完成',

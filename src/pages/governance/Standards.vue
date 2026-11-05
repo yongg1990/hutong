@@ -11,7 +11,6 @@
         <el-button type="primary" :disabled="!selectedValueSet" @click="openValueSetItemModal">新增代码项</el-button>
       </template>
     </PageHeader>
-    <el-alert v-if="loadError" type="error" :closable="false" :title="loadError" style="margin-bottom: 12px" />
 
     <!-- Standards Overview Cards -->
     <div class="panel" style="margin-bottom: 14px">
@@ -60,10 +59,13 @@
           :data="dataElements"
           style="width: 100%"
         >
-          <el-table-column prop="code" label="数据元编码 *" width="180" class-name="mono" />
-          <el-table-column prop="name" label="中文名称 *" min-width="140" />
-          <el-table-column prop="type" label="类型 *" width="80" />
-          <el-table-column prop="valueSet" label="关联值域 *" min-width="150" class-name="mono" />
+          <el-table-column prop="code" label="数据元编码" width="180" class-name="mono" />
+          <el-table-column prop="name" label="中文名称" min-width="140" />
+          <el-table-column prop="type" label="类型" width="100" />
+          <el-table-column prop="valueSet" label="关联值域" min-width="150" class-name="mono" />
+          <el-table-column prop="securityClass" label="安全级别" width="130" />
+          <el-table-column prop="status" label="状态" width="100" />
+          <el-table-column prop="lockVersion" label="锁版本" width="90" />
           <el-table-column label="操作" width="130"><template #default="{ row }"><el-button link @click.stop="editElement(row)">编辑</el-button><el-button link @click.stop="toggleElement(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button></template></el-table-column>
         </el-table>
         <div class="pagination-row"><el-pagination v-model:current-page="elementPage" :page-size="20" :total="elementTotal" layout="total, prev, pager, next" @current-change="loadElements" /></div>
@@ -75,9 +77,9 @@
             <span>值域明细: </span>
             <strong class="mono">{{ activeValueSet || '全部值域' }}</strong>
           </h2>
-          <el-tag size="small" type="success">{{ itemTotal }} 个代码项</el-tag>
+          <div><el-switch v-model="onlyActiveItems" :disabled="!selectedValueSet" active-text="全部有效项" @change="loadItems" /><el-tag size="small" type="success">{{ itemTotal }} 个代码项</el-tag></div>
         </div>
-        <FilterBar v-if="selectedValueSet" @search="searchItems" @reset="resetItems">
+        <FilterBar v-if="selectedValueSet && !onlyActiveItems" @search="searchItems" @reset="resetItems">
           <el-input v-model="itemFilters.itemCode" placeholder="代码项编码" clearable style="width: 140px" />
           <el-input v-model="itemFilters.itemName" placeholder="代码项名称" clearable style="width: 140px" />
           <el-select v-model="itemFilters.status" placeholder="状态" clearable style="width: 110px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
@@ -85,15 +87,15 @@
         </FilterBar>
         <el-table :data="activeValueSetItems">
           <template #empty>请选择值域</template>
-          <el-table-column prop="code" label="代码 (Code) *" width="140" class-name="mono" />
-          <el-table-column prop="name" label="名称 (Name) *" min-width="140" />
-          <el-table-column prop="valueSet" label="所属值域 *" width="160" class-name="mono" />
-          <el-table-column label="状态 *" width="90">
+          <el-table-column prop="code" label="代码" width="140" class-name="mono" />
+          <el-table-column prop="name" label="名称" min-width="140" />
+          <el-table-column prop="valueSet" label="所属值域" width="160" class-name="mono" />
+          <el-table-column label="状态" width="90">
             <template #default="{ row }"><StatusTag :code="row.status" /></template>
           </el-table-column>
           <el-table-column label="操作" width="130"><template #default="{ row }"><el-button link @click="editItem(row)">编辑</el-button><el-button link @click="toggleItem(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button></template></el-table-column>
         </el-table>
-        <div v-if="selectedValueSet" class="pagination-row"><el-pagination v-model:current-page="itemPage" :page-size="20" :total="itemTotal" layout="total, prev, pager, next" @current-change="loadItems" /></div>
+        <div v-if="selectedValueSet && !onlyActiveItems" class="pagination-row"><el-pagination v-model:current-page="itemPage" :page-size="20" :total="itemTotal" layout="total, prev, pager, next" @current-change="loadItems" /></div>
       </div>
     </div>
 
@@ -101,7 +103,7 @@
     <el-dialog v-model="elementModalVisible" :title="editingElement ? '编辑数据元' : '新增数据元'" width="520px" :close-on-click-modal="false">
       <el-form :model="elementForm" label-position="top">
         <el-form-item label="数据元编码 (DE_CODE)" required>
-          <el-input v-model="elementForm.code" placeholder="如: DE_HERB_WATER_CONTENT" />
+          <el-input v-model="elementForm.code" :disabled="!!editingElement" placeholder="如: DE_HERB_WATER_CONTENT" />
         </el-form-item>
         <el-form-item label="中文名称" required>
           <el-input v-model="elementForm.name" placeholder="如: 水分含量(%)" />
@@ -115,6 +117,10 @@
           <el-input v-model="elementForm.valueSet" placeholder="如: VS_WATER_TEST_METHOD 或留空" />
         </el-form-item>
         <el-form-item label="安全级别" required><el-select v-model="elementForm.securityClass" style="width: 100%"><el-option v-for="item in ['PUBLIC', 'INTERNAL', 'SENSITIVE', 'STRICT_SENSITIVE']" :key="item" :label="item" :value="item" /></el-select></el-form-item>
+        <el-form-item label="字符串最大长度"><el-input-number v-model="elementForm.maxLength" :min="0" :precision="0" /></el-form-item>
+        <el-form-item label="数值精度"><el-input-number v-model="elementForm.numericPrecision" :min="1" :precision="0" /></el-form-item>
+        <el-form-item label="数值小数位"><el-input-number v-model="elementForm.numericScale" :min="0" :precision="0" /></el-form-item>
+        <el-form-item label="标准依据"><el-input v-model="elementForm.sourceReference" maxlength="512" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="elementModalVisible = false">取消</el-button>
@@ -137,13 +143,14 @@
           <el-input v-model="valueForm.valueSet" disabled />
         </el-form-item>
         <el-form-item label="代码 (Code)" required>
-          <el-input v-model="valueForm.code" placeholder="如: QUALIFIED" />
+          <el-input v-model="valueForm.code" :disabled="!!editingItem" placeholder="如: QUALIFIED" />
         </el-form-item>
         <el-form-item label="中文名称 (Name)" required>
           <el-input v-model="valueForm.name" placeholder="如: 合格" />
         </el-form-item>
         <el-form-item label="生效时间" required><el-date-picker v-model="valueForm.validFrom" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" /></el-form-item>
         <el-form-item label="失效时间"><el-date-picker v-model="valueForm.validTo" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width: 100%" /></el-form-item>
+        <el-form-item label="扩展属性 (JSON)"><el-input v-model="valueForm.attributes" type="textarea" :rows="4" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="valueModalVisible = false">取消</el-button>
@@ -166,6 +173,7 @@ import { apiErrorMessage } from '@/api/client';
 const standards = ref<any[]>([]);
 const valueSets = ref<ValueSet[]>([]);
 const selectedValueSet = ref<ValueSet | null>(null);
+const onlyActiveItems = ref(false);
 const editingElement = ref<DataElement | null>(null);
 const editingValueSet = ref<ValueSet | null>(null);
 const editingItem = ref<ValueSetItem | null>(null);
@@ -173,7 +181,6 @@ const valueSetModalVisible = ref(false);
 const valueSetForm = ref({ valueSetCode: '', valueSetName: '', version: '1.0.0' });
 const elementPage = ref(1), valuePage = ref(1), itemPage = ref(1);
 const elementTotal = ref(0), valueTotal = ref(0), itemTotal = ref(0);
-const loadError = ref('');
 const elementModalVisible = ref(false);
 const valueModalVisible = ref(false);
 const dataTypes = ['STRING', 'DECIMAL', 'INTEGER', 'BOOLEAN', 'DATE', 'DATETIME', 'OBJECT', 'ARRAY'];
@@ -198,14 +205,16 @@ const elementForm = ref({
   name: '',
   type: 'STRING',
   valueSet: '',
-  securityClass: 'INTERNAL'
+  securityClass: 'INTERNAL',
+  maxLength: undefined as number | undefined, numericPrecision: undefined as number | undefined,
+  numericScale: undefined as number | undefined, sourceReference: ''
 });
 
 const valueForm = ref({
   valueSet: '',
   code: '',
   name: '',
-  validFrom: '', validTo: ''
+  validFrom: '', validTo: '', attributes: '{}'
 });
 
 const dataElements = ref<Array<DataElement & { code: string; name: string; type: string; valueSet: string }>>([]);
@@ -214,7 +223,7 @@ const valueSetItems = ref<Array<ValueSetItem & { code: string; name: string; val
 
 const activeValueSetItems = valueSetItems;
 
-const reportError = (error: unknown) => { loadError.value = apiErrorMessage(error, '操作失败'); ElMessage.error(loadError.value); };
+const reportError = (error: unknown) => { ElMessage.error(apiErrorMessage(error, '操作失败')); };
 
 async function loadElements() {
   try {
@@ -233,47 +242,69 @@ async function loadValueSets() {
 async function loadItems() {
   if (!selectedValueSet.value) return;
   try {
-    const result = await standardsApi.items(selectedValueSet.value.valueSetId, { ...queryParams(appliedItemFilters.value), page: itemPage.value, size: 20 });
-    valueSetItems.value = (result.records || []).map(item => ({ ...item, code: item.itemCode, name: item.itemName, valueSet: selectedValueSet.value!.valueSetCode }));
-    itemTotal.value = Number(result.total || 0);
+    const valueSet = selectedValueSet.value;
+    const result = onlyActiveItems.value
+      ? { records: await standardsApi.activeItems(valueSet.valueSetId), total: '' }
+      : await standardsApi.items(valueSet.valueSetId, { ...queryParams(appliedItemFilters.value), page: itemPage.value, size: 20 });
+    if (selectedValueSet.value?.valueSetId !== valueSet.valueSetId) return;
+    valueSetItems.value = (result.records || []).map(item => ({ ...item, code: item.itemCode, name: item.itemName, valueSet: valueSet.valueSetCode }));
+    itemTotal.value = onlyActiveItems.value ? result.records.length : Number(result.total || 0);
   } catch (error) { reportError(error); }
 }
-function loadRemote() { loadError.value = ''; void loadElements(); void loadValueSets(); if (selectedValueSet.value) void loadItems(); }
+function loadRemote() { void loadElements(); void loadValueSets(); if (selectedValueSet.value) void loadItems(); }
 onMounted(async () => { standards.value = await governanceApi.getStandards(); loadRemote(); });
 function selectValueSet(row: ValueSet | null) { selectedValueSet.value = row; activeValueSet.value = row?.valueSetCode || ''; itemPage.value = 1; itemTotal.value = 0; valueSetItems.value = []; if (row) void loadItems(); }
 
 
 const openDataElementModal = () => { editElement(); };
-function editElement(row?: DataElement) {
-  editingElement.value = row || null;
-  elementForm.value = { code: row?.elementCode || '', name: row?.elementName || '', type: row?.dataType || 'STRING', valueSet: row?.valueSetCode || '', securityClass: row?.securityClass || 'INTERNAL' };
-  elementModalVisible.value = true;
+async function editElement(row?: DataElement) {
+  try {
+    const detail = row ? await standardsApi.getDataElement(row.id) : undefined;
+    editingElement.value = detail || null;
+    elementForm.value = { code: detail?.elementCode || '', name: detail?.elementName || '', type: detail?.dataType || 'STRING', valueSet: detail?.valueSetCode || '', securityClass: detail?.securityClass || 'INTERNAL', maxLength: detail?.maxLength, numericPrecision: detail?.numericPrecision, numericScale: detail?.numericScale, sourceReference: detail?.sourceReference || '' };
+    elementModalVisible.value = true;
+  } catch (error) { reportError(error); }
 }
 
 const saveDataElement = async () => {
   const form = elementForm.value;
   if (!form.code.trim() || !form.name.trim()) return ElMessage.warning('请填写编码和名称');
+  if (!/^[A-Z][A-Z0-9_-]*$/.test(form.code.trim())) return ElMessage.warning('数据元编码须以大写字母开头，仅含大写字母、数字、下划线或中划线');
+  if (form.numericPrecision != null && form.numericScale != null && form.numericScale > form.numericPrecision) return ElMessage.warning('小数位数不能大于数值精度');
   try {
-    if (editingElement.value) await standardsApi.updateDataElement(editingElement.value.id, { elementName: form.name, dataType: form.type, securityClass: form.securityClass, valueSetCode: form.valueSet || undefined, lockVersion: editingElement.value.lockVersion });
-    else await standardsApi.createDataElement({ elementCode: form.code, elementName: form.name, dataType: form.type, securityClass: form.securityClass, valueSetCode: form.valueSet || undefined });
+    const data = { elementName: form.name.trim(), dataType: form.type, securityClass: form.securityClass, valueSetCode: form.valueSet || undefined, maxLength: form.maxLength ?? undefined, numericPrecision: form.numericPrecision ?? undefined, numericScale: form.numericScale ?? undefined, sourceReference: form.sourceReference.trim() || undefined };
+    if (editingElement.value) await standardsApi.updateDataElement(editingElement.value.id, { ...data, lockVersion: editingElement.value.lockVersion });
+    else await standardsApi.createDataElement({ elementCode: form.code.trim(), ...data });
     elementModalVisible.value = false; await loadElements();
   } catch (error) { reportError(error); }
 };
 function openValueSetModal() { editValueSet(); }
-function editValueSet(row?: ValueSet) { editingValueSet.value = row || null; valueSetForm.value = row ? { valueSetCode: row.valueSetCode, valueSetName: row.valueSetName, version: row.version } : { valueSetCode: '', valueSetName: '', version: '1.0.0' }; valueSetModalVisible.value = true; }
+async function editValueSet(row?: ValueSet) {
+  try {
+    const detail = row ? await standardsApi.getValueSet(row.valueSetId) : undefined;
+    editingValueSet.value = detail || null;
+    valueSetForm.value = detail ? { valueSetCode: detail.valueSetCode, valueSetName: detail.valueSetName, version: detail.version } : { valueSetCode: '', valueSetName: '', version: '1.0.0' };
+    valueSetModalVisible.value = true;
+  } catch (error) { reportError(error); }
+}
 async function saveValueSet() {
   const form = valueSetForm.value;
   if (!form.valueSetCode.trim() || !form.valueSetName.trim() || !form.version.trim()) return ElMessage.warning('请填写编码、名称和版本');
   try { if (editingValueSet.value) await standardsApi.updateValueSet(editingValueSet.value.valueSetId, form.valueSetName); else await standardsApi.createValueSet(form); valueSetModalVisible.value = false; await loadValueSets(); } catch (error) { reportError(error); }
 }
-async function toggleElement(row: DataElement) { try { await standardsApi.setDataElementStatus(row.id, row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'); await loadElements(); } catch (error) { reportError(error); } }
+async function toggleElement(row: DataElement) { try { await standardsApi.setDataElementStatus(row.id, row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE', row.lockVersion); await loadElements(); } catch (error) { reportError(error); } }
 async function toggleValueSet(row: ValueSet) { try { await standardsApi.setValueSetStatus(row.valueSetId, row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'); await loadValueSets(); } catch (error) { reportError(error); } }
 
 const openValueSetItemModal = () => { editItem(); };
-function editItem(row?: ValueSetItem) {
-  editingItem.value = row || null;
-  valueForm.value = { valueSet: selectedValueSet.value?.valueSetCode || '', code: row?.itemCode || '', name: row?.itemName || '', validFrom: row?.validFrom || '', validTo: row?.validTo || '' };
-  valueModalVisible.value = true;
+async function editItem(row?: ValueSetItem) {
+  const valueSet = selectedValueSet.value;
+  if (!valueSet) return;
+  try {
+    const detail = row ? await standardsApi.getItem(valueSet.valueSetId, row.itemId) : undefined;
+    editingItem.value = detail || null;
+    valueForm.value = { valueSet: valueSet.valueSetCode, code: detail?.itemCode || '', name: detail?.itemName || '', validFrom: detail?.validFrom || '', validTo: detail?.validTo || '', attributes: JSON.stringify(detail?.attributes || {}, null, 2) };
+    valueModalVisible.value = true;
+  } catch (error) { reportError(error); }
 }
 
 const saveValueSetItem = async () => {
@@ -281,8 +312,12 @@ const saveValueSetItem = async () => {
   if (form.valueSet !== selectedValueSet.value?.valueSetCode) return ElMessage.warning('请先选择对应值域');
   if (!id || !form.code.trim() || !form.name.trim() || !form.validFrom) return ElMessage.warning('请选择值域并填写代码、名称和生效时间');
   try {
-    if (editingItem.value) await standardsApi.updateItem(id, editingItem.value.itemId, { itemName: form.name, validFrom: form.validFrom, validTo: form.validTo || undefined });
-    else await standardsApi.createItem(id, { itemCode: form.code, itemName: form.name, validFrom: form.validFrom });
+    const attributes = JSON.parse(form.attributes || '{}');
+    if (!attributes || typeof attributes !== 'object' || Array.isArray(attributes)) throw new Error('扩展属性须为 JSON 对象');
+    if (form.validTo && form.validTo <= form.validFrom) throw new Error('失效时间须晚于生效时间');
+    const data = { itemName: form.name.trim(), validFrom: form.validFrom, validTo: form.validTo || undefined, attributes };
+    if (editingItem.value) await standardsApi.updateItem(id, editingItem.value.itemId, data);
+    else await standardsApi.createItem(id, { itemCode: form.code.trim(), ...data });
     valueModalVisible.value = false; await loadItems();
   } catch (error) { reportError(error); }
 };

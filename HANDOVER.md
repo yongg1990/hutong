@@ -1,9 +1,49 @@
 # 项目交接文档
 
+## 2026-10-19 编辑失败原因与处理规则
+
+- 本次重复编辑失败发生于 `src/config/pageApiRegistry.ts`。请求在一次 `apply_patch_batch` 中同时对同一路径执行 `delete_file` 和 `add_file`，工具返回 `invalid patch: multiple operations target ...`，补丁在写入前被拒绝，原文件未改变。
+- 根因是补丁请求构造错误，不是 Vue/TypeScript 语法、中文路径、Windows 文件权限或 Swagger 网络问题。2026-09-29 的交接记录已经说明过同一限制，但上轮没有遵守，且连续重复提交相同无效补丁，造成任务中断。
+- 后续同一文件每批只提交一个 `apply_patch_update_file` 操作，不通过同批删除再新增实现。整文件替换入口也可能被工具包装成 Delete + Add，本轮又触发过一次，因此本项目手工编辑优先采用局部更新。上下文不匹配时先读取实际内容再缩小范围，不原样重试。
+- 另一个已确认原因是更新片段顺序错误：工具按文件位置顺序匹配多个 hunk，倒序或重叠片段会报 expected lines/context not found，即使目标文字存在。hunk 必须按原文件从上到下排列；同一批不要先新增文本再以它作为后续修改目标。失败原子拒绝，不代表文件被部分写坏。
+- 排查流程：区分工具补丁格式错误、上下文匹配错误和代码错误；前两类先纠正补丁结构，不能靠反复提交相同请求解决。
+- 上轮只新增了 `src/config/apiContract.ts` 并部分修改请求拦截器，页面注册清单仍是旧版，不能把当时状态视为重新对接完成。本轮在这些未完成改动上继续；`src/api/governance.ts` 的原有用户修改须保留。
+
+## 2026-10-19 最新接口对接摘要
+
+> 本节优先于下方历史记录。契约来源为本次读取的实时 `/api/tcmirp/v3/api-docs`，不再按旧版接口全集判断是否对接。
+
+### 本次范围与标记
+
+- 仅接入 Swagger 分组 description 明确含“可对接”的 19 组。APP-01：登录认证、租户与访问控制、用户与角色、角色、权限、通用字典、项目空间；APP-02：主体管理、业务对象管理、饮片品种管理、监管编码体系管理；APP-03：来源系统管理、来源系统密钥管理、对接助手、数据元管理、值域管理；APP-04：事件类型配置、事件 Schema 管理、事件类型授权。
+- `src/config/apiContract.ts` 是本次允许的 method/path 清单；`src/config/pageApiRegistry.ts` 按分组生成 15 个管理页面的接口标记及端点说明，保留原 PageHeader 标记样式。侧栏元数据也从该注册清单取值。登录保留实际登录端点展示。
+- 移除工作台、业务场景/通用事件录入、批次/原始记录、字段映射、治理案卷、标识命名空间/标识绑定、可信事件/血缘/证据/文件/存证、交换规范/查询/投影、部署实例、订阅任务、审计告警等范围外页面的对接标记。保留页面和历史代码，不删除用户功能。
+- 默认真实后端模式。允许分组始终请求后端，失败不自动回退为模拟成功；不允许的端点不会发往后端。显式静态模式只对范围外模块保留原演示适配。页面标记表示代码按契约接入，不表示已完成登录联调。
+
+### 契约调整
+
+- 登录按 username/password 提交，保留已有 RSA 加密；按 token/userId/tenantId/expiresIn 解析响应，不编造角色/租户资料，tenantId 为空保留平台用户语义。移除登录租户必选和预置体验账号。退出请求不再虚构服务端成功；本地退出仍清理会话。
+- 请求上下文不再默认注入租户/项目/来源 ID 1；缺失上下文时省略对应请求头，登录不带旧账号上下文。切换登录账号和退出清理项目与来源选择。Navbar 项目入口改为管理真实项目空间，不再切换到虚构 PRJ ID。
+- 用户 tenantId 可选且字符串传递；角色绑定/解除发送 roleIds 字符串数组，tenantId 为可选查询参数。角色列表按每页 200 继续获取完整选项。租户选择使用新增 `/tenant-access/tenants/permitted`；来源密钥页使用 `/openapi/v1/source-systems/tenant` 按租户加载来源选项，保留当前租户与管理员代生成两类接口。
+- 权限树使用 `/permissions/tree`；角色赋权按服务端嵌套 children/granted 递归展示及回填，保存最终 permissionCodes 集合。补齐权限创建入口；parentId 保持字符串，创建时不发送修改专用 status 字段。
+- 项目 BusinessScope 只包含 scenarioCodes/regionCodes，移除旧 partyIds/objectTypes，并修正空数组为“无授权范围”的语义。
+- 编码体系新增必填语义版本 version，展示 contentDigest/publishedAt，试校验允许指定 version；饮片创建只依赖 productId 返回值。主体、业务对象、饮片的正式分页/详情/创建/更新接口保留并按当前契约接入。
+- 来源系统注册仅要求 code/name/type/status；ownerPartyId 等字段按文档可选，更新仍要求 ownerPartyId 与 lockVersion。`governance.ts` 在原有用户修改上增量调整，没有回滚原改动。
+- 数据元详情、约束字段、锁版本更新/启停已接入；值域及代码项编辑先取详情，代码不可变。补齐有效代码项查询及 attributes JSON 编辑，保留 validFrom/validTo；值域/代码项不发送文档没有的 lockVersion。
+- 事件类型补齐详情、PUT 更新、PATCH 启停及乐观锁。Schema 按 summary/detail 区分取值，查看展示完整 fields/referenceRules；已保存测试和发布无请求体，新增当前未保存草稿测试入口，提交完整 eventType/schemaVersion/fields/referenceRules。
+- 来源密钥、对接助手、事件类型授权沿用本项目已有页面与接口模块，并纳入最新分组清单。密钥创建返回 `{ key }`，只展示公开信息；授权保存为完整目标集合，对接助手校验不提交事件。
+
+### 本次执行边界
+
+- 按用户要求未运行打包、lint、测试、浏览器验证或启动命令；没有新增独立日志文件。
+- 未使用真实账号进行认证后的端到端联调，不能宣称业务验收通过。下方历史“检查通过/端口运行”等结论仅属于对应历史轮次，本轮不复用这些结论。
+- 后续接口更新仍应读取实时 Swagger，先按分组“可对接”筛选，再同步契约清单、API 模块及页面标记，不把未标注接口恢复为正式对接。
+
+
 ## 1. 文档信息
 
-- 文档版本：v1.6.0
-- 最近更新：2026-09-28
+- 文档版本：v1.7.0
+- 最近更新：2026-10-19
 - 项目目录：[96mF:\codex\gitHub\hutong[0m
 - 接口文档：线上 Swagger（实时 OpenAPI）http://192.168.1.39/api/tcmirp/swagger-ui/index.html#/
 - OpenAPI JSON：http://192.168.1.39/api/tcmirp/v3/api-docs

@@ -3,8 +3,6 @@ import { request, apiCall } from './client';
 export interface BusinessScope {
   scenarioCodes: string[];
   regionCodes: string[];
-  partyIds: string[];
-  objectTypes: string[];
 }
 
 export interface ProjectSpaceCreateRequest {

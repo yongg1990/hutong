@@ -25,18 +25,12 @@
       <el-dropdown trigger="click" @command="handleProjectChange">
         <div class="project-selector">
           <span class="label">项目空间:</span>
-          <span class="name">{{ contextStore.projectName }}</span>
+          <span class="name">{{ contextStore.projectName || '未选择项目' }}</span>
           <el-icon class="arrow-icon"><ArrowDown /></el-icon>
         </div>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item v-if="isStaticMode()" command="1">中药互认协同空间 (1)</el-dropdown-item>
-            <el-dropdown-item v-if="!isStaticMode()" command="PRJ-YN-TCM-2026">
-              云南中药全产业链追溯示范项目 (PRJ-YN-TCM-2026)
-            </el-dropdown-item>
-            <el-dropdown-item v-if="!isStaticMode()" command="PRJ-WS-SANQI-01">
-              文山三七专线合规追溯项目 (PRJ-WS-SANQI-01)
-            </el-dropdown-item>
+            <el-dropdown-item command="manage">管理项目空间</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
@@ -110,10 +104,10 @@
           style="margin-bottom: 16px;"
         >
           <template #title>
-            <span style="font-weight: 700;">为什么提示“内网隔离/基准模式”？</span>
+            <span style="font-weight: 700;">后端连接设置</span>
           </template>
           <div style="font-size: 12.5px; line-height: 1.6; margin-top: 4px;">
-            您配置的文档地址为私网 IP（<strong>192.168.1.39</strong>）。当前前端系统运行在公网云端沙箱中，<strong>公网环境受限于物理网络协议，无法直接跨网访问您的局域网私有主机</strong>。系统已自动启用「全功能基准 Mock 模式」以保障前端各项操作与流程演示。
+            当前文档标注“可对接”的接口使用真实后端；连接失败会返回错误，不会自动转为模拟成功。
           </div>
         </el-alert>
 
@@ -131,7 +125,7 @@
           <el-descriptions-item label="网络连通状态">
             <div style="display: flex; align-items: center; gap: 8px;">
               <el-tag :type="apiStatus.isOnline ? 'success' : 'danger'" size="small">
-                {{ apiStatus.isOnline ? '● 服务在线 (200 OK)' : '○ 局域网未直连 / 模拟基准兜底' }}
+                {{ apiStatus.isOnline ? '服务在线' : '未连接' }}
               </el-tag>
               <span v-if="apiStatus.checkedAt" class="text-xs text-gray-500">检测时间: {{ apiStatus.checkedAt }}</span>
             </div>
@@ -201,19 +195,12 @@ const saveAndTestBaseUrl = async () => {
   if (ok) {
     ElMessage.success('后端接口探测成功！已切换为真实在线模式。');
   } else {
-    ElMessage.warning('未能连通目标地址（通常因私网不可达或服务未启动），继续使用基准 Mock 兜底保证页面可用。');
+    ElMessage.warning('未能连通目标地址，请检查网络、代理配置与后端服务。');
   }
 };
 
-const handleProjectChange = (projId: string) => {
-  if (isStaticMode()) {
-    contextStore.switchProject('1', '中药互认协同空间');
-  } else if (projId === 'PRJ-WS-SANQI-01') {
-    contextStore.switchProject('PRJ-WS-SANQI-01', '文山三七专线合规追溯项目');
-  } else {
-    contextStore.switchProject('PRJ-YN-TCM-2026', '云南中药全产业链追溯示范项目');
-  }
-  ElMessage.success(`协同项目空间已切换为: ${contextStore.projectName}`);
+const handleProjectChange = () => {
+  router.push('/settings/tenant-project');
 };
 
 const handleUserCommand = (cmd: string) => {

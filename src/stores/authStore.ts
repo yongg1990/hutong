@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia';
 import { authApi, type LoginPayload, type LoginResult } from '@/api/auth';
 import { useContextStore } from './contextStore';
-import { isStaticMode } from './demoStore';
 
 export interface AuthState {
   token: string;
@@ -20,7 +19,7 @@ export interface AuthState {
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => {
     const storedToken = localStorage.getItem('weappauthorization') || localStorage.getItem('tcmirp_token') || '';
-    const hasBackendSession = localStorage.getItem('tcmirp_session_source') === (isStaticMode() ? 'static' : 'backend');
+    const hasBackendSession = localStorage.getItem('tcmirp_session_source') === 'backend';
     const isLegacyDemoToken = /^(jwt_tcmirp_|local-|demo-|mock-|fake-|dev-token)/i.test(storedToken);
     const savedToken = !hasBackendSession || isLegacyDemoToken ? '' : storedToken;
     if (!savedToken && storedToken) {
@@ -58,13 +57,11 @@ export const useAuthStore = defineStore('auth', {
 
       // Sync to context store
       const contextStore = useContextStore();
-      if (isStaticMode()) {
-        contextStore.setProject('1', '中药互认协同空间');
-        localStorage.setItem('tcmirp_source_system_id', '1');
-      }
       contextStore.setTenant(res.user.tenantId, res.user.tenantName);
       contextStore.userName = res.user.realName || res.user.username;
-      contextStore.userRole = (res.user.roles && res.user.roles[0]) || '业务操作员';
+      contextStore.userRole = (res.user.roles && res.user.roles[0]) || '已登录';
+      contextStore.switchProject('', '');
+      localStorage.removeItem('tcmirp_source_system_id');
 
       return res;
     },
@@ -82,13 +79,18 @@ export const useAuthStore = defineStore('auth', {
         localStorage.removeItem('tcmirp_token');
         localStorage.removeItem('tcmirp_user');
         localStorage.removeItem('tcmirp_session_source');
+        const contextStore = useContextStore();
+        contextStore.setTenant('', '');
+        contextStore.switchProject('', '');
+        contextStore.userName = ''; contextStore.userRole = '';
+        localStorage.removeItem('tcmirp_source_system_id');
       }
     },
 
     initSession() {
       const token = localStorage.getItem('weappauthorization') || localStorage.getItem('tcmirp_token');
       const rawUser = localStorage.getItem('tcmirp_user');
-      const isBackendSession = localStorage.getItem('tcmirp_session_source') === (isStaticMode() ? 'static' : 'backend');
+      const isBackendSession = localStorage.getItem('tcmirp_session_source') === 'backend';
       const isLegacyDemoToken = Boolean(token && /^(jwt_tcmirp_|local-|demo-|mock-|fake-|dev-token)/i.test(token));
       if (token && rawUser && isBackendSession && !isLegacyDemoToken) {
         try {
@@ -98,13 +100,9 @@ export const useAuthStore = defineStore('auth', {
 
           const contextStore = useContextStore();
           if (this.user) {
-            if (isStaticMode()) {
-              contextStore.setProject('1', '中药互认协同空间');
-              localStorage.setItem('tcmirp_source_system_id', '1');
-            }
             contextStore.setTenant(this.user.tenantId, this.user.tenantName);
             contextStore.userName = this.user.realName || this.user.username;
-            contextStore.userRole = (this.user.roles && this.user.roles[0]) || '业务操作员';
+            contextStore.userRole = (this.user.roles && this.user.roles[0]) || '已登录';
           }
         } catch (e) {
           console.error('Failed to parse cached user', e);

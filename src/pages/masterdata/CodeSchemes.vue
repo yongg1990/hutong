@@ -26,6 +26,9 @@
           <el-table-column prop="schemeId" label="体系 ID" width="170"><template #default="{ row }"><span class="mono scheme-id">{{ row.schemeId }}</span></template></el-table-column>
           <el-table-column prop="schemeCode" label="体系代码" min-width="200" show-overflow-tooltip><template #default="{ row }"><span class="mono code-text">{{ row.schemeCode }}</span></template></el-table-column>
           <el-table-column prop="schemeName" label="体系名称" min-width="190" show-overflow-tooltip />
+          <el-table-column prop="version" label="版本" width="110" />
+          <el-table-column prop="contentDigest" label="内容摘要" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="publishedAt" label="发布时间" width="175" />
           <el-table-column prop="issuerType" label="发布机构类型" min-width="150" show-overflow-tooltip><template #default="{ row }"><el-tag size="small" effect="plain">{{ row.issuerType }}</el-tag></template></el-table-column>
           <el-table-column prop="validationJson" label="整码校验规则" min-width="220" show-overflow-tooltip><template #default="{ row }"><span class="mono rule-preview">{{ compactJson(row.validationJson) }}</span></template></el-table-column>
           <el-table-column label="状态" width="90"><template #default="{ row }"><StatusTag :code="row.status" :label="statusLabel(row.status)" /></template></el-table-column>
@@ -48,6 +51,7 @@
         <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
           <div class="form-grid">
             <el-form-item label="编码体系代码" prop="schemeCode"><el-input v-model="form.schemeCode" maxlength="128" :disabled="editing" placeholder="例如 NATIONAL_MEDICAL_INSURANCE_16" @input="normalizeSchemeCode" /></el-form-item>
+            <el-form-item label="语义版本" prop="version"><el-input v-model="form.version" :disabled="editing" maxlength="32" placeholder="1.0.0" /></el-form-item>
             <el-form-item label="编码体系名称" prop="schemeName"><el-input v-model="form.schemeName" maxlength="200" placeholder="请输入编码体系名称" /></el-form-item>
             <el-form-item label="发布机构类型" prop="issuerType">
               <el-select v-model="form.issuerType" filterable allow-create default-first-option placeholder="选择或输入机构类型" style="width:100%">
@@ -70,6 +74,9 @@
           <el-descriptions-item label="体系 ID"><span class="mono">{{ detail.schemeId }}</span></el-descriptions-item>
           <el-descriptions-item label="体系代码"><span class="mono code-text">{{ detail.schemeCode }}</span></el-descriptions-item>
           <el-descriptions-item label="体系名称">{{ detail.schemeName }}</el-descriptions-item>
+          <el-descriptions-item label="版本">{{ detail.version }}</el-descriptions-item>
+          <el-descriptions-item label="内容摘要">{{ detail.contentDigest || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="发布时间">{{ detail.publishedAt || '-' }}</el-descriptions-item>
           <el-descriptions-item label="发布机构类型">{{ detail.issuerType }}</el-descriptions-item>
           <el-descriptions-item label="状态"><StatusTag :code="detail.status" :label="statusLabel(detail.status)" /></el-descriptions-item>
           <el-descriptions-item label="乐观锁版本"><span class="mono">{{ detail.lockVersion ?? '-' }}</span></el-descriptions-item>
@@ -122,6 +129,7 @@
             </el-select>
           </el-form-item>
           <el-form-item label="业务生效时间"><el-date-picker v-model="validationForm.effectiveAt" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="可选" style="width:100%" /></el-form-item>
+          <el-form-item label="编码体系版本"><el-input v-model="validationForm.version" placeholder="留空使用最新启用版本" /></el-form-item>
         </div>
         <el-form-item label="待校验编码" prop="rawCode"><el-input v-model="validationForm.rawCode" class="mono-input" placeholder="请输入监管编码原值" /></el-form-item>
       </el-form>
@@ -166,7 +174,7 @@ const filters = reactive({ schemeCode: '', version: '', schemeName: '', issuerTy
 const inactiveCount = computed(() => schemes.value.filter(item => item.status === 'INACTIVE').length);
 
 const formVisible = ref(false); const formLoading = ref(false); const submitting = ref(false); const editing = ref(false); const editingId = ref(''); const formRef = ref<FormInstance>();
-const blankForm = () => ({ schemeCode: '', schemeName: '', issuerType: '', validationJson: JSON.stringify({ pattern: '' }, null, 2), status: 'ACTIVE' as SchemeStatus, lockVersion: 0 });
+const blankForm = () => ({ schemeCode: '', version: '1.0.0', schemeName: '', issuerType: '', validationJson: JSON.stringify({ pattern: '' }, null, 2), status: 'ACTIVE' as SchemeStatus, lockVersion: 0 });
 const form = reactive(blankForm());
 const detailVisible = ref(false); const detailLoading = ref(false); const detail = ref<CodeSchemeResponse | null>(null);
 const currentScheme = ref<CodeSchemeResponse | null>(null); const segmentsVisible = ref(false); const segmentsLoading = ref(false); const segments = ref<CodeSchemeSegment[]>([]);
@@ -174,10 +182,10 @@ const segmentFormVisible = ref(false); const segmentFormLoading = ref(false); co
 const blankSegmentForm = () => ({ segmentNo: 1, startPos: 1, segmentLength: 1, semanticCode: '', ruleJson: JSON.stringify({ pattern: '' }, null, 2) });
 const segmentForm = reactive(blankSegmentForm());
 const validationVisible = ref(false); const validating = ref(false); const validationFormRef = ref<FormInstance>();
-const validationForm = reactive({ schemeCode: '', rawCode: '', effectiveAt: '' }); const validationResult = ref<CodeValidationResponse | null>(null);
+const validationForm = reactive({ schemeCode: '', version: '', rawCode: '', effectiveAt: '' }); const validationResult = ref<CodeValidationResponse | null>(null);
 
 const validJson = (_rule: unknown, value: string, callback: (error?: Error) => void) => { if (!value?.trim()) return callback(new Error('请输入 JSON 校验规则')); try { JSON.parse(value); callback(); } catch { callback(new Error('请输入合法的 JSON')); } };
-const rules: FormRules = { schemeCode: [{ required: true, message: '请输入编码体系代码', trigger: 'blur' }], schemeName: [{ required: true, message: '请输入编码体系名称', trigger: 'blur' }], issuerType: [{ required: true, message: '请输入发布机构类型', trigger: 'change' }], validationJson: [{ required: true, message: '请输入整码校验规则', trigger: 'blur' }, { validator: validJson, trigger: 'blur' }], status: [{ required: true, message: '请选择状态', trigger: 'change' }] };
+const rules: FormRules = { version: [{ required: true, pattern: /^[0-9]+\.[0-9]+\.[0-9]+$/, message: '请输入 x.y.z 格式的版本', trigger: 'blur' }], schemeCode: [{ required: true, message: '请输入编码体系代码', trigger: 'blur' }], schemeName: [{ required: true, message: '请输入编码体系名称', trigger: 'blur' }], issuerType: [{ required: true, message: '请输入发布机构类型', trigger: 'change' }], validationJson: [{ required: true, message: '请输入整码校验规则', trigger: 'blur' }, { validator: validJson, trigger: 'blur' }], status: [{ required: true, message: '请选择状态', trigger: 'change' }] };
 const segmentRules: FormRules = { segmentNo: [{ required: true, message: '请输入编码段序号', trigger: 'change' }], startPos: [{ required: true, message: '请输入起始位置', trigger: 'change' }], segmentLength: [{ required: true, message: '请输入编码段长度', trigger: 'change' }], semanticCode: [{ required: true, message: '请输入编码段语义代码', trigger: 'blur' }], ruleJson: [{ required: true, message: '请输入编码段校验规则', trigger: 'blur' }, { validator: validJson, trigger: 'blur' }] };
 const validationRules: FormRules = { schemeCode: [{ required: true, message: '请输入编码体系代码', trigger: 'change' }], rawCode: [{ required: true, message: '请输入待校验编码', trigger: 'blur' }] };
 const statusLabel = (value?: string) => value === 'ACTIVE' ? '启用' : value === 'INACTIVE' ? '停用' : value || '-';
@@ -195,7 +203,7 @@ const handleReset = () => { Object.assign(filters, { schemeCode: '', version: ''
 const handleSizeChange = () => { page.value = 1; loadSchemes(); };
 const openCreate = () => { editing.value = false; editingId.value = ''; Object.assign(form, blankForm()); formRef.value?.clearValidate(); formVisible.value = true; };
 const openEdit = async (row: CodeSchemeResponse) => { editing.value = true; editingId.value = String(row.schemeId); Object.assign(form, blankForm(), row, { validationJson: prettyJson(row.validationJson), status: row.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE' }); formVisible.value = true; formLoading.value = true; try { const result = await masterDataApi.getCodeSchemeById(editingId.value); Object.assign(form, result, { validationJson: prettyJson(result.validationJson), status: result.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE', lockVersion: result.lockVersion ?? 0 }); formRef.value?.clearValidate(); } catch (error) { formVisible.value = false; ElMessage.error(apiErrorMessage(error, '监管编码体系详情加载失败')); } finally { formLoading.value = false; } };
-const submitScheme = async () => { if (!await formRef.value?.validate().catch(() => false)) return; submitting.value = true; try { const validationJson = JSON.stringify(JSON.parse(form.validationJson)); if (editing.value) { await masterDataApi.updateCodeScheme(editingId.value, { schemeName: form.schemeName.trim(), issuerType: form.issuerType.trim(), validationJson, status: form.status, lockVersion: form.lockVersion }); ElMessage.success('监管编码体系更新成功'); } else { await masterDataApi.createCodeScheme({ schemeCode: form.schemeCode.trim(), schemeName: form.schemeName.trim(), issuerType: form.issuerType.trim(), validationJson }); ElMessage.success('监管编码体系创建成功'); } formVisible.value = false; await loadSchemes(); } catch (error) { ElMessage.error(apiErrorMessage(error, editing.value ? '监管编码体系更新失败' : '监管编码体系创建失败')); } finally { submitting.value = false; } };
+const submitScheme = async () => { if (!await formRef.value?.validate().catch(() => false)) return; submitting.value = true; try { const validationJson = JSON.stringify(JSON.parse(form.validationJson)); if (editing.value) { await masterDataApi.updateCodeScheme(editingId.value, { schemeName: form.schemeName.trim(), issuerType: form.issuerType.trim(), validationJson, status: form.status, lockVersion: form.lockVersion }); ElMessage.success('监管编码体系更新成功'); } else { await masterDataApi.createCodeScheme({ schemeCode: form.schemeCode.trim(), version: form.version.trim(), schemeName: form.schemeName.trim(), issuerType: form.issuerType.trim(), validationJson }); ElMessage.success('监管编码体系创建成功'); } formVisible.value = false; await loadSchemes(); } catch (error) { ElMessage.error(apiErrorMessage(error, editing.value ? '监管编码体系更新失败' : '监管编码体系创建失败')); } finally { submitting.value = false; } };
 const openDetail = async (row: CodeSchemeResponse) => { detailVisible.value = true; detailLoading.value = true; detail.value = null; try { detail.value = await masterDataApi.getCodeSchemeById(String(row.schemeId)); } catch (error) { ElMessage.error(apiErrorMessage(error, '监管编码体系详情加载失败')); } finally { detailLoading.value = false; } };
 const disableScheme = async (row: CodeSchemeResponse) => { try { await ElMessageBox.confirm('确定停用“' + row.schemeName + '”吗？', '停用监管编码体系', { type: 'warning' }); await masterDataApi.disableCodeScheme(String(row.schemeId)); ElMessage.success('监管编码体系已停用'); await loadSchemes(); } catch (error) { if (error !== 'cancel' && error !== 'close') ElMessage.error(apiErrorMessage(error, '监管编码体系停用失败')); } };
 
@@ -206,8 +214,8 @@ const openSegmentEdit = async (row: CodeSchemeSegment) => { if (!currentScheme.v
 const submitSegment = async () => { if (!currentScheme.value || !await segmentFormRef.value?.validate().catch(() => false)) return; segmentSubmitting.value = true; try { const payload = { segmentNo: segmentForm.segmentNo, startPos: segmentForm.startPos, segmentLength: segmentForm.segmentLength, semanticCode: segmentForm.semanticCode.trim(), ruleJson: JSON.stringify(JSON.parse(segmentForm.ruleJson)) }; if (segmentEditing.value) { await masterDataApi.updateCodeSchemeSegment(String(currentScheme.value.schemeId), segmentEditingId.value, payload); ElMessage.success('监管编码段更新成功'); } else { await masterDataApi.createCodeSchemeSegment(String(currentScheme.value.schemeId), payload); ElMessage.success('监管编码段创建成功'); } segmentFormVisible.value = false; await loadSegments(); } catch (error) { ElMessage.error(apiErrorMessage(error, segmentEditing.value ? '监管编码段更新失败' : '监管编码段创建失败')); } finally { segmentSubmitting.value = false; } };
 const deleteSegment = async (row: CodeSchemeSegment) => { if (!currentScheme.value) return; try { await ElMessageBox.confirm('确定删除编码段“' + row.semanticCode + '”吗？', '删除监管编码段', { type: 'warning' }); await masterDataApi.deleteCodeSchemeSegment(String(currentScheme.value.schemeId), String(row.segmentId)); ElMessage.success('监管编码段已删除'); await loadSegments(); } catch (error) { if (error !== 'cancel' && error !== 'close') ElMessage.error(apiErrorMessage(error, '监管编码段删除失败')); } };
 
-const openValidation = () => { Object.assign(validationForm, { schemeCode: '', rawCode: '', effectiveAt: '' }); validationResult.value = null; validationFormRef.value?.clearValidate(); validationVisible.value = true; };
-const validateCode = async () => { if (!await validationFormRef.value?.validate().catch(() => false)) return; validating.value = true; validationResult.value = null; try { validationResult.value = await masterDataApi.validateCode({ schemeCode: validationForm.schemeCode.trim(), rawCode: validationForm.rawCode.trim(), effectiveAt: validationForm.effectiveAt || undefined }); } catch (error) { ElMessage.error(apiErrorMessage(error, '监管编码校验失败')); } finally { validating.value = false; } };
+const openValidation = () => { Object.assign(validationForm, { schemeCode: '', version: '', rawCode: '', effectiveAt: '' }); validationResult.value = null; validationFormRef.value?.clearValidate(); validationVisible.value = true; };
+const validateCode = async () => { if (!await validationFormRef.value?.validate().catch(() => false)) return; validating.value = true; validationResult.value = null; try { validationResult.value = await masterDataApi.validateCode({ schemeCode: validationForm.schemeCode.trim(), version: validationForm.version.trim() || undefined, rawCode: validationForm.rawCode.trim(), effectiveAt: validationForm.effectiveAt || undefined }); } catch (error) { ElMessage.error(apiErrorMessage(error, '监管编码校验失败')); } finally { validating.value = false; } };
 onMounted(loadSchemes);
 </script>
 

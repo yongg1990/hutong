@@ -40,13 +40,13 @@
                 </div>
                 <div class="meta-row">
                   <span class="meta-k">网关运行模式:</span>
-                  <span class="meta-v highlight">以接口响应为准；部分页面含本地演示数据</span>
+                  <span class="meta-v highlight">当前分组调用真实后端，以接口响应为准</span>
                 </div>
               </div>
 
               <div class="popover-endpoints-section">
                 <div class="endpoints-heading">
-                  <span>页面核心交互端点</span>
+                  <span>本组对接端点</span>
                   <span class="endpoint-count">共 {{ effectiveApiInfo.endpoints.length }} 个接口</span>
                 </div>
                 <div class="endpoints-list">

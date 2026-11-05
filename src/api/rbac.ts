@@ -1,4 +1,4 @@
-import { request, apiCall } from './client';
+import { request } from './client';
 import B from '@/utils/Secret/BigInt';
 import R from '@/utils/Secret/RSA';
 
@@ -96,8 +96,8 @@ export interface PermissionCreateRequest {
   moduleCode: string;
   apiMethod?: string;
   apiPath?: string;
-  parentId?: number;
-  permissionType?: string;
+  parentId?: string;
+  permissionType: string;
 }
 
 export interface PermissionUpdateRequest {
@@ -477,6 +477,16 @@ function mapRoleResponse(r: any): RoleItem {
 type TenantCreateRequest = { tenantName: string; tenantType: string; tenantCode?: string };
 type TenantUpdateRequest = { tenantName: string; tenantType: string; status?: string };
 
+function mapPermissionResponse(p: any): PermissionNode {
+  return {
+    id: p.permissionId, permissionId: p.permissionId, code: p.permissionCode, permissionCode: p.permissionCode,
+    label: p.permissionName, permissionName: p.permissionName, moduleCode: p.moduleCode,
+    apiMethod: p.apiMethod, apiPath: p.apiPath, parentId: p.parentId,
+    permissionType: p.permissionType, status: p.status, granted: p.granted,
+    children: (p.children || []).map(mapPermissionResponse)
+  };
+}
+
 /**
  * 租户与权限体系 API 服务 (Swagger: /tenant-access/*)
  */
@@ -508,6 +518,15 @@ export const rbacApi = {
   async getTenants(params?: { tenantName?: string; page?: number; size?: number }): Promise<TenantItem[]> {
     const result = await this.getTenantPage(params);
     return result.records;
+  },
+
+  async getPermittedTenants(): Promise<TenantItem[]> {
+    const records: TenantItem[] = [];
+    for (let page = 1; ; page++) {
+      const result: any = await request.get('/tenant-access/tenants/permitted', { params: { page, size: 200 } });
+      records.push(...(result.records || []).map(mapTenantResponse));
+      if (!result.records?.length || records.length >= Number(result.total)) return records;
+    }
   },
 
   // GET /tenant-access/tenants/{id}
@@ -564,7 +583,7 @@ export const rbacApi = {
     tenantId?: string | number;
   }): Promise<UserItem[]> {
     const query = new URLSearchParams();
-    if (params?.tenantId != null && params.tenantId !== '' && Number.isFinite(Number(params.tenantId))) {
+    if (params?.tenantId != null && params.tenantId !== '') {
       query.append('tenantId', String(params.tenantId));
     }
     const res: any = await request.get(`/tenant-access/users?${query.toString()}`);
@@ -579,7 +598,7 @@ export const rbacApi = {
     password?: string;
   }): Promise<UserItem> {
     const res: any = await request.post('/tenant-access/users', {
-      tenantId: data.tenantId ? Number(data.tenantId) : undefined,
+      tenantId: data.tenantId == null || data.tenantId === '' ? undefined : String(data.tenantId),
       username: data.username,
       displayName: data.displayName,
       password: R.encryptedString(userPasswordRsaKey, data.password || 'Tcm@2026!Admin')
@@ -659,8 +678,15 @@ export const rbacApi = {
     const query = new URLSearchParams();
     if (params?.tenantId != null && params.tenantId !== '') query.set('tenantId', String(params.tenantId));
     const keyword = params?.keyword?.trim().toLowerCase();
-    const res: any = await request.get(`/tenant-access/roles?${query}`);
-    return res.map(mapRoleResponse).filter((r: RoleItem) => !keyword ||
+    const records: RoleItem[] = [];
+    query.set('size', '200');
+    for (let page = 1; ; page++) {
+      query.set('page', String(page));
+      const res: any = await request.get(`/tenant-access/roles?${query}`);
+      records.push(...res.map(mapRoleResponse));
+      if (res.length < 200) break;
+    }
+    return records.filter((r: RoleItem) => !keyword ||
       (r.roleCode || '').toLowerCase().includes(keyword) ||
       (r.roleName || '').toLowerCase().includes(keyword));
   },
@@ -681,12 +707,7 @@ export const rbacApi = {
 
   async getRolePermissions(roleId: string | number): Promise<PermissionNode[]> {
     const res: any = await request.get(`/tenant-access/roles/${roleId}/permissions`);
-    return res.map((p: any) => ({
-      id: p.permissionId, permissionId: p.permissionId, code: p.permissionCode,
-      label: p.permissionName, permissionName: p.permissionName, moduleCode: p.moduleCode,
-      apiMethod: p.apiMethod, apiPath: p.apiPath, parentId: p.parentId,
-      permissionType: p.permissionType, status: p.status, granted: p.granted
-    }));
+    return res.map(mapPermissionResponse);
   },
 
   // POST /tenant-access/roles/{roleId}/permissions
@@ -744,26 +765,7 @@ export const rbacApi = {
 
   // POST /tenant-access/permissions
   async createPermission(data: PermissionCreateRequest): Promise<PermissionNode> {
-    const newNode: PermissionNode = {
-      id: Date.now(),
-      permissionId: Date.now(),
-      label: data.permissionName,
-      permissionName: data.permissionName,
-      code: data.permissionCode,
-      permissionCode: data.permissionCode,
-      moduleCode: data.moduleCode,
-      apiMethod: data.apiMethod,
-      apiPath: data.apiPath,
-      parentId: data.parentId,
-      permissionType: data.permissionType || 'MENU',
-      status: 'ACTIVE'
-    };
-
-    return apiCall(
-      request.post('/tenant-access/permissions', data),
-      newNode,
-      '创建权限节点'
-    );
+    return mapPermissionResponse(await request.post('/tenant-access/permissions', data));
   },
 
   // POST /tenant-access/permissions/{permissionId}/update
@@ -771,7 +773,7 @@ export const rbacApi = {
     permissionId: number | string,
     data: PermissionUpdateRequest
   ): Promise<PermissionNode> {
-    return request.post('/tenant-access/permissions/' + permissionId + '/update', data);
+    return mapPermissionResponse(await request.post('/tenant-access/permissions/' + permissionId + '/update', data));
   },
 
   // GET /tenant-access/permissions/{permissionId}/delete
@@ -780,6 +782,7 @@ export const rbacApi = {
   },
 
   async getPermissionTree(): Promise<PermissionNode[]> {
-    return this.getPermissions();
+    const result: any = await request.get('/tenant-access/permissions/tree');
+    return result.map(mapPermissionResponse);
   }
 };

@@ -23,7 +23,7 @@
         <h2>系统角色权能清单 ({{ total }})</h2>
         <div class="dictionary-actions">
           <span class="sub-text">权限字典 {{ permissionCount }} 项</span>
-          <el-button link @click="openPermissionManager">管理字典</el-button>
+          <el-button link @click="openPermissionManager">管理权限</el-button>
         </div>
       </div>
       <div class="panel-body">
@@ -132,6 +132,7 @@
     </el-drawer>
 
     <el-dialog v-model="permissionManagerVisible" title="编辑权限" width="min(960px, 96vw)" class="permission-manager-dialog" :close-on-click-modal="false">
+      <el-button type="primary" @click="openPermissionCreate">新增权限</el-button>
       <el-input v-model="permissionNameFilter" placeholder="搜索权限名称" clearable class="permission-search" />
       <el-table
         :key="permissionNameFilter.trim() ? 'search' : 'all'"
@@ -158,7 +159,7 @@
       </el-table>
     </el-dialog>
 
-    <el-dialog v-model="permissionEditVisible" title="修改权限" width="560px" append-to-body destroy-on-close :close-on-click-modal="false">
+    <el-dialog v-model="permissionEditVisible" :title="editingPermission ? '修改权限' : '新增权限'" width="560px" append-to-body destroy-on-close :close-on-click-modal="false">
       <el-form ref="permissionFormRef" :model="permissionForm" :rules="permissionRules" label-width="100px">
         <el-form-item label="权限编码" prop="permissionCode">
           <el-input v-model="permissionForm.permissionCode" />
@@ -216,7 +217,7 @@
           />
         </el-form-item>
         <el-form-item label="租户 ID">
-          <el-input-number v-model="roleTenantId" :min="1" placeholder="留空创建平台角色" />
+          <el-input v-model="roleTenantId" placeholder="留空创建平台角色" />
         </el-form-item>
         <el-form-item label="角色名称" prop="roleName">
           <el-input v-model="form.roleName" placeholder="如 业务协同审计员" />
@@ -319,7 +320,7 @@ const treeRef = ref<InstanceType<typeof ElTree>>();
 const currentCheckedKeys = ref<string[]>([]);
 
 const formRef = ref<FormInstance>();
-const roleTenantId = ref<number | undefined>();
+const roleTenantId = ref('');
 const form = ref<Partial<RoleItem>>({
   roleCode: '',
   roleName: '',
@@ -342,7 +343,8 @@ const loadRoles = async () => {
     total.value = result.total;
     page.value = result.page;
     pageSize.value = result.size;
-    permissionCount.value = pTree.length;
+    const countPermissions = (nodes: PermissionNode[]): number => nodes.reduce((total, node) => total + 1 + countPermissions(node.children || []), 0);
+    permissionCount.value = countPermissions(pTree);
   } catch (err) {
     roles.value = [];
     total.value = 0;
@@ -393,7 +395,14 @@ const openPermissionManager = () => {
   loadPermissionItems();
 };
 
+const openPermissionCreate = () => {
+  editingPermission.value = null;
+  permissionForm.value = { permissionCode: '', permissionName: '', moduleCode: '', permissionType: '', parentId: '', apiMethod: '', apiPath: '', status: 'ACTIVE' };
+  permissionFormRef.value?.clearValidate(); permissionEditVisible.value = true;
+};
+
 const openPermissionEdit = (item: PermissionNode) => {
+  permissionFormRef.value?.clearValidate();
   editingPermission.value = item;
   permissionForm.value = {
     permissionCode: item.code,
@@ -409,14 +418,16 @@ const openPermissionEdit = (item: PermissionNode) => {
 };
 
 const savePermissionItem = async () => {
-  if (!editingPermission.value || !permissionFormRef.value) return;
+  if (!permissionFormRef.value) return;
   const valid = await permissionFormRef.value.validate().catch(() => false);
   if (!valid) return;
   savingPermissionItem.value = true;
   try {
-    const data = { ...permissionForm.value, parentId: permissionForm.value.parentId || null };
-    await rbacApi.updatePermission(editingPermission.value.id, data);
-    ElMessage.success('权限修改成功');
+    const form = permissionForm.value;
+    const data = { permissionCode: form.permissionCode.trim(), permissionName: form.permissionName.trim(), moduleCode: form.moduleCode.trim(), permissionType: form.permissionType, parentId: form.parentId ? String(form.parentId) : undefined, apiMethod: form.apiMethod?.trim() || undefined, apiPath: form.apiPath?.trim() || undefined };
+    if (editingPermission.value) await rbacApi.updatePermission(editingPermission.value.id, { ...data, status: form.status });
+    else await rbacApi.createPermission(data);
+    ElMessage.success(editingPermission.value ? '权限修改成功' : '权限创建成功');
     permissionEditVisible.value = false;
     await loadPermissionItems();
   } catch (err) {
@@ -427,6 +438,7 @@ const savePermissionItem = async () => {
 };
 
 const confirmDeletePermission = async (item: PermissionNode) => {
+  if (savingPermissionItem.value) return;
   try {
     await ElMessageBox.confirm('确定删除权限【' + item.label + '】吗？', '删除权限', {
       confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning'
@@ -449,18 +461,19 @@ const openCreateDialog = () => {
     roleName: '',
     description: ''
   };
-  roleTenantId.value = undefined;
+  roleTenantId.value = '';
   dialogVisible.value = true;
 };
 
 const submitRoleForm = async () => {
+  if (roleTenantId.value.trim() && !/^\d+$/.test(roleTenantId.value.trim())) return ElMessage.warning('租户 ID 必须是数字字符串');
   if (!formRef.value) return;
   await formRef.value.validate(async (valid) => {
     if (!valid) return;
     submitting.value = true;
     try {
       await rbacApi.createRole({ roleCode: form.value.roleCode!, roleName: form.value.roleName!,
-        description: form.value.description }, roleTenantId.value);
+        description: form.value.description }, roleTenantId.value.trim() || undefined);
       ElMessage.success(`新角色 [${form.value.roleName}] 创建成功！`);
       dialogVisible.value = false;
       await loadRoles();
@@ -480,9 +493,9 @@ const openPermissionDrawer = async (row: RoleItem) => {
   loadingPerms.value = true;
   try {
     const permissions = await rbacApi.getRolePermissions(row.id);
-    permissionTree.value = buildPermissionTree(permissions);
-    currentCheckedKeys.value = permissions.filter(p => p.granted).map(p => p.code);
-    syncParentChecks();
+    permissionTree.value = permissions;
+    const flatten = (nodes: PermissionNode[]): PermissionNode[] => nodes.flatMap(node => [node, ...flatten(node.children || [])]);
+    currentCheckedKeys.value = flatten(permissions).filter(p => p.granted).map(p => p.code);
     await nextTick();
     treeRef.value?.setCheckedKeys(currentCheckedKeys.value);
     updateParentIndeterminate();

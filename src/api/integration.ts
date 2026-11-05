@@ -46,7 +46,9 @@ const authorizationPath = (tenantId: string, projectSpaceId: string) =>
   `/openapi/v1/event-fact/event-type-authorizations/tenants/${encodeURIComponent(tenantId)}/project-spaces/${encodeURIComponent(projectSpaceId)}/event-types`;
 
 export const sourceKeysApi = {
-  list(sourceSystemId: string): Promise<SourceSystemKey[]> { return request.get(keyPath(sourceSystemId)); },
+  list(params: { tenantId?: string; sourceSystemId?: string; status: SourceSystemKey['status'] }): Promise<SourceSystemKey[]> {
+    return request.get('/openapi/v1/source-systems-keys', { params });
+  },
   create(sourceSystemId: string, data: KeyCreateRequest): Promise<{ key: SourceSystemKey }> {
     return request.post(keyPath(sourceSystemId), data);
   },

@@ -1,5 +1,4 @@
 <template>
-  <div v-if="isStaticMode()" style="position:fixed;top:12px;right:16px;z-index:10"><el-tag type="warning">静态协同数据</el-tag></div>
   <div class="login-container">
     <div class="login-bg-decorations">
       <div class="decor-circle circle-1"></div>
@@ -58,22 +57,10 @@
       <div class="login-main">
         <div class="form-header">
           <h2>系统用户身份认证</h2>
-          <p>请输入所属协同租户与经授权的账号口令登录</p>
+          <p>请输入经授权的账号和密码</p>
         </div>
 
         <el-form ref="formRef" :model="form" :rules="rules" class="login-form" size="large">
-          <el-form-item prop="tenantId">
-            <label class="form-label">所属协同租户</label>
-            <el-select v-model="form.tenantId" placeholder="选择或切换所属租户机构" style="width: 100%">
-              <el-option
-                v-for="t in tenants"
-                :key="t.id"
-                :label="t.tenantName + ' (' + t.tenantCode + ')'"
-                :value="t.id"
-              />
-            </el-select>
-          </el-form-item>
-
           <el-form-item prop="username">
             <label class="form-label">登录账号</label>
             <el-input
@@ -89,7 +76,7 @@
             <el-input
               v-model="form.password"
               type="password"
-              placeholder="请输入登录密码 (默认 Tcmirp@2026#)"
+              placeholder="请输入登录密码"
               :prefix-icon="Lock"
               show-password
               @keyup.enter="handleLogin"
@@ -97,7 +84,7 @@
           </el-form-item>
 
           <div class="form-options">
-            <el-checkbox v-model="rememberMe">记住当前租户与登录状态</el-checkbox>
+            <el-checkbox v-model="rememberMe">记住登录状态</el-checkbox>
             <el-link type="primary" :underline="false" @click="tipForget">忘记密码?</el-link>
           </div>
 
@@ -111,47 +98,10 @@
           </el-button>
         </el-form>
 
-        <!-- Fast demo account quick switcher -->
-        <div class="quick-accounts">
-          <div class="quick-title">快捷体验体验角色账号（一键填入）：</div>
-          <div class="quick-tags">
-            <el-tag
-              class="account-chip"
-              effect="plain"
-              @click="fillAccount('admin_yn_tcm', 'TENANT-YN-DEMO')"
-            >
-              系统总管 (admin)
-            </el-tag>
-            <el-tag
-              class="account-chip"
-              type="success"
-              effect="plain"
-              @click="fillAccount('li_quality', 'TENANT-YN-DEMO')"
-            >
-              质检专员 (li_quality)
-            </el-tag>
-            <el-tag
-              class="account-chip"
-              type="warning"
-              effect="plain"
-              @click="fillAccount('wang_warehouse', 'TENANT-YN-DEMO')"
-            >
-              仓储调度 (wang_warehouse)
-            </el-tag>
-            <el-tag
-              class="account-chip"
-              type="info"
-              effect="plain"
-              @click="fillAccount('zhao_field', 'TENANT-WS-SANQI')"
-            >
-              田间农事 (zhao_field)
-            </el-tag>
-          </div>
-        </div>
 
         <div class="form-footer-api">
           <span>登录认证端点: </span>
-          <code class="mono">POST /api/tcmirp/auth/login</code>
+          <code class="mono">POST /api/tcmirp/tenant-access/auth/login</code>
           <span style="margin: 0 4px;">·</span>
           <span>请求头自动携带: </span>
           <code class="mono">weappauthorization: data.token</code>
@@ -162,13 +112,11 @@
 </template>
 
 <script setup lang="ts">
-import { isStaticMode } from '@/stores/demoStore';
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus';
 import { User, Lock } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/authStore';
-import { rbacApi, type TenantItem } from '@/api/rbac';
 import { apiErrorMessage } from '@/api/client';
 
 const router = useRouter();
@@ -177,37 +125,16 @@ const authStore = useAuthStore();
 
 const loading = ref(false);
 const rememberMe = ref(true);
-const tenants = ref<TenantItem[]>([]);
 const formRef = ref<FormInstance>();
 
 const form = ref({
-  tenantId: 'TENANT-YN-DEMO',
-  username: 'admin_yn_tcm',
-  password: 'Tcmirp@2026#'
+  username: '',
+  password: ''
 });
 
 const rules = {
-  tenantId: [{ required: true, message: '请选择所属租户机构', trigger: 'change' }],
   username: [{ required: true, message: '请输入登录账号', trigger: 'blur' }],
   password: [{ required: true, message: '请输入安全密码', trigger: 'blur' }]
-};
-
-onMounted(async () => {
-  try {
-    tenants.value = await rbacApi.getTenants();
-    if (tenants.value.length > 0 && !tenants.value.some(t => String(t.id) === String(form.value.tenantId))) {
-      form.value.tenantId = tenants.value[0].id;
-    }
-  } catch (err) {
-    console.warn('Failed to load tenants for login', err);
-  }
-});
-
-const fillAccount = (username: string, tenantId: string) => {
-  form.value.username = username;
-  form.value.tenantId = tenantId;
-  form.value.password = 'Tcmirp@2026#';
-  ElMessage.info(`已填入预置账号: ${username}`);
 };
 
 const handleLogin = async () => {
@@ -218,8 +145,7 @@ const handleLogin = async () => {
     try {
       const res = await authStore.login({
         username: form.value.username,
-        password: form.value.password,
-        tenantId: form.value.tenantId
+        password: form.value.password
       });
 
       ElMessage.success(`欢迎回来，${res.user.realName || res.user.username}！`);
@@ -236,7 +162,7 @@ const handleLogin = async () => {
 
 const tipForget = () => {
   ElMessageBox.alert(
-    '若忘记系统账号密码，请联系您所属租户的主系统管理员或平台运维人员，在【用户与账号管理】模块执行「重置密码」，重置后初始默认密码为：<strong style="color: #0e5f40; font-family: monospace;">Tcmirp@2026#</strong>',
+    '请联系所属租户管理员或平台运维人员处理账号密码。',
     '忘记密码说明',
     { dangerouslyUseHTMLString: true }
   );

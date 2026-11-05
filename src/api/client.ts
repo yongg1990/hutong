@@ -1,8 +1,9 @@
-import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
+import axios, { type AxiosResponse } from 'axios';
 import { ElMessage } from 'element-plus';
 import { reactive } from 'vue';
 import { isStaticMode } from '../stores/demoStore';
 import { staticAdapter } from './staticAdapter';
+import { isConnectableEndpoint } from '../config/apiContract';
 
 // Default requests use the local proxy for the documented intranet API.
 export const DEFAULT_API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/tcmirp';
@@ -64,113 +65,41 @@ const finishQuery = (config?: object) => {
   }
 };
 
-// Keep calls aligned with the currently published Swagger contract. The UI has
-// additional offline/demo views whose endpoints are not present in this backend;
-// those calls intentionally fall through to apiCall's local fallback.
-const swaggerEndpointPatterns: Array<{ method: string; pattern: RegExp }> = [
-  { method: 'GET', pattern: /^\/ingestion-governance\/source-systems\/\d+\/keys$/ },
-  { method: 'POST', pattern: /^\/ingestion-governance\/(?:source-systems\/\d+\/keys(?:\/\d+\/status)?|admin\/tenants\/\d+\/source-systems\/\d+\/keys)$/ },
-  { method: 'GET', pattern: /^\/ingestion-governance\/integration-assistant\/(tenants|project-spaces|source-systems|source-system-keys|event-types|schemas)$/ },
-  { method: 'POST', pattern: /^\/ingestion-governance\/integration-assistant\/(request-examples|validate)$/ },
-  { method: 'GET', pattern: /^\/openapi\/v1\/event-fact\/event-type-authorizations\/tenants\/\d+\/project-spaces\/\d+\/event-types$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/event-fact\/event-type-authorizations\/tenants\/\d+\/project-spaces\/\d+\/event-types$/ },
-  { method: 'POST', pattern: /^\/tenant-access\/auth\/(login|logout)$/ },
-  { method: 'GET', pattern: /^\/tenant-access\/(tenants|users|permissions)$/ },
-  { method: 'GET', pattern: /^\/tenant-access\/permissions\/tree$/ },
-  { method: 'GET', pattern: /^\/tenant-access\/dictionaries(?:\/[^/]+\/items(?:\/active)?)?$/ },
-  { method: 'GET', pattern: /^\/tenant-access\/roles$/ },
-  { method: 'GET', pattern: /^\/tenant-access\/(roles|users)\/page$/ },
-  { method: 'GET', pattern: /^\/tenant-access\/roles\/\d+\/permissions$/ },
-  { method: 'POST', pattern: /^\/tenant-access\/(tenants|users|permissions)$/ },
-  { method: 'POST', pattern: /^\/tenant-access\/dictionaries(?:\/[^/]+)?(?:\/items(?:\/[^/]+)?)?$/ },
-  { method: 'GET', pattern: /^\/tenant-access\/tenants\/\d+$/ },
-  { method: 'POST', pattern: /^\/tenant-access\/tenants\/\d+\/update$/ },
-  { method: 'GET', pattern: /^\/tenant-access\/tenants\/\d+\/delete$/ },
-  { method: 'POST', pattern: /^\/tenant-access\/users\/\d+\/roles$/ },
-  { method: 'GET', pattern: /^\/tenant-access\/users\/\d+\/roles$/ },
-  { method: 'POST', pattern: /^\/tenant-access\/users\/\d+\/roles\/delete$/ },
-  { method: 'POST', pattern: /^\/tenant-access\/roles\/tenant$/ },
-  { method: 'POST', pattern: /^\/tenant-access\/roles\/\d+\/permissions$/ },
-  { method: 'POST', pattern: /^\/tenant-access\/permissions\/\d+\/update$/ },
-  { method: 'GET', pattern: /^\/tenant-access\/permissions\/\d+\/delete$/ },
-  { method: 'POST', pattern: new RegExp('^/openapi/v1/(trace-codes|source-systems|raw-records|parties|mappings/test|identifiers/namespaces|identifiers/bindings|identifiers/resolve|event-fact/events|event-fact/config/schemas|event-fact/config/schemas/test|event-fact/config/event-types|decoction-piece-products|business-objects|batches|code-schemes|code-schemes/validate)$') },
-  { method: 'GET', pattern: /^\/openapi\/v1\/business-objects(?:\/[0-9]+)?$/ },
-  { method: 'GET', pattern: /^\/openapi\/v1\/(source-systems|data-elements|value-sets)(?:\/\d+)?$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/(source-systems|data-elements|value-sets)(?:\/\d+(?:\/status)?)?$/ },
-  { method: 'GET', pattern: /^\/openapi\/v1\/value-sets\/\d+\/items(?:\/\d+|\/active)?$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/value-sets\/\d+\/items(?:\/\d+(?:\/status)?)?$/ },
-  { method: 'GET', pattern: /^\/openapi\/v1\/value-sets\/\d+\/items\/\d+$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/(data-elements|value-sets)\/\d+\/status$/ },
-  { method: 'GET', pattern: /^\/openapi\/v1\/event-fact\/(event-types|schemas\/definitions)(?:\/\d+)?$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/event-fact\/schemas\/definitions\/\d+$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/event-fact\/(event-types|schemas\/definitions|schemas\/test)$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/event-fact\/schemas\/definitions\/\d+(?:\/(test|publish))?$/ },
-  { method: 'PUT', pattern: /^\/openapi\/v1\/event-fact\/event-types\/\d+$/ },
-  { method: 'PATCH', pattern: /^\/openapi\/v1\/event-fact\/event-types\/\d+\/status$/ },
-  { method: 'GET', pattern: /^\/openapi\/v1\/parties(?:\/[0-9]+)?$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/parties\/[0-9]+$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/business-objects\/[0-9]+$/ },
-  { method: 'GET', pattern: /^\/openapi\/v1\/(decoction-piece-products|code-schemes)$/ },
-  { method: 'GET', pattern: /^\/openapi\/v1\/(decoction-piece-products|code-schemes)\/[0-9]+$/ },
-  { method: 'GET', pattern: /^\/openapi\/v1\/code-schemes\/[0-9]+\/segments$/ },
-  { method: 'GET', pattern: /^\/openapi\/v1\/code-schemes\/[0-9]+\/segments\/[0-9]+$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/decoction-piece-products\/[0-9]+(?:\/delete)?$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/code-schemes\/[0-9]+(?:\/delete|\/segments)?$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/code-schemes\/[0-9]+\/segments\/[0-9]+(?:\/delete)?$/ },
-  { method: 'GET', pattern: new RegExp('^/openapi/v1/identifiers/namespaces(?:/[0-9]+)?$') },
-  { method: 'GET', pattern: new RegExp('^/openapi/v1/identifiers/bindings(?:/[0-9]+)?$') },
-  { method: 'POST', pattern: new RegExp('^/openapi/v1/identifiers/namespaces/[0-9]+$') },
-  { method: 'POST', pattern: /^\/openapi\/v1\/identifiers\/bindings\/[0-9]+$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/raw-records\/-?\d+\/replays$/ },
-  { method: 'POST', pattern: new RegExp('^/openapi/v1/event-fact/config/schemas/[^/]+/[^/]+/publish$') },
-  { method: 'GET', pattern: new RegExp('^/openapi/v1/event-fact/schemas/[^/]+/[^/]+$') },
-  { method: 'GET', pattern: new RegExp('^/openapi/v1/event-fact/events/[0-9]+$') },
-  { method: 'POST', pattern: /^\/supply-chain\/(warehouse-receipts|warehouse-issues|trace-code-assignments|supply-orders|supply-deliveries|quality-inspections|primary-processes|prescriptions|pledges|plantings|input-applications|harvests|farming-operations|decoction-processes|decoction-deliveries)$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/(proofs|evidence|credentials)$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/proofs\/(verify|\d+\/(process|retry|reconcile))$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/(files\/upload-sessions|alerts\/[^/]+\/actions|callback-deliveries\/[^/]+\/replay)$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/files\/upload-sessions\/[^/]+\/complete$/ },
-  { method: 'GET', pattern: /^\/openapi\/v1\/(proofs\/[^/]+\/[^/]+|files\/[^/]+|files\/upload-sessions\/[^/]+|evidence\/[^/]+|credentials\/[^/]+|callback-deliveries\/[^/]+|batches\/[^/]+)$/ },
-  { method: 'GET', pattern: /^\/exchange-query\/(profiles|profiles\/\d+\/versions|profile-versions\/\d+\/(datasets|conformance-cases)|datasets\/\d+\/field-rules|projects\/\d+\/bindings|projections\/\d+|objects\/\d+|events\/\d+(?:\/status)?|metadata\/profiles\/[^/]+|lineage\/[^/]+\/[^/]+)$/ },
-  { method: 'POST', pattern: /^\/exchange-query\/(profiles(?:\/\d+)?|profile-versions(?:\/\d+\/(?:test|publish))?|field-rules(?:\/\d+)?|datasets(?:\/\d+)?|conformance-cases(?:\/\d+)?|bindings(?:\/\d+)?|projections|projects\/\d+\/projections\/\d+\/process)$/ },
-  { method: 'POST', pattern: /^\/admin\/v1\/subscriptions$/ },
-  { method: 'GET', pattern: /^\/openapi\/v1\/(project-spaces(?:\/[0-9]+)?|deployment-instances\/[0-9]+)$/ },
-  { method: 'POST', pattern: /^\/openapi\/v1\/(project-spaces|deployment-instances)$/ },
-  { method: 'PATCH', pattern: /^\/openapi\/v1\/project-spaces\/[0-9]+$/ },
-];
 
 // Request Interceptor
 request.interceptors.request.use((config) => {
   const method = (config.method || 'get').toUpperCase();
   const rawUrl = String(config.url || '').split('?')[0];
-  // Key material and authorization changes must never be simulated.
-  const liveIntegration = rawUrl.startsWith('/ingestion-governance/') || rawUrl.startsWith('/openapi/v1/event-fact/event-type-authorizations/');
-  if (isStaticMode() && !liveIntegration) {
+  const connectable = isConnectableEndpoint(method, rawUrl);
+  if (isStaticMode() && !connectable) {
     config.adapter = staticAdapter;
     if (method === 'GET') beginQuery(config);
     return config;
   }
-  if (!swaggerEndpointPatterns.some(item => item.method === method && item.pattern.test(rawUrl))) {
-    return Promise.reject(Object.assign(new Error('该接口未在当前 Swagger 文档发布，已使用本地演示数据'), { code: 'UNSUPPORTED_ENDPOINT' }));
+  if (!connectable) {
+    return Promise.reject(Object.assign(new Error('该接口所属分组未标注“可对接”，当前不进行后端调用'), { code: 'UNSUPPORTED_ENDPOINT' }));
   }
   if (method === 'GET') beginQuery(config);
   // Retrieve token from weappauthorization or tcmirp_token
-  const token = localStorage.getItem('weappauthorization') || localStorage.getItem('tcmirp_token');
+  const isLogin = rawUrl === '/tenant-access/auth/login';
+  const token = isLogin ? null : localStorage.getItem('weappauthorization') || localStorage.getItem('tcmirp_token');
 
   // Inject multi-tenant, context and weappauthorization headers
-  const storedTenantId = localStorage.getItem('tcmirp_tenant_id');
-  const storedProjectId = localStorage.getItem('tcmirp_project_space_id') || localStorage.getItem('tcmirp_project_id');
-  const storedSourceSystemId = localStorage.getItem('tcmirp_source_system_id');
-  const tenantId = storedTenantId && /^\d+$/.test(storedTenantId) ? storedTenantId : '1';
-  const projectId = storedProjectId && /^\d+$/.test(storedProjectId) ? storedProjectId : '1';
-  const sourceSystemId = storedSourceSystemId && /^\d+$/.test(storedSourceSystemId) ? storedSourceSystemId : '1';
+  const storedTenantId = isLogin ? null : String(config.headers?.['X-Tenant-Id'] || localStorage.getItem('tcmirp_tenant_id') || '');
+  const storedProjectId = isLogin ? null : localStorage.getItem('tcmirp_project_space_id') || localStorage.getItem('tcmirp_project_id');
+  const storedSourceSystemId = isLogin ? null : localStorage.getItem('tcmirp_source_system_id');
+  const tenantId = storedTenantId && /^\d+$/.test(storedTenantId) ? storedTenantId : undefined;
+  const projectId = storedProjectId && /^\d+$/.test(storedProjectId) ? storedProjectId : undefined;
+  const sourceSystemId = storedSourceSystemId && /^\d+$/.test(storedSourceSystemId) ? storedSourceSystemId : undefined;
 
   if (config.headers) {
     if (typeof (config.headers as any).set === 'function') {
-      (config.headers as any).set('X-Tenant-Id', tenantId);
-      (config.headers as any).set('X-Project-Id', projectId);
-      (config.headers as any).set('X-Project-Space-Id', projectId);
-      (config.headers as any).set('X-Source-System-Id', sourceSystemId);
+      if (tenantId) (config.headers as any).set('X-Tenant-Id', tenantId);
+      if (projectId) {
+        (config.headers as any).set('X-Project-Id', projectId);
+        (config.headers as any).set('X-Project-Space-Id', projectId);
+      }
+      if (sourceSystemId) (config.headers as any).set('X-Source-System-Id', sourceSystemId);
       (config.headers as any).set('X-Request-Id', `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`);
       // 登录后如果有token，在请求头自动带上 weappauthorization
       if (token) {
@@ -179,10 +108,12 @@ request.interceptors.request.use((config) => {
         (config.headers as any).set('Authorization', `Bearer ${token}`);
       }
     } else {
-      (config.headers as any)['X-Tenant-Id'] = tenantId;
-      (config.headers as any)['X-Project-Id'] = projectId;
-      (config.headers as any)['X-Project-Space-Id'] = projectId;
-      (config.headers as any)['X-Source-System-Id'] = sourceSystemId;
+      if (tenantId) (config.headers as any)['X-Tenant-Id'] = tenantId;
+      if (projectId) {
+        (config.headers as any)['X-Project-Id'] = projectId;
+        (config.headers as any)['X-Project-Space-Id'] = projectId;
+      }
+      if (sourceSystemId) (config.headers as any)['X-Source-System-Id'] = sourceSystemId;
       (config.headers as any)['X-Request-Id'] = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
       if (token) {
         (config.headers as any)['weappauthorization'] = token;
@@ -221,13 +152,14 @@ request.interceptors.response.use((response: AxiosResponse) => {
         response: { status: Number(res.code) },
         businessMessage: res.message
       });
+      Object.assign(authError, { config: response.config });
       return Promise.reject(authError);
     }
 
     if (res.code === 200 || res.code === 0 || res.code === '0' || res.code === '200') {
       return res.data !== undefined ? res.data : res;
     }
-    return Promise.reject(Object.assign(new Error(res.message || 'API Error'), { businessMessage: res.message }));
+    return Promise.reject(Object.assign(new Error(res.message || 'API Error'), { businessMessage: res.message, config: response.config }));
   }
   return res;
 }, (error) => {
@@ -258,11 +190,12 @@ export function apiErrorMessage(error: unknown, fallback: string): string {
     try { return JSON.parse(data); } catch { return null; }
   })() : data;
   const message = (body && typeof body === 'object' && 'message' in body ? body.message : undefined)
-    ?? err?.businessMessage;
+    ?? err?.businessMessage
+    ?? (error instanceof Error ? error.message : undefined);
   return typeof message === 'string' && message.trim() ? message.trim() : fallback;
 }
 
-// Safe API Call with Automatic Mock Fallback for Intranet/Offline Dev environments
+// Local-only pages may retain reference data; real API failures must propagate.
 export async function apiCall<T>(
   requestPromise: Promise<any>,
   fallbackData: T,
@@ -273,7 +206,8 @@ export async function apiCall<T>(
     apiStatus.isOnline = true;
     return result as T;
   } catch (err: any) {
-    // 401 Unauthorized token expired
+    // Calls in connectable groups must report real failures, never mock success.
+    if (err?.config && isConnectableEndpoint(err.config.method || 'GET', String(err.config.url || ''))) throw err;
     if (isStaticMode()) throw err;
     if (err?.response?.status === 401 || err?.response?.status === 403) {
       throw err;
@@ -290,9 +224,7 @@ export async function apiCall<T>(
       ElMessage.error(apiErrorMessage(err, actionName ? `${actionName}失败` : '请求失败'));
     }
 
-    // Log friendly guidance if intranet IP is unreachable
-    console.warn(`[TCMIRP API] 接口调用未能直连后端 (${apiStatus.baseUrl}${actionName ? ` - ${actionName}` : ''})，已自动使用基准数据保障系统持续运行。`, err);
-    return fallbackData;
+    throw err;
   }
 }
 

@@ -28,7 +28,6 @@
     <div class="section-heading"><h2>标准事件样例</h2><el-button :icon="Refresh" :disabled="!schema || busy" @click="resetSample">重置样例</el-button></div>
     <fieldset :disabled="busy"><JsonEditor v-model="sampleEventJson" :rows="15" label="标准事件 JSON" /></fieldset>
     <div class="actions"><el-button type="primary" :icon="Document" :loading="generating" :disabled="!ready || busy" @click="generate">生成明文模板</el-button></div>
-    <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <template v-if="example">
       <div class="section-heading"><h2>SDK 明文输入</h2><div class="actions"><el-button :icon="Download" @click="download('plaintext-request.json', plaintext)">下载明文</el-button><el-button type="primary" :loading="validating" :disabled="busy || !plaintext.trim()" @click="validate">校验明文</el-button></div></div>
       <el-descriptions :column="1" border><el-descriptions-item label="上报端点">{{ example.method }} {{ example.endpoint }}</el-descriptions-item><el-descriptions-item label="Schema 摘要">{{ example.schemaDigest }}</el-descriptions-item></el-descriptions>
@@ -61,7 +60,7 @@ import type { EventSchemaField } from '@/api/events';
 const selection = reactive<IntegrationSelection>({ tenantId: '', projectSpaceId: '', sourceSystemId: '', sourceSystemKeyId: '', eventType: '', schemaVersion: '' });
 const schema = ref<IntegrationSchema | null>(null), selectedKey = ref<SourceSystemKey | null>(null);
 const example = ref<IntegrationExample | null>(null), validation = ref<IntegrationValidation | null>(null);
-const sampleEventJson = ref(''), plaintext = ref(''), idempotencyKey = ref(''), error = ref('');
+const sampleEventJson = ref(''), plaintext = ref(''), idempotencyKey = ref('');
 const generating = ref(false), validating = ref(false), schemaVisible = ref(false);
 const busy = computed(() => generating.value || validating.value);
 const ready = computed(() => Object.values(selection).every(Boolean));
@@ -80,7 +79,7 @@ const sourceLabel = (item: SourceSystemManagement) => `${item.sourceSystemName} 
 const keyLabel = (item: SourceSystemKey) => `${item.id} · ${item.keyAlgorithm}/${item.dataAlgorithm}`;
 const eventLabel = (item: EventAuthorization) => `${item.eventName} (${item.eventType})`;
 const schemaLabel = (item: IntegrationSchema) => item.schemaVersion;
-function clearOutput() { example.value = null; plaintext.value = ''; validation.value = null; error.value = ''; }
+function clearOutput() { example.value = null; plaintext.value = ''; validation.value = null; }
 watch(() => selection.tenantId, () => { selection.sourceSystemId = ''; selection.sourceSystemKeyId = ''; selectedKey.value = null; selection.eventType = ''; selection.schemaVersion = ''; }, { flush: 'sync' });
 watch(() => selection.projectSpaceId, () => { selection.eventType = ''; selection.schemaVersion = ''; }, { flush: 'sync' });
 watch(() => selection.sourceSystemId, () => { selection.sourceSystemKeyId = ''; selectedKey.value = null; }, { flush: 'sync' });
@@ -129,16 +128,16 @@ async function generate() {
   try {
     const result = await integrationApi.example({ ...selection, ...(sampleEventJson.value.trim() ? { sampleEventJson: sampleEventJson.value } : {}), ...(idempotencyKey.value ? { idempotencyKey: idempotencyKey.value } : {}) });
     example.value = result; plaintext.value = pretty(result.plaintextRequest); validation.value = result.validation;
-  } catch (cause) { error.value = apiErrorMessage(cause, '生成明文模板失败'); }
+  } catch (cause) { ElMessage.error(apiErrorMessage(cause, '生成明文模板失败')); }
   finally { generating.value = false; }
 }
 async function validate() {
   if (busy.value) return;
   try { requireJsonObject(plaintext.value); }
   catch (cause) { ElMessage.warning(cause instanceof Error ? cause.message : '明文 JSON 格式错误'); return; }
-  validating.value = true; validation.value = null; error.value = '';
+  validating.value = true; validation.value = null;
   try { validation.value = await integrationApi.validate(plaintext.value); }
-  catch (cause) { error.value = apiErrorMessage(cause, '明文校验失败'); }
+  catch (cause) { ElMessage.error(apiErrorMessage(cause, '明文校验失败')); }
   finally { validating.value = false; }
 }
 function download(filename: string, text: string) {

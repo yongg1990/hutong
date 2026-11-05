@@ -30,13 +30,13 @@ export interface SourceSystemRequest {
   sourceSystemCode: string;
   sourceSystemName: string;
   sourceSystemType: string;
-  ownerPartyId: string;
-  endpointType: 'API' | 'FILE' | 'MESSAGE' | 'DATABASE' | string;
+  ownerPartyId?: string;
+  endpointType?: 'API' | 'FILE' | 'MESSAGE' | 'DATABASE' | string;
   baseUrl?: string;
-  signaturePublicKey: string;
-  signatureAlgorithm: string;
-  trustLevel: string;
-  defaultPurposeCodes: string[];
+  signaturePublicKey?: string;
+  signatureAlgorithm?: string;
+  trustLevel?: string;
+  defaultPurposeCodes?: string[];
   status: 'ACTIVE' | 'INACTIVE';
 }
 
@@ -54,7 +54,7 @@ export interface SourceSystemManagement extends SourceSystemRequest {
   version?: string;
   createdAt?: string;
 }
-export type SourceSystemUpdateRequest = Omit<SourceSystemRequest, 'sourceSystemCode'> & { lockVersion: number };
+export type SourceSystemUpdateRequest = Omit<SourceSystemRequest, 'sourceSystemCode'> & { ownerPartyId: string; lockVersion: number };
 export interface PreserveRawCommand {
   projectSpaceId: string;
   batchId?: string;
@@ -160,6 +160,15 @@ export const governanceApi = {
 
   async getSourceSystem(id: string): Promise<SourceSystemManagement> {
     return request.get(`/openapi/v1/source-systems/${encodeURIComponent(id)}`);
+  },
+
+  async listSelectableSources(tenantId: string): Promise<SourceSystemManagement[]> {
+    const records: SourceSystemManagement[] = [];
+    for (let page = 1; ; page++) {
+      const result: any = await request.get('/openapi/v1/source-systems/tenant', { params: { tenantId, page, size: 200 } });
+      records.push(...(result.records || []));
+      if (!result.records?.length || records.length >= Number(result.total)) return records;
+    }
   },
 
   async updateSourceSystem(id: string, data: SourceSystemUpdateRequest): Promise<SourceSystemManagement> {

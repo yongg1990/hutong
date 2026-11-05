@@ -1,12 +1,10 @@
-import { request, apiCall } from './client';
-import { isStaticMode } from '../stores/demoStore';
+import { request } from './client';
 import B from '@/utils/Secret/BigInt';
 import R from '@/utils/Secret/RSA';
 
 export interface LoginPayload {
   username: string;
   password: string;
-  tenantId?: string;
 }
 
 export interface LoginResult {
@@ -54,13 +52,13 @@ export const authApi = {
     const token = res?.token;
     if (!token) throw new Error('登录接口未返回有效 token，无法建立会话');
 
-    const user = res?.user || {
-      id: String(res?.userId || payload.username.trim()),
+    const user = {
+      id: String(res.userId),
       username: payload.username.trim(),
       realName: payload.username.trim(),
-      tenantId: String(res?.tenantId || payload.tenantId || 'TENANT-YN-DEMO'),
-      tenantName: String(res?.tenantName || '云南省中药材全产业链协同示范联盟'),
-      roles: ['ROLE_OPERATOR'],
+      tenantId: res?.tenantId == null ? '' : String(res.tenantId),
+      tenantName: '',
+      roles: [],
       permissions: []
     };
 
@@ -69,19 +67,15 @@ export const authApi = {
     localStorage.setItem('tcmirp_user', JSON.stringify(user));
     localStorage.setItem('tcmirp_tenant_id', user.tenantId);
     localStorage.setItem('tcmirp_tenant_name', user.tenantName);
-    localStorage.setItem('tcmirp_session_source', isStaticMode() ? 'static' : 'backend');
+    localStorage.setItem('tcmirp_session_source', 'backend');
     return { token, tokenType: 'Bearer', expiresIn: Number(res?.expiresIn || 86400), user };
   },
 
   async logout(): Promise<LogoutResult> {
     const token = localStorage.getItem('weappauthorization') || localStorage.getItem('tcmirp_token') || '';
-    const res = await apiCall<LogoutResult>(
-      request.post('/tenant-access/auth/logout', {}, { headers: { WeAppAuthorization: token } }),
-      { success: true, message: '安全登出成功' },
-      '用户退出登录'
-    );
+    await request.post('/tenant-access/auth/logout', undefined, { headers: { WeAppAuthorization: token } });
     ['weappauthorization', 'tcmirp_token', 'tcmirp_user', 'tcmirp_tenant_id', 'tcmirp_tenant_name', 'tcmirp_session_source'].forEach(k => localStorage.removeItem(k));
-    return res;
+    return { success: true, message: '安全登出成功' };
   },
 
   async getCurrentUser(): Promise<any> {

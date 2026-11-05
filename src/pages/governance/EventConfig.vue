@@ -3,7 +3,7 @@
     <PageHeader title="事件与 Schema 配置" subtitle="事件类型定义、Schema 草稿、测试与发布">
       <template #actions>
         <el-button @click="$router.push('/governance/event-authorizations')">事件类型授权</el-button>
-        <el-button @click="eventTypeVisible = true">创建事件类型</el-button>
+        <el-button @click="openCreateEventType">创建事件类型</el-button>
         <el-button type="primary" @click="openSchemaDialog">创建 Schema 草稿</el-button>
       </template>
     </PageHeader>
@@ -50,23 +50,33 @@
         <el-table-column prop="eventType" label="事件类型" min-width="180" class-name="mono" />
         <el-table-column prop="eventName" label="名称" min-width="180" />
         <el-table-column prop="scenarioCode" label="场景代码" min-width="160" class-name="mono" />
+        <el-table-column prop="description" label="说明" min-width="180" show-overflow-tooltip />
+        <el-table-column prop="lockVersion" label="锁版本" width="90" />
+        <el-table-column prop="updatedAt" label="更新时间" width="175" />
         <el-table-column label="状态" width="110">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>
+        <el-table-column label="操作" width="200" fixed="right"><template #default="{ row }">
+          <el-button link @click="viewEventType(row)">详情</el-button><el-button link @click="editEventType(row)">编辑</el-button>
+          <el-button link @click="toggleEventType(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button>
+        </template></el-table-column>
       </el-table>
       <div class="pagination-row"><el-pagination v-model:current-page="eventPage" :page-size="20" :total="eventTotal" layout="total, prev, pager, next" @current-change="loadEventTypes" /></div>
     </div>
+    <el-dialog :model-value="!!eventTypeDetail" title="事件类型详情" width="640px" @close="eventTypeDetail = null">
+      <el-descriptions v-if="eventTypeDetail" :column="1" border><el-descriptions-item v-for="(value, key) in eventTypeDetail" :key="key" :label="String(key)">{{ value ?? '-' }}</el-descriptions-item></el-descriptions>
+    </el-dialog>
 
-    <el-dialog v-model="eventTypeVisible" title="创建事件类型" width="520px" :close-on-click-modal="false">
+    <el-dialog v-model="eventTypeVisible" :title="editingEventTypeId ? '编辑事件类型' : '创建事件类型'" width="520px" :close-on-click-modal="false">
       <el-form :model="eventTypeForm" label-position="top">
-        <el-form-item label="事件类型代码" required><el-input v-model="eventTypeForm.eventType" /></el-form-item>
+        <el-form-item label="事件类型代码" required><el-input v-model="eventTypeForm.eventType" :disabled="!!editingEventTypeId" maxlength="128" /></el-form-item>
         <el-form-item label="事件类型名称" required><el-input v-model="eventTypeForm.eventName" /></el-form-item>
         <el-form-item label="场景代码" required><el-input v-model="eventTypeForm.scenarioCode" /></el-form-item>
         <el-form-item label="说明"><el-input v-model="eventTypeForm.description" type="textarea" :rows="3" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="eventTypeVisible = false">取消</el-button>
-        <el-button type="primary" :loading="creatingEventType" @click="createEventType">确认创建</el-button>
+        <el-button type="primary" :loading="creatingEventType" @click="createEventType">保存</el-button>
       </template>
     </el-dialog>
 
@@ -117,9 +127,13 @@
           </div>
         </div>
         <el-empty v-if="!schemaForm.referenceRules.length" description="暂无引用规则" :image-size="48" />
+        <el-alert v-if="draftTestResult" :type="draftTestResult.valid ? 'success' : 'error'" :closable="false" :title="draftTestResult.valid ? '草稿测试通过' : '草稿测试失败'">
+          <div v-for="(error, index) in draftTestResult.errors" :key="index">{{ error }}</div>
+        </el-alert>
       </el-form>
       <template #footer>
         <el-button @click="schemaVisible = false">取消</el-button>
+        <el-button :loading="testingDraft" @click="testUnsavedSchema">测试当前草稿</el-button>
         <el-button type="primary" :loading="creatingSchema" @click="saveSchemaDraft">保存草稿</el-button>
       </template>
     </el-dialog>
@@ -162,9 +176,9 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { apiErrorMessage } from '@/api/client';
-import { eventsApi, type SchemaSnapshot, type SchemaTestResult, type EventSchemaField, type EventSchemaReferenceRule } from '@/api/events';
+import { eventsApi, type SchemaSnapshot, type SchemaTestResult, type EventSchemaField, type EventSchemaReferenceRule, type EventTypeDetail } from '@/api/events';
 
-type EventTypeRow = { id: string; eventType: string; status: string; eventName: string; scenarioCode: string };
+type EventTypeRow = EventTypeDetail;
 
 const emptySchemaFilters = () => ({ eventType: '', schemaVersion: '', status: '' });
 const emptyEventFilters = () => ({ eventType: '', scenarioCode: '', status: '' });
@@ -181,11 +195,15 @@ const querying = ref(false);
 const publishingKey = ref('');
 
 const eventTypeVisible = ref(false);
+const editingEventTypeId = ref(''), eventTypeLockVersion = ref(0);
+const eventTypeDetail = ref<EventTypeDetail | null>(null);
 const creatingEventType = ref(false);
 const eventTypeForm = ref({ eventType: '', eventName: '', scenarioCode: '', description: '' });
 
 const schemaVisible = ref(false);
 const creatingSchema = ref(false);
+const testingDraft = ref(false);
+const draftTestResult = ref<SchemaTestResult | null>(null);
 const dataTypes = ['STRING', 'INTEGER', 'DECIMAL', 'BOOLEAN', 'DATE', 'DATETIME', 'OBJECT', 'ARRAY'];
 const emptyField = (): EventSchemaField => ({ fieldName: '', displayName: '', dataType: 'STRING', required: false });
 const emptyRule = (): EventSchemaReferenceRule => ({ fieldName: '', targetType: '', namespace: '', required: false, onNotFound: '', onAmbiguous: '' });
@@ -208,12 +226,35 @@ const testResult = ref<SchemaTestResult | null>(null);
 const drawerVisible = ref(false);
 const selectedSchema = ref<SchemaSnapshot | null>(null);
 const formattedSchema = computed(() => {
-  if (!selectedSchema.value?.schemaJson) return '{}';
-  try { return JSON.stringify(JSON.parse(selectedSchema.value.schemaJson), null, 2); }
-  catch { return selectedSchema.value.schemaJson; }
+  if (!selectedSchema.value) return '{}';
+  const { schemaJson, ...detail } = selectedSchema.value;
+  return JSON.stringify(detail, null, 2);
 });
 
 const schemaKey = (row: Pick<SchemaSnapshot, 'eventType' | 'schemaVersion'>) => row.eventType + '@' + row.schemaVersion;
+
+function openCreateEventType() {
+  editingEventTypeId.value = ''; eventTypeLockVersion.value = 0;
+  eventTypeForm.value = { eventType: '', eventName: '', scenarioCode: '', description: '' }; eventTypeVisible.value = true;
+}
+async function viewEventType(row: EventTypeRow) {
+  try { eventTypeDetail.value = await eventsApi.getEventType(row.id); }
+  catch (error) { ElMessage.error(apiErrorMessage(error, '查询事件类型失败')); }
+}
+async function editEventType(row: EventTypeRow) {
+  try {
+    const detail = await eventsApi.getEventType(row.id);
+    editingEventTypeId.value = detail.id; eventTypeLockVersion.value = detail.lockVersion;
+    eventTypeForm.value = { eventType: detail.eventType, eventName: detail.eventName, scenarioCode: detail.scenarioCode, description: detail.description || '' }; eventTypeVisible.value = true;
+  } catch (error) { ElMessage.error(apiErrorMessage(error, '加载事件类型失败')); }
+}
+async function toggleEventType(row: EventTypeRow) {
+  try {
+    const detail = await eventsApi.getEventType(row.id);
+    await eventsApi.setEventTypeStatus(detail.id, detail.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE', detail.lockVersion);
+    await loadEventTypes(); ElMessage.success('事件类型状态已更新');
+  } catch (error) { ElMessage.error(apiErrorMessage(error, '更新事件类型状态失败')); }
+}
 
 const upsertSchema = (schema: SchemaSnapshot) => {
   const index = schemas.value.findIndex(item => schemaKey(item) === schemaKey(schema));
@@ -270,6 +311,8 @@ const loadEventTypes = async () => {
 };
 
 const createEventType = async () => {
+  if (creatingEventType.value) return;
+  if (!/^[A-Z][A-Z0-9_]*$/.test(eventTypeForm.value.eventType.trim())) return ElMessage.warning('事件类型代码须为大写字母、数字及下划线');
   const form = eventTypeForm.value;
   if (!form.eventType.trim() || !form.eventName.trim() || !form.scenarioCode.trim()) {
     ElMessage.warning('请填写事件类型、名称和场景代码');
@@ -277,16 +320,19 @@ const createEventType = async () => {
   }
   creatingEventType.value = true;
   try {
-    const result = await eventsApi.createEventType({
+    const data = {
       eventType: form.eventType.trim(),
       eventName: form.eventName.trim(),
       scenarioCode: form.scenarioCode.trim(),
-      ...(form.description.trim() ? { description: form.description.trim() } : {})
-    });
-    eventTypes.value.unshift({ ...result, eventName: form.eventName.trim(), scenarioCode: form.scenarioCode.trim() });
+      description: form.description.trim()
+    };
+    const result = editingEventTypeId.value
+      ? await eventsApi.updateEventType(editingEventTypeId.value, { eventName: data.eventName, scenarioCode: data.scenarioCode, description: data.description, lockVersion: eventTypeLockVersion.value })
+      : await eventsApi.createEventType(data);
+    await loadEventTypes();
     eventTypeVisible.value = false;
     schemaForm.value.eventType = result.eventType;
-    ElMessage.success('事件类型创建成功');
+    ElMessage.success(editingEventTypeId.value ? '事件类型更新成功' : '事件类型创建成功');
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, '创建事件类型失败'));
   } finally {
@@ -295,6 +341,7 @@ const createEventType = async () => {
 };
 
 const openSchemaDialog = () => {
+  draftTestResult.value = null;
   editingSchemaId.value = '';
   editingLockVersion.value = null;
   schemaForm.value = {
@@ -310,6 +357,7 @@ const openEditSchema = async (row: SchemaSnapshot) => {
   try {
     const detail = await eventsApi.getSchemaDefinition(row.id);
     if (detail.status !== 'DRAFT') throw new Error('只有草稿状态可以编辑');
+    draftTestResult.value = null;
     editingSchemaId.value = detail.id;
     editingLockVersion.value = detail.lockVersion;
     schemaForm.value = { eventType: detail.eventType, schemaVersion: detail.schemaVersion, fields: detail.fields.map(field => ({ ...field })), referenceRules: detail.referenceRules.map(rule => ({ ...rule })) };
@@ -320,6 +368,7 @@ const openEditSchema = async (row: SchemaSnapshot) => {
 };
 
 const saveSchemaDraft = async () => {
+  if (creatingSchema.value) return;
   const form = schemaForm.value;
   if (!form.eventType.trim() || !form.schemaVersion.trim()) {
     ElMessage.warning('请输入事件类型和 Schema 版本');
@@ -350,12 +399,13 @@ const saveSchemaDraft = async () => {
 };
 
 const openTestDialog = (row: SchemaSnapshot) => {
-  testForm.value = { id: row.id, eventType: row.eventType, schemaVersion: row.schemaVersion };
   testResult.value = null;
+  testForm.value = { id: row.id, eventType: row.eventType, schemaVersion: row.schemaVersion };
   testVisible.value = true;
 };
 
 const testSchema = async () => {
+  if (testing.value) return;
   testing.value = true;
   try {
     testResult.value = await eventsApi.testSchemaDefinition(testForm.value.id);
@@ -368,6 +418,7 @@ const testSchema = async () => {
 };
 
 const publishSchema = async (row: SchemaSnapshot) => {
+  if (publishingKey.value) return;
   publishingKey.value = schemaKey(row);
   try {
     const result = await eventsApi.publishEventSchema(row.id);
@@ -383,6 +434,19 @@ const publishSchema = async (row: SchemaSnapshot) => {
 const viewSchema = async (row: SchemaSnapshot) => {
   try { selectedSchema.value = await eventsApi.getSchemaDefinition(row.id); drawerVisible.value = true; }
   catch (error) { ElMessage.error(apiErrorMessage(error, '查询 Schema 失败')); }
+};
+const testUnsavedSchema = async () => {
+  if (testingDraft.value) return;
+  draftTestResult.value = null;
+  testingDraft.value = true;
+  try {
+    const form = schemaForm.value;
+    if (!form.eventType.trim() || !form.schemaVersion.trim()) throw new Error('请输入事件类型和 Schema 版本');
+    const fields = form.fields.map(normalizeField), referenceRules = form.referenceRules.map(normalizeRule);
+    validateSchema(fields, referenceRules);
+    draftTestResult.value = await eventsApi.testSchemaDraft({ eventType: form.eventType.trim(), schemaVersion: form.schemaVersion.trim(), fields, referenceRules });
+  } catch (error) { ElMessage.error(apiErrorMessage(error, '测试当前草稿失败')); }
+  finally { testingDraft.value = false; }
 };
 onMounted(async () => {
   await querySchema();

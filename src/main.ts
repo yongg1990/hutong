@@ -25,7 +25,8 @@ useAuthStore().initSession();
 
 app.use(router);
 app.use(ElementPlus, {
-  locale: zhCn
+  locale: zhCn,
+  message: { duration: 3000, plain: true }
 });
 
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
