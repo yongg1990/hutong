@@ -106,7 +106,7 @@ defineExpose({ open });
 }
 
 .diff-table th {
-  background: #f6f8f7;
+  background: var(--color-surface-subtle);
   padding: 8px 12px;
   font-size: 12px;
   text-align: left;
@@ -116,7 +116,7 @@ defineExpose({ open });
 .diff-table td {
   padding: 8px 12px;
   font-size: 13px;
-  border-bottom: 1px solid #edf0ee;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .diff-row.added {

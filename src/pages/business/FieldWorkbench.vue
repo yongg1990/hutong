@@ -57,17 +57,9 @@
     <!-- Main Content Grid -->
     <div class="grid-two">
       <div class="panel">
-        <div class="panel-header">
-          <div class="header-title">
-            <h2>作物批次列表</h2>
-            <el-tag v-if="currentStage !== 'ALL'" size="small" type="info">
-              阶段: {{ currentStageName }}
-            </el-tag>
-          </div>
-          <span class="count-text">筛选共 {{ filteredBatches.length }} / {{ allBatches.length }} 条</span>
-        </div>
-        <el-table
+        <LocalPaginatedTable
           :data="filteredBatches"
+          v-loading="loading"
           @row-click="selectBatch"
           highlight-current-row
           empty-text="暂无匹配该阶段或条件的作物批次"
@@ -92,7 +84,7 @@
               </el-button>
             </template>
           </el-table-column>
-        </el-table>
+        </LocalPaginatedTable>
       </div>
 
       <!-- Right Side Batch Details Card -->
@@ -141,6 +133,7 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import PageHeader from '@/components/common/PageHeader.vue';
@@ -280,12 +273,12 @@ const exportData = () => {
 }
 
 .stage-item:hover {
-  background: #f4f8f6;
+  background: var(--color-surface-subtle);
 }
 
 .stage-item.active {
   box-shadow: inset 0 3px var(--color-brand);
-  background: #ebf4f0;
+  background: var(--color-brand-soft);
 }
 
 .stage-header {
@@ -311,7 +304,7 @@ const exportData = () => {
   background: rgba(23, 107, 77, 0.12);
   color: var(--color-brand);
   padding: 1px 6px;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .stage-sub {
@@ -374,7 +367,7 @@ const exportData = () => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid #edf0ee;
+  border-bottom: 1px solid var(--color-border-subtle);
   font-size: 13px;
 }
 
@@ -392,7 +385,7 @@ const exportData = () => {
 .cross-actions-title {
   font-size: 12px;
   font-weight: 600;
-  color: #435b50;
+  color: var(--color-text-secondary);
   margin-bottom: 8px;
 }
 

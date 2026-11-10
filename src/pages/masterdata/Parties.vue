@@ -6,6 +6,7 @@
       <el-select v-model="query.partyType" placeholder="主体类型" clearable style="width:160px"><el-option v-for="item in partyTypes" :key="item.value" :label="item.label" :value="item.value" /></el-select>
       <el-input v-model="query.regionCode" placeholder="行政区划编码" clearable style="width:160px" />
       <el-select v-model="query.status" placeholder="状态" clearable style="width:120px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
+      <template #actions><el-button type="primary" :icon="Plus" @click="createVisible = true">新增</el-button></template>
     </FilterBar>
     <div class="panel" style="margin-bottom:16px">
       <el-table :data="parties" v-loading="loading"><el-table-column prop="partyId" label="主体 ID" min-width="150" /><el-table-column prop="partyName" label="主体名称" min-width="200" /><el-table-column prop="partyType" label="类型" min-width="130" /><el-table-column prop="regionCode" label="地区" min-width="110" /><el-table-column prop="status" label="状态" width="100" /><el-table-column label="操作" width="135"><template #default="{ row }"><el-button link type="primary" @click="viewParty(row.partyId)">详情</el-button><el-button link @click="editParty(row.partyId)">编辑</el-button></template></el-table-column></el-table>
@@ -14,10 +15,7 @@
     <el-drawer v-model="detailVisible" title="主体详情" size="520px"><el-descriptions v-if="detail" :column="1" border><el-descriptions-item v-for="key in detailKeys" :key="key" :label="key">{{ detail[key] ?? '-' }}</el-descriptions-item></el-descriptions><template #footer><el-button v-if="detail" type="primary" @click="editParty(detail.partyId)">编辑</el-button></template></el-drawer>
     <el-dialog v-model="editVisible" title="编辑主体" width="620px"><el-form label-position="top"><el-form-item label="主体名称" required><el-input v-model="editForm.partyName" /></el-form-item><el-form-item label="主体类型" required><el-select v-model="editForm.partyType"><el-option v-for="item in partyTypes" :key="item.value" :label="item.label" :value="item.value" /></el-select></el-form-item><el-form-item label="行政区划编码"><el-input v-model="editForm.regionCode" /></el-form-item><el-form-item label="扩展属性 JSON"><JsonEditor v-model="editForm.attributes" :rows="4" label="扩展属性 JSON" /></el-form-item><el-form-item label="状态"><el-select v-model="editForm.status"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select></el-form-item></el-form><template #footer><el-button @click="editVisible = false">取消</el-button><el-button type="primary" :loading="submitting" @click="saveEdit">保存</el-button></template></el-dialog>
 
-    <div class="workspace-grid">
-      <section class="panel form-panel">
-        <div class="panel-header"><h2>登记信息</h2></div>
-        <div class="panel-body">
+    <el-dialog v-model="createVisible" title="登记信息" width="620px" @closed="resetForm">
           <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
             <div class="form-grid">
               <el-form-item label="主体名称" prop="partyName">
@@ -40,33 +38,18 @@
               <el-button type="primary" :loading="submitting" @click="submit">提交登记</el-button>
             </div>
           </el-form>
-        </div>
-      </section>
-
-      <aside class="panel result-panel">
-        <div class="panel-header"><h2>登记结果</h2></div>
-        <div class="panel-body">
-          <el-empty v-if="!result" description="提交后显示接口返回结果" :image-size="72" />
-          <el-descriptions v-else :column="1" border>
-            <el-descriptions-item label="主体 ID"><span class="mono">{{ result.partyId }}</span></el-descriptions-item>
-            <el-descriptions-item label="主体状态"><StatusTag :code="result.status" /></el-descriptions-item>
-            <el-descriptions-item label="主体名称">{{ submittedName }}</el-descriptions-item>
-            <el-descriptions-item label="主体类型">{{ submittedType }}</el-descriptions-item>
-          </el-descriptions>
-        </div>
-      </aside>
-    </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
+import { Plus } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import JsonEditor from '@/components/common/JsonEditor.vue';
-import StatusTag from '@/components/common/StatusTag.vue';
-import { masterDataApi, type PartyResponse, type PartyManagement } from '@/api/masterData';
+import { masterDataApi, type PartyManagement } from '@/api/masterData';
 import { apiErrorMessage } from '@/api/client';
 
 const partyTypes = [
@@ -81,13 +64,11 @@ const initialForm = () => ({ partyName: '', partyType: 'PRODUCER', regionCode: '
 const formRef = ref<FormInstance>();
 const form = reactive(initialForm());
 const submitting = ref(false);
-const result = ref<PartyResponse | null>(null);
-const submittedName = ref('');
-const submittedType = ref('');
+const createVisible = ref(false);
 const query = reactive({ partyName:'', partyType:'', regionCode:'', status:'' });
 const parties = ref<PartyManagement[]>([]);
 const detail = ref<PartyManagement | null>(null);
-const page = ref(1), size = ref(20), total = ref(0), loading = ref(false), detailVisible = ref(false), editVisible = ref(false), editingId = ref('');
+const page = ref(1), size = ref(10), total = ref(0), loading = ref(false), detailVisible = ref(false), editVisible = ref(false), editingId = ref('');
 const editForm = reactive({ partyName:'',partyType:'',regionCode:'',attributes:'',status:'ACTIVE',lockVersion:0 });
 const detailKeys: (keyof PartyManagement)[] = ['partyId','tenantId','partyName','partyType','regionCode','status','attributes','lockVersion','createdAt','updatedAt'];
 async function load() { loading.value = true; try { const res = await masterDataApi.getPartyPage({ ...query,page:page.value,size:size.value }); parties.value = res.records || []; total.value = Number(res.total || 0); } catch(e) { ElMessage.error(apiErrorMessage(e,'主体查询失败')); } finally { loading.value = false; } }
@@ -116,21 +97,19 @@ const rules: FormRules = {
 const resetForm = () => {
   Object.assign(form, initialForm());
   formRef.value?.clearValidate();
-  result.value = null;
 };
 
 const submit = async () => {
   if (!await formRef.value?.validate().catch(() => false)) return;
   submitting.value = true;
   try {
-    result.value = await masterDataApi.registerParty({
+    await masterDataApi.registerParty({
       partyName: form.partyName.trim(),
       partyType: form.partyType,
       regionCode: form.regionCode.trim() || undefined,
       attributes: form.attributes.trim() || undefined
     });
-    submittedName.value = form.partyName.trim();
-    submittedType.value = form.partyType;
+    createVisible.value = false;
     ElMessage.success('主体登记成功');
     await load();
   } catch (error) {
@@ -142,9 +121,7 @@ const submit = async () => {
 </script>
 
 <style scoped>
-.workspace-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.75fr); gap: 16px; align-items: start; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
-.result-panel { min-height: 260px; }
-@media (max-width: 960px) { .workspace-grid, .form-grid { grid-template-columns: 1fr; } }
+@media (max-width: 960px) { .form-grid { grid-template-columns: 1fr; } }
 </style>

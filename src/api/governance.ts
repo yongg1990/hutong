@@ -155,7 +155,7 @@ export const governanceApi = {
   },
 
   async listSourceSystems(params: Record<string, string | number | undefined>): Promise<{ records: SourceSystemManagement[]; total: string }> {
-    return request.get('/openapi/v1/source-systems', { params });
+    return request.get('/openapi/v1/source-systems', { params: { page: 1, size: 10, ...params } });
   },
 
   async getSourceSystem(id: string): Promise<SourceSystemManagement> {
@@ -165,7 +165,7 @@ export const governanceApi = {
   async listSelectableSources(tenantId: string): Promise<SourceSystemManagement[]> {
     const records: SourceSystemManagement[] = [];
     for (let page = 1; ; page++) {
-      const result: any = await request.get('/openapi/v1/source-systems/tenant', { params: { tenantId, page, size: 200 } });
+      const result: any = await request.get('/openapi/v1/source-systems/tenant', { params: { tenantId, page, size: 10 } });
       records.push(...(result.records || []));
       if (!result.records?.length || records.length >= Number(result.total)) return records;
     }
@@ -210,7 +210,7 @@ export const governanceApi = {
           params: {
             includeFailures: params.includeFailures ?? true,
             pageNo: params.pageNo || 1,
-            pageSize: params.pageSize || 100
+            pageSize: params.pageSize || 10
           }
         }).then((item: any) => [{
           batchId: item.batchId,

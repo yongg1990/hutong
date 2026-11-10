@@ -33,8 +33,8 @@
       append-to-body
       :close-on-click-modal="false"
     >
-      <el-table :data="availableList" @selection-change="handleSelectionChange" height="280">
-        <el-table-column type="selection" width="45" />
+      <LocalPaginatedTable :data="availableList" row-key="evidenceId" @selection-change="handleSelectionChange" height="280">
+        <el-table-column type="selection" :reserve-selection="true" width="45" />
         <el-table-column property="title" label="凭证名称" min-width="160" />
         <el-table-column property="type" label="类型" width="100" />
         <el-table-column label="校验摘要" width="160">
@@ -47,7 +47,7 @@
             <StatusTag :code="row.status" />
           </template>
         </el-table-column>
-      </el-table>
+      </LocalPaginatedTable>
 
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -58,6 +58,7 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref } from 'vue';
 import { Plus } from '@element-plus/icons-vue';
 import StatusTag from '@/components/common/StatusTag.vue';

@@ -5,6 +5,7 @@
       subtitle="品种、饮片批次、医保编码与追溯码赋码登记"
     >
       <template #actions>
+        <el-button @click="router.push('/master-data/decoction-pieces')">查看中药饮片标准库</el-button>
         <el-button type="primary" @click="openEvent('TRACE_CODE_ASSIGNED')">
           赋码登记与绑定
         </el-button>
@@ -14,16 +15,7 @@
 
     <div class="grid-two">
       <div class="panel">
-        <div class="panel-header">
-          <div class="header-title">
-            <h2>饮片品种与赋码状态清单</h2>
-            <el-tag size="small" type="success">国家16位医保码</el-tag>
-          </div>
-          <el-button size="small" link type="primary" @click="router.push('/master-data/decoction-pieces')">
-            查看中药饮片标准库 ➔
-          </el-button>
-        </div>
-        <el-table :data="herbPieces" highlight-current-row @row-click="selectedBatch=$event.batchNo">
+        <LocalPaginatedTable :data="herbPieces" v-loading="loading" highlight-current-row @row-click="selectedBatch=$event.batchNo">
           <el-table-column prop="speciesName" label="品种 *" width="85" />
           <el-table-column prop="batchNo" label="批次号 *" width="130" class-name="mono" />
           <el-table-column prop="medicalInsuranceCode" label="国家医保饮片编码 (16位) *" min-width="170" class-name="mono" />
@@ -38,7 +30,7 @@
               </el-button>
             </template>
           </el-table-column>
-        </el-table>
+        </LocalPaginatedTable>
       </div>
 
       <div class="panel">
@@ -54,6 +46,7 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import PageHeader from '@/components/common/PageHeader.vue';

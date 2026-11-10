@@ -2,27 +2,30 @@
   <div>
     <PageHeader title="事件类型授权" />
     <el-form inline :disabled="loading || saving" class="scope-form">
-      <el-form-item label="租户 ID" required><el-input v-model="tenantId" @input="clear" /></el-form-item>
-      <el-form-item label="项目空间 ID" required><el-input v-model="projectSpaceId" @input="clear" /></el-form-item>
+      <el-form-item><el-input v-model="tenantId" aria-label="租户 ID" placeholder="租户 ID" @input="clear" /></el-form-item>
+      <el-form-item><el-input v-model="projectSpaceId" aria-label="项目空间 ID" placeholder="项目空间 ID" @input="clear" /></el-form-item>
       <el-form-item><el-button :icon="Search" type="primary" :loading="loading" @click="load">查询</el-button></el-form-item>
     </el-form>
     <div v-if="loaded" class="toolbar"><span>已选 {{ selectedCount }} / {{ rows.length }}</span><el-button type="primary" :icon="Check" :loading="saving" @click="save">保存授权集合</el-button></div>
-    <el-table :data="rows" v-loading="loading" empty-text="暂无事件类型授权状态">
-      <el-table-column label="保持启用" width="100"><template #default="{ row }"><el-checkbox v-model="row.selected" :disabled="saving" :aria-label="`授权 ${row.eventName}`" /></template></el-table-column>
-      <el-table-column prop="eventType" label="事件类型" min-width="190" />
-      <el-table-column prop="eventName" label="名称" min-width="160" />
-      <el-table-column label="事件状态" width="100"><template #default="{ row }"><StatusTag :code="row.eventTypeStatus" /></template></el-table-column>
-      <el-table-column label="项目状态" width="100"><template #default="{ row }"><StatusTag :code="row.projectStatus" /></template></el-table-column>
-      <el-table-column label="当前有效" width="100"><template #default="{ row }"><el-tag :type="row.authorized ? 'success' : 'info'">{{ row.authorized ? '是' : '否' }}</el-tag></template></el-table-column>
-      <el-table-column label="授权记录" width="110"><template #default="{ row }"><StatusTag v-if="row.authorizationStatus" :code="row.authorizationStatus" /><span v-else>未授权</span></template></el-table-column>
-      <el-table-column label="生效时间" width="220"><template #default="{ row }"><el-date-picker v-model="row.validFrom" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="立即生效" :disabled="!row.selected || saving || row.authorizationStatus === 'ACTIVE'" style="width: 195px" /></template></el-table-column>
-      <el-table-column label="失效时间" width="220"><template #default="{ row }"><el-date-picker v-model="row.validTo" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="长期有效" :disabled="!row.selected || saving || row.authorizationStatus === 'ACTIVE'" style="width: 195px" /></template></el-table-column>
-      <el-table-column prop="lockVersion" label="锁版本" width="90" />
-    </el-table>
+    <div class="table-surface">
+      <LocalPaginatedTable :data="rows" v-loading="loading" empty-text="暂无事件类型授权状态">
+        <el-table-column label="保持启用" width="100"><template #default="{ row }"><el-checkbox v-model="row.selected" :disabled="saving" :aria-label="`授权 ${row.eventName}`" /></template></el-table-column>
+        <el-table-column prop="eventType" label="事件类型" min-width="190" />
+        <el-table-column prop="eventName" label="名称" min-width="160" />
+        <el-table-column label="事件状态" width="100"><template #default="{ row }"><StatusTag :code="row.eventTypeStatus" /></template></el-table-column>
+        <el-table-column label="项目状态" width="100"><template #default="{ row }"><StatusTag :code="row.projectStatus" /></template></el-table-column>
+        <el-table-column label="当前有效" width="100"><template #default="{ row }"><el-tag :type="row.authorized ? 'success' : 'info'">{{ row.authorized ? '是' : '否' }}</el-tag></template></el-table-column>
+        <el-table-column label="授权记录" width="110"><template #default="{ row }"><StatusTag v-if="row.authorizationStatus" :code="row.authorizationStatus" /><span v-else>未授权</span></template></el-table-column>
+        <el-table-column label="生效时间" width="220"><template #default="{ row }"><el-date-picker v-model="row.validFrom" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="立即生效" :disabled="!row.selected || saving || row.authorizationStatus === 'ACTIVE'" style="width: 195px" /></template></el-table-column>
+        <el-table-column label="失效时间" width="220"><template #default="{ row }"><el-date-picker v-model="row.validTo" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="长期有效" :disabled="!row.selected || saving || row.authorizationStatus === 'ACTIVE'" style="width: 195px" /></template></el-table-column>
+        <el-table-column prop="lockVersion" label="锁版本" width="90" />
+      </LocalPaginatedTable>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { computed, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Search, Check } from '@element-plus/icons-vue';

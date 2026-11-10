@@ -4,14 +4,6 @@
       title="接入批次与原始记录"
       subtitle="创建批量接入任务、留存不可变原始记录并按任务 ID 查询处理状态"
     >
-      <template #actions>
-        <el-button @click="loadBatches">刷新查询</el-button>
-        <el-button @click="rawVisible = true">留存原始记录</el-button>
-        <el-button @click="replayVisible = true">重放原始记录</el-button>
-        <el-button type="primary" @click="openCreateBatchModal">
-          + 创建接入批次作业
-        </el-button>
-      </template>
     </PageHeader>
     <el-alert type="info" :closable="false" title="接口不提供批次列表。请输入批量任务 ID 查询；原始记录重放需要单独的 rawRecordId。" style="margin-bottom: 12px" />
 
@@ -31,15 +23,12 @@
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-input v-model="batchId" placeholder="批量任务 ID（必填）" style="width: 220px" clearable />
       <el-switch v-model="includeFailures" active-text="包含失败明细" />
+      <template #actions><el-button @click="rawVisible = true">留存原始记录</el-button><el-button @click="replayVisible = true">重放原始记录</el-button><el-button type="primary" @click="openCreateBatchModal"><el-icon><Plus /></el-icon>新增</el-button></template>
     </FilterBar>
 
     <div class="panel">
-      <div class="panel-header">
-        <h2>接入作业运行记录 ({{ batches.length }})</h2>
-        <span v-if="totalFailed !== '0'" class="sub-text">失败记录 {{ totalFailed }} 条</span>
-      </div>
       <div class="panel-body">
-        <el-table :data="batches" v-loading="loading" style="width: 100%" empty-text="未找到匹配的接入批次">
+        <LocalPaginatedTable :data="batches" v-loading="loading" style="width: 100%" empty-text="未找到匹配的接入批次">
           <el-table-column prop="batchId" label="批次号" min-width="160" class-name="mono">
             <template #default="{ row }">
               <span class="batch-id-text">{{ row.batchId }}</span>
@@ -70,7 +59,7 @@
               </el-button>
             </template>
           </el-table-column>
-        </el-table>
+        </LocalPaginatedTable>
       </div>
     </div>
 
@@ -88,13 +77,14 @@
           </div>
         </div>
 
-        <el-table :data="selectedBatch.failedRecordDetails || []" empty-text="接口未返回失败明细">
+        <el-table :data="selectedBatch.failedRecordDetails || []" v-loading="failureLoading" empty-text="接口未返回失败明细">
           <el-table-column prop="lineNo" label="行号" width="70" />
           <el-table-column prop="code" label="错误码" width="110" />
           <el-table-column prop="fieldPath" label="字段路径" width="120" />
           <el-table-column prop="ruleCode" label="规则码" width="110" />
           <el-table-column prop="message" label="消息" min-width="180" />
         </el-table>
+        <div class="pagination-row"><el-pagination v-model:current-page="failurePage" :page-size="10" :total="Number(selectedBatch.failCount || 0)" layout="total, prev, pager, next" @current-change="loadFailurePage" /></div>
 
       </div>
     </el-drawer>
@@ -181,6 +171,7 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
@@ -204,6 +195,7 @@ const drawerVisible = ref(false);
 const createBatchVisible = ref(false);
 const creatingBatch = ref(false);
 const selectedBatch = ref<IngestBatch | null>(null);
+const failurePage = ref(1), failureLoading = ref(false);
 const loading = ref(false);
 const lastOperation = ref<{ title: string; items: Array<{ label: string; value: string }> } | null>(null);
 
@@ -309,7 +301,7 @@ const loadBatches = async () => {
       batchId: batchId.value || undefined,
       includeFailures: includeFailures.value,
       pageNo: 1,
-      pageSize: 100
+      pageSize: 10
     });
   } catch (err) {
     batches.value = [];
@@ -331,8 +323,22 @@ const handleReset = async () => {
 };
 
 const openErrorDrawer = (row: IngestBatch) => {
+  failurePage.value = 1;
   selectedBatch.value = row;
   drawerVisible.value = true;
+  void loadFailurePage();
+};
+const loadFailurePage = async () => {
+  if (!selectedBatch.value || failureLoading.value) return;
+  failureLoading.value = true;
+  try {
+    const [result] = await governanceApi.getBatches({ batchId: selectedBatch.value.batchId, includeFailures: true, pageNo: failurePage.value, pageSize: 10 });
+    if (result) selectedBatch.value = result;
+  } catch (error) {
+    ElMessage.error(apiErrorMessage(error, '失败明细加载失败'));
+  } finally {
+    failureLoading.value = false;
+  }
 };
 
 const triggerReplay = async () => {
@@ -417,7 +423,7 @@ const preserveRaw = async () => {
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border-subtle);
-  background: #fbfdfc;
+  background: var(--color-surface);
 }
 
 .operation-result {
@@ -493,7 +499,7 @@ const preserveRaw = async () => {
 }
 
 .batch-meta-banner {
-  background: #f8faf9;
+  background: var(--color-surface-subtle);
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 12px 14px;

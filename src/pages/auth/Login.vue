@@ -1,70 +1,45 @@
 <template>
-  <div class="login-container">
-    <div class="login-bg-decorations">
-      <div class="decor-circle circle-1"></div>
-      <div class="decor-circle circle-2"></div>
-    </div>
+  <div class="tcm-login">
+    <div class="tcm-scenery" aria-hidden="true"></div>
+    <div class="tcm-shade" aria-hidden="true"></div>
 
-    <div class="login-box">
-      <!-- Left side: Platform Brand & Architecture Intro -->
-      <div class="login-aside">
-        <div class="aside-brand">
-          <div class="brand-logo">
-            <svg viewBox="0 0 32 32" fill="none" class="logo-svg" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="16" cy="16" r="15" stroke="#4ade80" stroke-width="1.8" stroke-dasharray="3 3" />
-              <path d="M16 6C16 6 9 11 9 18C9 22 12.2 25 16 25C19.8 25 23 22 23 18C23 11 16 6 16 6Z" fill="#22c55e" />
-              <path d="M16 11V23" stroke="#dcfce7" stroke-width="1.8" stroke-linecap="round" />
-              <path d="M16 14L12 17" stroke="#dcfce7" stroke-width="1.5" stroke-linecap="round" />
-              <path d="M16 17L20 20" stroke="#dcfce7" stroke-width="1.5" stroke-linecap="round" />
-            </svg>
-          </div>
-          <div>
-            <h1 class="aside-title">中药全产业链追溯协同平台</h1>
-            <p class="aside-sub">Yunnan TCM Whole Industry Chain Traceability</p>
-          </div>
-        </div>
-
-        <div class="feature-list">
-          <div class="feature-item">
-            <div class="f-dot"></div>
-            <div>
-              <strong>全流程可信存证</strong>
-              <p>田间GAP种植、初加工、检验LIMS、WMS赋码与跨域物化全程上链存证</p>
-            </div>
-          </div>
-          <div class="feature-item">
-            <div class="f-dot"></div>
-            <div>
-              <strong>多租户安全隔离</strong>
-              <p>租户组织间数据逻辑隔离，精准 RBAC 权限矩阵动态鉴权与审计</p>
-            </div>
-          </div>
-          <div class="feature-item">
-            <div class="f-dot"></div>
-            <div>
-              <strong>跨省跨域标准互认</strong>
-              <p>直连长三角及沿海重点药港，一码贯通与数字仓单跨省互认</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="aside-footer mono">
-          <span>安全接入节点: EDGE-KM-01 | 国密 SM2/SM3 加密握手</span>
+    <header class="tcm-header">
+      <div class="tcm-brand">
+        <div class="tcm-emblem"><el-icon><FirstAidKit /></el-icon></div>
+        <div>
+          <span class="tcm-brand-name">云南中药 · 数字追溯</span>
+          <span class="tcm-brand-en">YUNNAN TCM TRACEABILITY</span>
         </div>
       </div>
+      <span class="tcm-header-note"><el-icon><Lock /></el-icon> 统一身份认证</span>
+    </header>
 
-      <!-- Right side: Login Form Card -->
-      <div class="login-main">
-        <div class="form-header">
-          <h2>系统用户身份认证</h2>
-          <p>请输入经授权的账号和密码</p>
+    <main class="tcm-content">
+      <section class="tcm-intro">
+        <div class="tcm-eyebrow"><span></span> 源于自然 · 信于数字</div>
+        <h1>中药全产业链<br />追溯协同平台</h1>
+        <p class="tcm-description">从一株本草，到一份安心。<br />连接产地与产业，让每一程都有迹可循。</p>
+        <div class="tcm-capabilities">
+          <span><el-icon><Connection /></el-icon> 全程追溯</span>
+          <span><el-icon><CircleCheck /></el-icon> 可信存证</span>
+          <span><el-icon><Share /></el-icon> 跨域协同</span>
+        </div>
+      </section>
+
+      <section class="tcm-auth" aria-labelledby="login-heading">
+        <div class="tcm-form-header">
+          <span class="tcm-form-eyebrow">WELCOME BACK</span>
+          <h2 id="login-heading">欢迎登录</h2>
+          <p>请输入您的账号信息，安全访问工作空间</p>
         </div>
 
-        <el-form ref="formRef" :model="form" :rules="rules" class="login-form" size="large">
+        <el-form ref="formRef" :model="form" :rules="rules" class="tcm-form" size="large" @submit.prevent="handleLogin">
           <el-form-item prop="username">
-            <label class="form-label">登录账号</label>
+            <label for="login-username" class="tcm-label">登录账号</label>
             <el-input
               v-model="form.username"
+              id="login-username"
+              autocomplete="username"
               placeholder="请输入管理员或业务员账号"
               :prefix-icon="User"
               clearable
@@ -72,9 +47,11 @@
           </el-form-item>
 
           <el-form-item prop="password">
-            <label class="form-label">安全密码</label>
+            <label for="login-password" class="tcm-label">安全密码</label>
             <el-input
               v-model="form.password"
+              id="login-password"
+              autocomplete="current-password"
               type="password"
               placeholder="请输入登录密码"
               :prefix-icon="Lock"
@@ -83,39 +60,60 @@
             />
           </el-form-item>
 
-          <div class="form-options">
+          <el-form-item prop="captcha">
+            <label for="login-captcha" class="tcm-label">验证码</label>
+            <div class="tcm-captcha-row">
+              <el-input
+                v-model="form.captcha"
+                id="login-captcha"
+                placeholder="请输入计算结果"
+                inputmode="numeric"
+                autocomplete="off"
+                :disabled="loading"
+                @keyup.enter="handleLogin"
+              />
+              <el-tooltip content="刷新验证码" placement="top">
+                <button
+                  type="button"
+                  class="tcm-captcha-question"
+                  :disabled="loading"
+                  aria-label="刷新验证码"
+                  @click="refreshCaptcha"
+                >{{ captcha.question }} = ?</button>
+              </el-tooltip>
+            </div>
+          </el-form-item>
+
+          <div class="tcm-options">
             <el-checkbox v-model="rememberMe">记住登录状态</el-checkbox>
             <el-link type="primary" :underline="false" @click="tipForget">忘记密码?</el-link>
           </div>
 
           <el-button
             type="primary"
-            class="submit-btn"
+            class="tcm-submit"
             :loading="loading"
             @click="handleLogin"
           >
-            登 录 平 台
+            <span>登录平台</span><el-icon v-if="!loading"><Right /></el-icon>
           </el-button>
         </el-form>
+        <div class="tcm-secure-note"><el-icon><Lock /></el-icon> 账号安全保护 · 授权访问</div>
+      </section>
+    </main>
 
-
-        <div class="form-footer-api">
-          <span>登录认证端点: </span>
-          <code class="mono">POST /api/tcmirp/tenant-access/auth/login</code>
-          <span style="margin: 0 4px;">·</span>
-          <span>请求头自动携带: </span>
-          <code class="mono">weappauthorization: data.token</code>
-        </div>
-      </div>
-    </div>
+    <footer class="tcm-footer">
+      <span>中药全产业链追溯协同平台</span>
+      <span>本草有源 · 品质可溯</span>
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus';
-import { User, Lock } from '@element-plus/icons-vue';
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
+import { User, Lock, FirstAidKit, Connection, CircleCheck, Share, Right } from '@element-plus/icons-vue';
 import { useAuthStore } from '@/stores/authStore';
 import { apiErrorMessage } from '@/api/client';
 
@@ -129,16 +127,54 @@ const formRef = ref<FormInstance>();
 
 const form = ref({
   username: '',
-  password: ''
+  password: '',
+  captcha: ''
 });
 
-const rules = {
+const createCaptcha = () => {
+  const first = Math.floor(Math.random() * 9) + 1;
+  const second = Math.floor(Math.random() * 9) + 1;
+  switch (Math.floor(Math.random() * 4)) {
+    case 0:
+      return { question: `${first} + ${second}`, answer: first + second };
+    case 1:
+      return { question: `${Math.max(first, second)} - ${Math.min(first, second)}`, answer: Math.abs(first - second) };
+    case 2:
+      return { question: `${first} * ${second}`, answer: first * second };
+    default:
+      return { question: `${first * second} ÷ ${second}`, answer: first };
+  }
+};
+
+const captcha = ref(createCaptcha());
+
+const refreshCaptcha = () => {
+  captcha.value = createCaptcha();
+  form.value.captcha = '';
+  formRef.value?.clearValidate('captcha');
+};
+
+const rules: FormRules = {
   username: [{ required: true, message: '请输入登录账号', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入安全密码', trigger: 'blur' }]
+  password: [{ required: true, message: '请输入安全密码', trigger: 'blur' }],
+  captcha: [
+    { required: true, whitespace: true, message: '请输入验证码计算结果', trigger: 'blur' },
+    {
+      validator: (_rule, value, callback) => {
+        const answer = String(value ?? '').trim();
+        if (!/^\d+$/.test(answer) || Number(answer) !== captcha.value.answer) {
+          callback(new Error('验证码计算结果不正确'));
+          return;
+        }
+        callback();
+      },
+      trigger: 'blur'
+    }
+  ]
 };
 
 const handleLogin = async () => {
-  if (!formRef.value) return;
+  if (!formRef.value || loading.value) return;
   await formRef.value.validate(async (valid) => {
     if (!valid) return;
     loading.value = true;
@@ -154,6 +190,7 @@ const handleLogin = async () => {
       router.push(redirect);
     } catch (err: any) {
       ElMessage.error(apiErrorMessage(err, '登录失败，请核对账号密码'));
+      refreshCaptcha();
     } finally {
       loading.value = false;
     }
@@ -170,250 +207,168 @@ const tipForget = () => {
 </script>
 
 <style scoped>
-.login-container {
-  width: 100vw;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f4f7f5;
+.tcm-login {
   position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
   overflow: hidden;
-  padding: 24px;
-  box-sizing: border-box;
+  color: #fff;
+  background: #173f32;
 }
 
-.login-bg-decorations {
+.tcm-scenery, .tcm-shade {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
+  z-index: -1;
   pointer-events: none;
 }
 
-.decor-circle {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.35;
+.tcm-scenery {
+  background: url('../../../assets/login-forest.jpg') center 48% / cover no-repeat;
+  animation: forest-breathe 26s ease-in-out infinite alternate;
 }
 
-.circle-1 {
-  width: 500px;
-  height: 500px;
-  background: #25855a;
-  top: -150px;
-  left: -100px;
+.tcm-shade {
+  background: linear-gradient(90deg, rgba(9, 34, 26, 0.7), rgba(9, 34, 26, 0.22) 62%, rgba(9, 34, 26, 0.12));
 }
 
-.circle-2 {
-  width: 450px;
-  height: 450px;
-  background: #14724e;
-  bottom: -150px;
-  right: -80px;
-}
-
-.login-box {
-  position: relative;
-  z-index: 1;
-  width: 960px;
-  max-width: 100%;
-  min-height: 580px;
+.tcm-header, .tcm-footer {
   display: flex;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(20, 114, 78, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(37, 133, 90, 0.15);
-  overflow: hidden;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: min(1440px, 100%);
+  margin: 0 auto;
+  padding: 34px 64px;
 }
 
-.login-aside {
+.tcm-brand { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.tcm-emblem {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 27px;
+}
+.tcm-brand-name { display: block; font-size: 19px; font-weight: 600; }
+.tcm-brand-en { display: block; margin-top: 3px; color: #d4e4dd; font-size: 10px; }
+.tcm-header-note { display: flex; align-items: center; gap: 7px; color: #e0ebe6; font-size: 12px; white-space: nowrap; }
+
+.tcm-content {
   flex: 1;
-  background: linear-gradient(145deg, #10593d 0%, #0d4630 100%);
-  color: #ffffff;
-  padding: 40px 36px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.aside-brand {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
   align-items: center;
-  gap: 14px;
+  gap: 72px;
+  width: min(1280px, 100%);
+  margin: 0 auto;
+  padding: 36px 64px 48px;
 }
-
-.brand-logo {
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-}
-
-.logo-svg {
-  width: 100%;
-  height: 100%;
-}
-
-.aside-title {
-  font-size: 19px;
-  font-weight: 700;
-  margin: 0;
-  color: #ffffff;
-  line-height: 1.3;
-}
-
-.aside-sub {
-  font-size: 11px;
-  color: #a7f3d0;
-  margin: 4px 0 0;
-  letter-spacing: 0.5px;
-}
-
-.feature-list {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  margin: 36px 0;
-}
-
-.feature-item {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-
-.f-dot {
-  width: 8px;
-  height: 8px;
-  background: #4ade80;
-  border-radius: 50%;
-  margin-top: 6px;
-  flex-shrink: 0;
-}
-
-.feature-item strong {
-  display: block;
-  font-size: 14.5px;
-  color: #f0fdf4;
-  margin-bottom: 4px;
-}
-
-.feature-item p {
-  font-size: 12px;
-  color: #bbf7d0;
+.tcm-intro { min-width: 0; padding-bottom: 24px; animation: content-arrive 0.8s ease-out both; }
+.tcm-eyebrow { display: flex; align-items: center; gap: 12px; color: #e2eee6; font-size: 13px; }
+.tcm-eyebrow span { width: 28px; height: 2px; background: #c9dcb3; }
+.tcm-intro h1 {
+  margin: 24px 0;
+  color: #fff;
+  font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  font-size: 48px;
+  font-weight: 600;
   line-height: 1.5;
-  margin: 0;
+  text-shadow: 0 2px 24px rgba(9, 34, 26, 0.15);
 }
+.tcm-description { margin: 0; color: #e0eae3; font-size: 15px; line-height: 2; }
+.tcm-capabilities { display: flex; flex-wrap: wrap; gap: 16px 24px; margin-top: 44px; }
+.tcm-capabilities span { display: inline-flex; align-items: center; gap: 8px; color: #eaf1e9; font-size: 13px; }
+.tcm-capabilities .el-icon { color: #d4e4b8; font-size: 18px; }
 
-.aside-footer {
-  font-size: 11.5px;
-  color: #86efac;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
-  padding-top: 14px;
+.tcm-auth {
+  min-width: 0;
+  padding: 38px 36px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 20px 72px rgba(6, 29, 21, 0.18);
+  color: var(--color-ink);
+  animation: content-arrive 0.8s 0.12s ease-out both;
 }
-
-.login-main {
-  width: 460px;
-  padding: 40px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  box-sizing: border-box;
-}
-
-.form-header h2 {
-  font-size: 20px;
-  font-weight: 700;
-  color: #1a2e24;
-  margin: 0 0 6px;
-}
-
-.form-header p {
-  font-size: 13px;
-  color: #64748b;
-  margin: 0 0 24px;
-}
-
-.form-label {
-  display: block;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #334155;
-  margin-bottom: 6px;
-}
-
-.form-options {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.submit-btn {
-  width: 100%;
-  height: 44px;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 2px;
+.tcm-form-eyebrow { color: #72817b; font-size: 10px; font-weight: 600; }
+.tcm-form-header h2 { margin: 7px 0 8px; color: #243c32; font-size: 27px; font-weight: 600; line-height: 1.5; }
+.tcm-form-header p { margin: 0 0 28px; color: #7b8580; font-size: 12px; line-height: 1.7; }
+.tcm-form :deep(.el-form-item) { margin-bottom: 23px; }
+.tcm-form :deep(.el-form-item__content) { display: block; line-height: normal; }
+.tcm-label { display: block; margin-bottom: 9px; color: #3e4944; font-size: 13px; font-weight: 500; }
+.tcm-form :deep(.el-input__wrapper) { min-height: 46px; padding: 0 13px; background: #fafcfb !important; }
+.tcm-form :deep(.el-input__inner) { height: 44px; font-size: 13px; }
+.tcm-form :deep(.el-input__prefix) { margin-right: 5px; color: #85958c; }
+.tcm-captcha-row { display: flex; align-items: center; gap: 10px; width: 100%; }
+.tcm-captcha-row .el-input { flex: 1; min-width: 0; }
+.tcm-captcha-question {
+  flex: 0 0 128px;
+  white-space: nowrap;
+  height: 46px;
+  padding: 0 8px;
+  border: 1px solid #d9e2eb;
   border-radius: 6px;
-}
-
-.quick-accounts {
-  margin-top: 24px;
-  padding: 12px;
-  background: #f8faf9;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-}
-
-.quick-title {
-  font-size: 11.5px;
-  color: #64748b;
-  margin-bottom: 8px;
-}
-
-.quick-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.account-chip {
+  background: repeating-linear-gradient(-45deg, #f0f5fc, #f0f5fc 4px, #e8eff9 4px, #e8eff9 5px);
+  color: #3260a3;
+  font: 600 17px Consolas, monospace;
   cursor: pointer;
-  font-size: 11px;
-  transition: all 0.15s;
+  transition: border-color 0.2s;
 }
+.tcm-captcha-question:hover { border-color: #86a9dc; }
+.tcm-captcha-question:disabled { cursor: not-allowed; opacity: 0.6; }
+.tcm-options { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -3px 0 21px; }
+.tcm-options :deep(.el-checkbox__label), .tcm-options :deep(.el-link) { font-size: 12px; }
+.tcm-options :deep(.el-checkbox__label) { padding-left: 7px; }
+.tcm-submit { width: 100%; height: 46px; font-size: 14px; }
+.tcm-submit :deep(> span) { display: flex; align-items: center; justify-content: center; gap: 15px; }
+.tcm-submit:hover { transform: translateY(-1px); box-shadow: 0 5px 14px rgba(37, 99, 235, 0.18); }
+.tcm-secure-note { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #edf0ee; color: #929b96; font-size: 11px; }
+.tcm-secure-note .el-icon { color: #769385; font-size: 13px; }
+.tcm-footer { padding-top: 20px; padding-bottom: 24px; color: #d3dfd6; font-size: 11px; }
 
-.account-chip:hover {
-  transform: translateY(-1px);
-  border-color: #25855a;
+@keyframes forest-breathe {
+  from { transform: scale(1); }
+  to { transform: scale(1.055); }
 }
-
-.form-footer-api {
-  margin-top: 20px;
-  font-size: 11px;
-  color: #94a3b8;
-  text-align: center;
+@keyframes content-arrive {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
-.form-footer-api code {
-  color: #14724e;
-  font-weight: 600;
+@media (max-width: 1100px) {
+  .tcm-header, .tcm-footer { padding-right: 36px; padding-left: 36px; }
+  .tcm-content { grid-template-columns: minmax(0, 1fr) 390px; gap: 36px; padding-right: 36px; padding-left: 36px; }
+  .tcm-intro h1 { font-size: 38px; }
+  .tcm-auth { padding-right: 30px; padding-left: 30px; }
 }
-
-@media (max-width: 860px) {
-  .login-box {
-    flex-direction: column;
-    width: 100%;
-  }
-  .login-aside {
-    display: none;
-  }
-  .login-main {
-    width: 100%;
-    padding: 30px 20px;
-  }
+@media (max-width: 800px) {
+  .tcm-header { padding: 24px; }
+  .tcm-header-note { display: none; }
+  .tcm-content { width: 100%; grid-template-columns: minmax(0, 440px); justify-content: center; gap: 24px; padding: 24px 24px 32px; }
+  .tcm-intro { padding: 0; }
+  .tcm-eyebrow, .tcm-description, .tcm-capabilities { display: none; }
+  .tcm-intro h1 { margin: 0; font-size: 30px; line-height: 1.5; }
+  .tcm-intro h1 br { display: none; }
+  .tcm-footer { padding: 16px 24px 22px; font-size: 10px; }
+}
+@media (max-width: 420px) {
+  .tcm-brand-name { font-size: 17px; }
+  .tcm-brand-en { font-size: 9px; }
+  .tcm-content { padding-right: 18px; padding-left: 18px; }
+  .tcm-intro h1 { font-size: 25px; }
+  .tcm-auth { padding: 28px 22px 22px; }
+  .tcm-footer { justify-content: center; }
+  .tcm-footer span:last-child { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tcm-scenery, .tcm-intro, .tcm-auth { animation: none; }
+  .tcm-submit:hover { transform: none; }
 }
 </style>

@@ -1,11 +1,6 @@
 <template>
   <div class="master-data-page scheme-page">
     <PageHeader title="监管编码主数据" subtitle="统一维护监管编码体系、编码段规则并试校验编码">
-      <template #actions>
-        <el-button :icon="Refresh" :loading="loading" @click="loadSchemes">刷新</el-button>
-        <el-button :icon="CircleCheck" @click="openValidation">编码试校验</el-button>
-        <el-button type="primary" :icon="Plus" @click="openCreate">新增编码体系</el-button>
-      </template>
     </PageHeader>
 
     <FilterBar @search="handleSearch" @reset="handleReset">
@@ -17,10 +12,10 @@
         <el-option label="启用" value="ACTIVE" />
         <el-option label="停用" value="INACTIVE" />
       </el-select>
+      <template #actions><el-button :icon="CircleCheck" @click="openValidation">编码试校验</el-button><el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button></template>
     </FilterBar>
 
     <section class="panel table-panel">
-      <div class="panel-header"><h2>监管编码体系列表 ({{ total }})</h2><span v-if="inactiveCount" class="panel-hint">本页停用 {{ inactiveCount }}</span></div>
       <div class="panel-body">
         <el-table :data="schemes" v-loading="loading" row-key="schemeId" empty-text="暂无监管编码体系" style="width:100%">
           <el-table-column prop="schemeId" label="体系 ID" width="170"><template #default="{ row }"><span class="mono scheme-id">{{ row.schemeId }}</span></template></el-table-column>
@@ -94,14 +89,14 @@
           <el-button type="primary" :icon="Plus" @click="openSegmentCreate">新增编码段</el-button>
         </div>
       </template>
-      <el-table :data="segments" v-loading="segmentsLoading" row-key="segmentId" empty-text="暂无编码段" style="width:100%">
+      <LocalPaginatedTable :data="segments" v-loading="segmentsLoading" row-key="segmentId" empty-text="暂无编码段" style="width:100%">
         <el-table-column prop="segmentNo" label="序号" width="70" />
         <el-table-column label="位置" width="110"><template #default="{ row }"><span class="mono">{{ row.startPos }} - {{ row.startPos + row.segmentLength - 1 }}</span></template></el-table-column>
         <el-table-column prop="segmentLength" label="长度" width="75" />
         <el-table-column prop="semanticCode" label="语义代码" min-width="150" show-overflow-tooltip><template #default="{ row }"><span class="mono semantic-code">{{ row.semanticCode }}</span></template></el-table-column>
         <el-table-column prop="ruleJson" label="段校验规则" min-width="180" show-overflow-tooltip><template #default="{ row }"><span class="mono rule-preview">{{ compactJson(row.ruleJson) }}</span></template></el-table-column>
         <el-table-column label="操作" width="115" fixed="right"><template #default="{ row }"><el-button link type="primary" size="small" @click="openSegmentEdit(row)">编辑</el-button><el-button link type="danger" size="small" @click="deleteSegment(row)">删除</el-button></template></el-table-column>
-      </el-table>
+      </LocalPaginatedTable>
     </el-drawer>
 
     <el-dialog v-model="segmentFormVisible" :title="segmentEditing ? '编辑监管编码段' : '新增监管编码段'" width="660px" destroy-on-close :close-on-click-modal="false" append-to-body>
@@ -142,13 +137,13 @@
           <el-descriptions-item label="编码体系"><span class="mono">{{ validationResult.schemeCode }}</span></el-descriptions-item>
           <el-descriptions-item label="标准化编码"><span class="mono">{{ validationResult.normalizedCode || '-' }}</span></el-descriptions-item>
         </el-descriptions>
-        <el-table v-if="validationResult.segments?.length" :data="validationResult.segments" size="small" class="segment-result-table">
+        <LocalPaginatedTable v-if="validationResult.segments?.length" :data="validationResult.segments" size="small" class="segment-result-table">
           <el-table-column prop="segmentNo" label="段序号" width="80" />
           <el-table-column prop="semanticCode" label="语义代码" min-width="150"><template #default="{ row }"><span class="mono">{{ row.semanticCode || '-' }}</span></template></el-table-column>
           <el-table-column prop="value" label="解析值" min-width="150"><template #default="{ row }"><span class="mono">{{ row.value || '-' }}</span></template></el-table-column>
           <el-table-column label="结果" width="90"><template #default="{ row }"><el-tag :type="row.valid === false ? 'danger' : 'success'" size="small">{{ row.valid === false ? '未通过' : '通过' }}</el-tag></template></el-table-column>
           <el-table-column prop="errorCode" label="错误码" min-width="120"><template #default="{ row }"><span class="mono">{{ row.errorCode || '-' }}</span></template></el-table-column>
-        </el-table>
+        </LocalPaginatedTable>
       </section>
       <template #footer><el-button @click="validationVisible=false">关闭</el-button><el-button type="primary" :loading="validating" @click="validateCode">开始校验</el-button></template>
     </el-dialog>
@@ -156,9 +151,10 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
-import { CircleCheck, CircleClose, Plus, Refresh } from '@element-plus/icons-vue';
+import { CircleCheck, CircleClose, Plus } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import JsonEditor from '@/components/common/JsonEditor.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
@@ -169,7 +165,7 @@ import { masterDataApi, type CodeSchemeResponse, type CodeSchemeSegment, type Co
 type SchemeStatus = 'ACTIVE' | 'INACTIVE';
 const issuerTypes = ['GOVERNMENT', 'REGULATOR', 'INDUSTRY_ASSOCIATION', 'ENTERPRISE'];
 const schemes = ref<CodeSchemeResponse[]>([]);
-const loading = ref(false); const page = ref(1); const pageSize = ref(20); const total = ref(0);
+const loading = ref(false); const page = ref(1); const pageSize = ref(10); const total = ref(0);
 const filters = reactive({ schemeCode: '', version: '', schemeName: '', issuerType: '', status: '' });
 const inactiveCount = computed(() => schemes.value.filter(item => item.status === 'INACTIVE').length);
 
@@ -220,5 +216,5 @@ onMounted(loadSchemes);
 </script>
 
 <style scoped>
-.scheme-page{padding-bottom:24px}.summary-strip{display:flex;gap:1px;margin-bottom:14px;overflow:hidden;background:var(--color-border);border:1px solid var(--color-border);border-radius:6px}.summary-item{display:flex;flex:1;align-items:baseline;gap:12px;padding:12px 16px;background:var(--color-surface)}.summary-item span{color:var(--color-muted);font-size:12px}.summary-item strong{color:var(--color-ink);font-size:20px;font-weight:700}.summary-item .active-number{color:#15803d}.summary-item .inactive-number{color:#b45309}.panel-header>div{display:flex;align-items:baseline;gap:10px}.panel-hint{color:var(--color-muted);font-size:12px}.scheme-id,.code-text{color:var(--color-brand);font-weight:700}.rule-preview{color:#475569;font-size:12px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}.segment-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0 16px}.json-actions{display:flex;align-items:center;justify-content:space-between;margin-top:-12px;color:var(--color-muted);font-size:12px}.rule-section{margin-top:18px}.rule-title{margin-bottom:8px;color:var(--color-ink);font-size:13px;font-weight:700}.rule-json{max-height:320px;margin:0;padding:14px;overflow:auto;white-space:pre-wrap;word-break:break-word;background:#f4f9f7;border:1px solid var(--color-border);border-radius:6px;color:#294342;font-size:12px;line-height:1.65}.drawer-heading{display:flex;width:100%;align-items:center;justify-content:space-between;padding-right:12px}.drawer-heading strong{display:block;color:var(--color-ink);font-size:16px}.drawer-heading span{display:block;margin-top:4px;color:var(--color-muted);font-size:12px}.semantic-code{color:#245f91;font-weight:700}.validation-result{margin-top:8px;padding:14px;border:1px solid;border-radius:6px}.validation-result.is-valid{background:#f0fdf4;border-color:#bbf7d0}.validation-result.is-invalid{background:#fff7ed;border-color:#fed7aa}.validation-summary{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.validation-summary>div{display:flex;align-items:center;gap:8px}.validation-summary .el-icon{font-size:20px}.is-valid .validation-summary{color:#15803d}.is-invalid .validation-summary{color:#c2410c}.segment-result-table{margin-top:12px}:deep(.json-input textarea),:deep(.mono-input input){font-family:"JetBrains Mono",SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;line-height:1.6}@media(max-width:800px){.summary-strip{flex-direction:column}.form-grid,.segment-grid{grid-template-columns:1fr}}
+.scheme-page{padding-bottom:24px}.summary-strip{display:flex;gap:1px;margin-bottom:14px;overflow:hidden;background:var(--color-border);border:1px solid var(--color-border);border-radius:6px}.summary-item{display:flex;flex:1;align-items:baseline;gap:12px;padding:12px 16px;background:var(--color-surface)}.summary-item span{color:var(--color-muted);font-size:12px}.summary-item strong{color:var(--color-ink);font-size:20px;font-weight:700}.summary-item .active-number{color:#15803d}.summary-item .inactive-number{color:#b45309}.panel-header>div{display:flex;align-items:baseline;gap:10px}.panel-hint{color:var(--color-muted);font-size:12px}.scheme-id,.code-text{color:var(--color-brand);font-weight:700}.rule-preview{color:#475569;font-size:12px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}.segment-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0 16px}.json-actions{display:flex;align-items:center;justify-content:space-between;margin-top:-12px;color:var(--color-muted);font-size:12px}.rule-section{margin-top:18px}.rule-title{margin-bottom:8px;color:var(--color-ink);font-size:13px;font-weight:700}.rule-json{max-height:320px;margin:0;padding:14px;overflow:auto;white-space:pre-wrap;word-break:break-word;background:var(--color-surface-subtle);border:1px solid var(--color-border);border-radius:6px;color:var(--color-text);font-size:12px;line-height:1.65}.drawer-heading{display:flex;width:100%;align-items:center;justify-content:space-between;padding-right:12px}.drawer-heading strong{display:block;color:var(--color-ink);font-size:16px}.drawer-heading span{display:block;margin-top:4px;color:var(--color-muted);font-size:12px}.semantic-code{color:#245f91;font-weight:700}.validation-result{margin-top:8px;padding:14px;border:1px solid;border-radius:6px}.validation-result.is-valid{background:#f0fdf4;border-color:#bbf7d0}.validation-result.is-invalid{background:#fff7ed;border-color:#fed7aa}.validation-summary{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.validation-summary>div{display:flex;align-items:center;gap:8px}.validation-summary .el-icon{font-size:20px}.is-valid .validation-summary{color:#15803d}.is-invalid .validation-summary{color:#c2410c}.segment-result-table{margin-top:12px}:deep(.json-input textarea),:deep(.mono-input input){font-family:"JetBrains Mono",SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;line-height:1.6}@media(max-width:800px){.summary-strip{flex-direction:column}.form-grid,.segment-grid{grid-template-columns:1fr}}
 </style>

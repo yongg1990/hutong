@@ -11,7 +11,7 @@
     <el-dialog v-model="visible" title="修正并重放" width="min(600px,94vw)"><el-form label-position="top"><el-form-item label="原始内容"><JsonEditor v-model="payload" :rows="6" /></el-form-item><el-form-item label="处理说明" required><el-input v-model="note" type="textarea" /></el-form-item></el-form><p v-for="item in active?.history" :key="item">{{ item }}</p><template #footer><el-button @click="visible=false">取消</el-button><el-button type="primary" @click="resolve">修正、重放并关闭</el-button></template></el-dialog>
 
     <div class="panel">
-      <el-table :data="cases">
+      <LocalPaginatedTable :data="cases" v-loading="loading">
         <el-table-column prop="caseNo" label="案卷编号 *" width="160" class-name="mono" />
         <el-table-column prop="ruleCode" label="规则码 *" width="180" class-name="mono" />
         <el-table-column prop="sourceSystem" label="来源系统 *" width="120" />
@@ -21,13 +21,14 @@
         <el-table-column label="状态 *" width="110">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>
-      </el-table>
+      </LocalPaginatedTable>
     </div>
 
   </div>
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, onMounted } from 'vue';
 import { isStaticMode, resolveCase } from '@/stores/demoStore';
 import JsonEditor from '@/components/common/JsonEditor.vue';

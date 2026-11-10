@@ -165,7 +165,7 @@ const goToEvidence = () => {
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  border-bottom: 1px solid #edf0ee;
+  border-bottom: 1px solid var(--color-border-subtle);
   font-size: 13px;
 }
 
@@ -178,7 +178,7 @@ const goToEvidence = () => {
   overflow: auto;
   margin-top: 12px;
   padding: 12px;
-  background: #f6f8f7;
+  background: var(--color-surface-subtle);
   white-space: pre-wrap;
   word-break: break-all;
 }

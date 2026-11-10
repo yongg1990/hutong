@@ -4,27 +4,17 @@
       title="互通规范包"
       subtitle="定义不同业务场景与外部系统的交换数据标准、一致性映射与脱敏规则"
     >
-      <template #actions>
-        <el-button @click="$router.push('/exchange/profile-config')">规范配置</el-button>
-        <el-button @click="$router.push('/exchange/queries')">交换查询</el-button>
-        <el-button type="primary" @click="openCreate">
-          <el-icon class="mr-1"><Plus /></el-icon>
-          新建规范包
-        </el-button>
-      </template>
     </PageHeader>
 
     <FilterBar @search="loadProfiles" @reset="handleReset">
       <el-input v-model="profileCode" placeholder="规范包代码" clearable style="width: 220px" />
       <el-input-number v-model="limit" :min="1" :max="100" controls-position="right" />
+      <template #actions><el-button @click="$router.push('/exchange/profile-config')">规范配置</el-button><el-button @click="$router.push('/exchange/queries')">交换查询</el-button><el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button></template>
     </FilterBar>
 
     <!-- Top Panel: Profile List -->
-    <div class="bg-white border border-gray-200 rounded-md shadow-sm flex-none overflow-hidden">
-      <div class="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-        <div class="font-medium text-gray-700">规范包列表</div>
-      </div>
-      <el-table 
+    <div class="table-surface flex-none overflow-hidden">
+      <LocalPaginatedTable
         :data="profiles" 
         v-loading="loading"
         highlight-current-row
@@ -56,7 +46,7 @@
             <el-button size="small" type="primary" link @click.stop="openVersions(row)">版本历史</el-button>
           </template>
         </el-table-column>
-      </el-table>
+      </LocalPaginatedTable>
     </div>
 
     <!-- Bottom Panel: Field Rules Table (Consistency Mapping) -->
@@ -70,7 +60,7 @@
       </div>
       
       <div class="flex-1 overflow-auto p-4">
-        <el-table :data="selectedProfile.datasets" style="width: 100%; margin-bottom: 16px" border size="small">
+        <LocalPaginatedTable :data="selectedProfile.datasets" style="width: 100%; margin-bottom: 16px" border size="small">
           <el-table-column prop="id" label="数据集 ID" width="100" class-name="mono" />
           <el-table-column prop="profileVersionId" label="规范版本 ID" width="120" class-name="mono" />
           <el-table-column prop="datasetCode" label="数据集代码" width="170" class-name="mono" />
@@ -80,8 +70,8 @@
           <el-table-column prop="status" label="状态" width="100" />
           <el-table-column prop="createdAt" label="创建时间" width="170" />
           <el-table-column prop="updatedAt" label="更新时间" width="170" />
-        </el-table>
-        <el-table :data="selectedProfile.rules" style="width: 100%" border size="small">
+        </LocalPaginatedTable>
+        <LocalPaginatedTable :data="selectedProfile.rules" style="width: 100%" border size="small">
           <el-table-column prop="id" label="规则 ID" width="100" class-name="mono" />
           <el-table-column prop="datasetId" label="数据集 ID" width="110" class-name="mono" />
           <el-table-column prop="targetPath" label="目标字段 (targetPath)" width="180" class-name="mono font-semibold text-gray-700" />
@@ -126,7 +116,7 @@
               </span>
             </template>
           </el-table-column>
-        </el-table>
+        </LocalPaginatedTable>
       </div>
     </div>
     
@@ -157,7 +147,7 @@
     </el-dialog>
 
     <el-drawer v-model="versionsVisible" title="规范版本历史" size="680px" :close-on-click-modal="false">
-      <el-table :data="versions" v-loading="loadingVersions">
+      <LocalPaginatedTable :data="versions" v-loading="loadingVersions">
         <el-table-column prop="id" label="版本 ID" width="110" />
         <el-table-column prop="profileId" label="规范包 ID" width="120" />
         <el-table-column prop="version" label="版本号" width="100" />
@@ -167,12 +157,13 @@
         <el-table-column prop="status" label="状态" width="100" />
         <el-table-column prop="createdAt" label="创建时间" width="170" />
         <el-table-column prop="updatedAt" label="更新时间" width="170" />
-      </el-table>
+      </LocalPaginatedTable>
     </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, onMounted } from 'vue';
 import { Plus, Check, Pointer } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
@@ -187,7 +178,7 @@ type Profile = ExchangeProfile;
 const profiles = ref<Profile[]>([]);
 const loading = ref(false);
 const profileCode = ref('');
-const limit = ref(20);
+const limit = ref(10);
 const profileDialogVisible = ref(false);
 const versionsVisible = ref(false);
 const savingProfile = ref(false);
@@ -214,7 +205,7 @@ const loadProfiles = async () => {
 
 const handleReset = () => {
   profileCode.value = '';
-  limit.value = 20;
+  limit.value = 10;
   loadProfiles();
 };
 

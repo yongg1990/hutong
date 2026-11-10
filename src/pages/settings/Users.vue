@@ -4,12 +4,6 @@
       title="用户与账号管理"
       subtitle="租户用户账号创建与角色绑定"
     >
-      <template #actions>
-        <el-button @click="loadUsers">刷新用户</el-button>
-        <el-button type="primary" @click="openCreateDialog">
-          + 新增用户账号
-        </el-button>
-      </template>
     </PageHeader>
 
     <!-- Filter Bar -->
@@ -23,13 +17,11 @@
           :value="t.id"
         />
       </el-select>
+      <template #actions><el-button type="primary" @click="openCreateDialog"><el-icon><Plus /></el-icon>新增</el-button></template>
     </FilterBar>
 
     <!-- Users Table Panel -->
     <div class="panel">
-      <div class="panel-header">
-        <h2>用户账号列表 ({{ total }})</h2>
-      </div>
       <div class="panel-body">
         <el-table :data="users" v-loading="loading" style="width: 100%" empty-text="暂无匹配的用户账号">
           <el-table-column prop="userId" label="用户 ID" width="110" class-name="mono" />
@@ -150,7 +142,7 @@ import { apiErrorMessage } from '@/api/client';
 const users = ref<UserItem[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = ref(20);
+const pageSize = ref(10);
 const tenants = ref<TenantItem[]>([]);
 const roles = ref<RoleItem[]>([]);
 const loading = ref(false);
@@ -351,7 +343,7 @@ const submitRoleAction = async () => {
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border-subtle);
-  background: #fbfdfc;
+  background: var(--color-surface);
 }
 
 .panel-header h2 {

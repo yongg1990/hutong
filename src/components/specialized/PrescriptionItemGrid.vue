@@ -19,7 +19,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(row, idx) in items" :key="idx">
+        <tr v-for="(row, idx) in pageRows" :key="(page - 1) * 10 + idx">
           <td><el-input v-model="row.pieceName" size="small" placeholder="饮片名" /></td>
           <td><el-input v-model="row.spec" size="small" placeholder="如: 蒸制/切片" /></td>
           <td><el-input v-model="row.qty" size="small" placeholder="15g" /></td>
@@ -33,16 +33,18 @@
           </td>
           <td><el-input v-model="row.usage" size="small" placeholder="冲服/包煎" /></td>
           <td>
-            <el-button type="danger" link size="small" @click="removeRow(idx)">删除</el-button>
+            <el-button type="danger" link size="small" @click="removeRow((page - 1) * 10 + idx)">删除</el-button>
           </td>
         </tr>
       </tbody>
     </table>
+    <div v-if="items.length > 10" class="pagination-row"><el-pagination v-model:current-page="page" :page-size="10" :total="items.length" layout="total, prev, pager, next" /></div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { defaultItems } from '@/stores/demoStore';
+import { useLocalPagination } from '@/composables/useLocalPagination';
 
 interface PrescriptionItem {
   pieceName: string;
@@ -53,9 +55,11 @@ interface PrescriptionItem {
 }
 
 const items = defineModel<PrescriptionItem[]>({ default: defaultItems });
+const { page, pageRows } = useLocalPagination(items);
 
 const addRow = () => {
   items.value.push({ pieceName: '', spec: '', qty: '', insuranceCode: '', usage: '煎服' });
+  page.value = Math.ceil(items.value.length / 10);
 };
 
 const removeRow = (index: number) => {
@@ -85,7 +89,7 @@ const removeRow = (index: number) => {
 }
 
 .item-table th {
-  background: #f6f8f7;
+  background: var(--color-surface-subtle);
   padding: 6px 8px;
   font-size: 12px;
   border-bottom: 1px solid var(--color-border);
@@ -94,7 +98,7 @@ const removeRow = (index: number) => {
 
 .item-table td {
   padding: 6px 8px;
-  border-bottom: 1px solid #edf0ee;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .is-invalid :deep(.el-input__wrapper) {

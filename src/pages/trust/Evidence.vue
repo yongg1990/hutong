@@ -4,18 +4,15 @@
       title="证据文件与凭证"
       subtitle="质检报告 PDF、出入库单据、合同凭证文件检索与哈希校验"
     >
-      <template #actions>
-        <el-button @click="$router.push('/trust/files-credentials')">上传文件 / 凭证</el-button>
-        <el-button type="primary" @click="createDialogVisible = true">登记证据</el-button>
-      </template>
     </PageHeader>
 
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-input v-model="evidenceId" placeholder="证据 ID" style="width: 220px" />
+      <template #actions><el-button @click="$router.push('/trust/files-credentials')">上传文件 / 凭证</el-button><el-button type="primary" @click="createDialogVisible = true"><el-icon><Plus /></el-icon>新增</el-button></template>
     </FilterBar>
 
     <div class="panel">
-      <el-table :data="evidences" v-loading="loading">
+      <LocalPaginatedTable :data="evidences" v-loading="loading">
         <el-table-column prop="evidenceId" label="证据编号" width="160" class-name="mono" />
         <el-table-column prop="name" label="证据文件名 *" min-width="200" />
         <el-table-column prop="type" label="证据类型" width="140" />
@@ -30,7 +27,7 @@
             <el-button size="small" type="primary" link @click="verifyHash(row)">校验</el-button>
           </template>
         </el-table-column>
-      </el-table>
+      </LocalPaginatedTable>
     </div>
 
     <el-dialog v-model="createDialogVisible" title="登记证据" width="600px" :close-on-click-modal="false">
@@ -63,6 +60,7 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { isStaticMode } from '@/stores/demoStore';

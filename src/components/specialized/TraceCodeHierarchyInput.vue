@@ -36,7 +36,7 @@
 
     <div style="margin-top: 14px; display: flex; justify-content: flex-end; gap: 10px;">
       <el-button type="primary" :loading="submitting" @click="submitTraceCode">
-        提交登记至 OpenAPI (/openapi/v1/trace-codes)
+        保存
       </el-button>
     </div>
   </div>

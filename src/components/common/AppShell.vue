@@ -287,7 +287,7 @@ const navGroups = [
 .brand-short {
   font-weight: 700;
   font-size: 16px;
-  color: #e7f1ec;
+  color: #eff5ff;
 }
 
 .collapse-toggle {
@@ -378,7 +378,7 @@ const navGroups = [
 }
 
 .task-badge-btn:hover {
-  background-color: #f7f9f8;
+  background-color: var(--color-surface-subtle);
 }
 
 .task-badge-btn .badge {
@@ -386,7 +386,7 @@ const navGroups = [
   color: #fff;
   font-size: 11px;
   font-weight: 700;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 0 6px;
   height: 16px;
   line-height: 16px;
@@ -469,7 +469,7 @@ const navGroups = [
   color: #fff;
   font-size: 10px;
   padding: 1px 6px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-weight: 600;
 }
 

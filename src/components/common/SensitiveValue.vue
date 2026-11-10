@@ -110,7 +110,7 @@ onUnmounted(() => {
 .audit-tip {
   font-size: 13px;
   color: var(--color-muted);
-  background: #f8fbf9;
+  background: var(--color-surface-subtle);
   border: 1px solid var(--color-border);
   padding: 10px;
   border-radius: 4px;

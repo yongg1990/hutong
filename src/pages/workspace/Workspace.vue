@@ -1,14 +1,5 @@
 <template>
   <div class="workspace-page">
-    <PageHeader
-      title="工作台"
-      :subtitle="contextStore.projectName + ' · 只展示当前权限范围内的事项与待办'"
-    >
-      <template #actions>
-        <el-button @click="refreshData">刷新</el-button>
-      </template>
-    </PageHeader>
-
     <!-- Top Metrics Row -->
     <div class="metric-row">
       <div class="metric-card metric-warn clickable" @click="router.push('/governance/cases')" title="点击跳转至治理异常案卷">
@@ -115,7 +106,7 @@
           <div class="step-card-top">
             <div class="step-badge-group">
               <span class="step-num">{{ String(idx + 1).padStart(2, '0') }}</span>
-              <span class="step-icon">{{ step.icon }}</span>
+              <el-icon class="step-icon"><component :is="step.icon" /></el-icon>
             </div>
             <span class="step-tag mono">{{ step.object.split(' ')[0] }}</span>
             <span class="step-arrow-mark" v-if="idx < pipelineSteps.length - 1">➔</span>
@@ -187,7 +178,7 @@
       <div class="quick-grid">
         <div class="quick-card" @click="router.push('/business/field')">
           <div class="quick-card-header">
-            <span class="quick-icon">🌱</span>
+            <el-icon class="quick-icon"><Sunny /></el-icon>
             <span class="quick-tag">12个基地</span>
           </div>
           <strong>田间种植</strong>
@@ -197,7 +188,7 @@
 
         <div class="quick-card" @click="router.push('/business/process-quality')">
           <div class="quick-card-header">
-            <span class="quick-icon">⚙️</span>
+            <el-icon class="quick-icon"><SetUp /></el-icon>
             <span class="quick-tag">4批在检</span>
           </div>
           <strong>初加工与质量</strong>
@@ -207,7 +198,7 @@
 
         <div class="quick-card" @click="router.push('/business/coding')">
           <div class="quick-card-header">
-            <span class="quick-icon">🏷️</span>
+            <el-icon class="quick-icon"><PriceTag /></el-icon>
             <span class="quick-tag">32万码</span>
           </div>
           <strong>饮片赋码</strong>
@@ -217,7 +208,7 @@
 
         <div class="quick-card" @click="router.push('/business/supply')">
           <div class="quick-card-header">
-            <span class="quick-icon">📦</span>
+            <el-icon class="quick-icon"><Box /></el-icon>
             <span class="quick-tag">8笔交割</span>
           </div>
           <strong>供销交割</strong>
@@ -227,7 +218,7 @@
 
         <div class="quick-card" @click="router.push('/business/decoction')">
           <div class="quick-card-header">
-            <span class="quick-icon">🍵</span>
+            <el-icon class="quick-icon"><FirstAidKit /></el-icon>
             <span class="quick-tag">16张处方</span>
           </div>
           <strong>处方代煎</strong>
@@ -240,7 +231,7 @@
     <!-- Walkthrough Guide Dialog -->
     <el-dialog v-model="guideModalVisible" title="云南中药材全产业链协同与可信追溯全流程演练指南" width="680px" :close-on-click-modal="false">
       <div class="guide-content">
-        <p style="margin-bottom: 16px; color: #3f4e48; font-size: 13px;">
+        <p style="margin-bottom: 16px; color: var(--color-text-secondary); font-size: 13px;">
           本平台已完成从<strong>源头田间种植</strong>至<strong>终端处方代煎</strong>的完整数据链路贯通。您可以按照以下 6 个标准业务阶段顺序体验全链条协同与数据穿透：
         </p>
 
@@ -278,15 +269,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import { useContextStore } from '@/stores/contextStore';
-import PageHeader from '@/components/common/PageHeader.vue';
+import { Sunny, SetUp, PriceTag, Box, FirstAidKit, Connection } from '@element-plus/icons-vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { workspaceApi, type WorkspaceStats } from '@/api/workspace';
 import type { WorkItem, ActivityLog } from '@/types';
 
 const router = useRouter();
-const contextStore = useContextStore();
 
 const loading = ref(false);
 const guideModalVisible = ref(false);
@@ -303,7 +291,7 @@ const stats = ref<WorkspaceStats>({
 const pipelineSteps = [
   {
     name: '田间种植建档',
-    icon: '🌱',
+    icon: Sunny,
     desc: '录入三七种植基地地块、作物批次与播种、施肥农事记录',
     path: '/business/field',
     object: 'CROP_BATCH (BATCH-2026-SQ-01)',
@@ -311,7 +299,7 @@ const pipelineSteps = [
   },
   {
     name: '初加工与质检',
-    icon: '⚙️',
+    icon: SetUp,
     desc: '以种植批次为原料趁鲜切制，挂接 LIMS 检验合格报告',
     path: '/business/process-quality',
     object: 'PROCESS_BATCH (PROC-SQ-2608-01)',
@@ -319,7 +307,7 @@ const pipelineSteps = [
   },
   {
     name: '饮片赋码包装',
-    icon: '🏷️',
+    icon: PriceTag,
     desc: '绑定国家16位医保饮片编码与药监码，建立袋-盒-箱层级包装树',
     path: '/business/coding',
     object: 'HERB_PACKAGE (8691234567890100)',
@@ -327,7 +315,7 @@ const pipelineSteps = [
   },
   {
     name: '供销交割入库',
-    icon: '📦',
+    icon: Box,
     desc: '中心仓入库签收、出库交割流转与供应链仓单质押核验',
     path: '/business/supply',
     object: 'ORDER / STOCK (SO-2026-0808-01)',
@@ -335,7 +323,7 @@ const pipelineSteps = [
   },
   {
     name: '医院处方代煎',
-    icon: '🍵',
+    icon: FirstAidKit,
     desc: '接收医疗机构处方Token，饮片调剂调配，煎药打包配送',
     path: '/business/decoction',
     object: 'PRESCRIPTION (RX-202608-091)',
@@ -343,7 +331,7 @@ const pipelineSteps = [
   },
   {
     name: '血缘图谱与存证',
-    icon: '🔗',
+    icon: Connection,
     desc: '查看全链条完整因果DAG血缘拓扑、Merkle上链根哈希与证据链',
     path: '/trust/lineage',
     object: 'MERKLE_ROOT / PROOF (PF-202608-0912)',
@@ -376,10 +364,6 @@ const loadData = async () => {
   } finally {
     loading.value = false;
   }
-};
-
-const refreshData = async () => {
-  await loadData();
 };
 
 onMounted(() => {
@@ -417,7 +401,7 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 14px 16px;
-  box-shadow: 0 1px 3px rgba(14, 95, 64, 0.04);
+  box-shadow: 0 1px 3px rgba(24, 35, 52, 0.04);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -453,7 +437,7 @@ onMounted(() => {
 
 .metric-card.clickable:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(14, 95, 64, 0.08);
+  box-shadow: 0 6px 16px rgba(24, 35, 52, 0.08);
   border-color: var(--color-brand);
 }
 
@@ -565,7 +549,7 @@ onMounted(() => {
   border-radius: 8px;
   padding: 16px 20px;
   margin-bottom: 20px;
-  box-shadow: 0 1px 4px rgba(14, 95, 64, 0.04);
+  box-shadow: 0 1px 4px rgba(24, 35, 52, 0.04);
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
@@ -596,7 +580,7 @@ onMounted(() => {
   height: 8px;
   border-radius: 50%;
   background: var(--color-brand);
-  box-shadow: 0 0 0 3px rgba(14, 95, 64, 0.2);
+  box-shadow: 0 0 0 3px rgba(24, 35, 52, 0.2);
   flex-shrink: 0;
 }
 
@@ -646,8 +630,8 @@ onMounted(() => {
 .step-card {
   display: flex;
   flex-direction: column;
-  background: #f8faf9;
-  border: 1px solid #e1eee7;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 12px 14px;
   cursor: pointer;
@@ -658,10 +642,10 @@ onMounted(() => {
 }
 
 .step-card:hover {
-  background: #edf6f1;
+  background: var(--color-brand-soft);
   border-color: var(--color-brand);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(14, 95, 64, 0.08);
+  box-shadow: 0 4px 12px rgba(24, 35, 52, 0.08);
 }
 
 .step-card-top {
@@ -682,13 +666,14 @@ onMounted(() => {
   font-size: 11px;
   font-weight: 700;
   color: var(--color-brand);
-  background: rgba(14, 95, 64, 0.09);
+  background: var(--color-brand-soft);
   padding: 1px 5px;
   border-radius: 3px;
   font-family: var(--font-mono);
 }
 
 .step-icon {
+  color: var(--color-brand);
   font-size: 16px;
   line-height: 1;
 }
@@ -707,7 +692,7 @@ onMounted(() => {
 }
 
 .step-arrow-mark {
-  color: #9ab4a7;
+  color: var(--color-muted);
   font-size: 11px;
   margin-left: 2px;
 }
@@ -785,7 +770,7 @@ onMounted(() => {
 }
 
 .todo-item:hover {
-  background: #f8faf9;
+  background: var(--color-surface-subtle);
 }
 
 .todo-item:last-child {
@@ -815,7 +800,7 @@ onMounted(() => {
 .timeline-node {
   position: relative;
   padding-left: 16px;
-  border-left: 2px solid #cfe0d7;
+  border-left: 2px solid var(--color-border);
 }
 
 .timeline-node::before {
@@ -847,7 +832,7 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 16px 20px;
-  box-shadow: 0 1px 3px rgba(14, 95, 64, 0.03);
+  box-shadow: 0 1px 3px rgba(24, 35, 52, 0.03);
 }
 
 .section-header {
@@ -888,7 +873,7 @@ onMounted(() => {
 }
 
 .quick-card {
-  background: #fbfdfc;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 14px;
@@ -900,9 +885,9 @@ onMounted(() => {
 
 .quick-card:hover {
   border-color: var(--color-brand);
-  background: #edf6f1;
+  background: var(--color-brand-soft);
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(14, 95, 64, 0.08);
+  box-shadow: 0 4px 10px rgba(24, 35, 52, 0.08);
 }
 
 .quick-card-header {
@@ -913,14 +898,15 @@ onMounted(() => {
 }
 
 .quick-icon {
+  color: var(--color-brand);
   font-size: 20px;
 }
 
 .quick-tag {
   font-size: 10.5px;
-  background: #eef5f1;
+  background: var(--color-brand-soft);
   color: var(--color-brand);
-  border: 1px solid #d4e7dd;
+  border: 1px solid var(--color-brand-border);
   padding: 1px 5px;
   border-radius: 3px;
   font-weight: 600;
@@ -961,7 +947,7 @@ onMounted(() => {
 
 .guide-step-desc {
   font-size: 13px;
-  color: #4a5c53;
+  color: var(--color-text-secondary);
   margin: 4px 0 6px;
 }
 
@@ -969,8 +955,8 @@ onMounted(() => {
   display: flex;
   gap: 16px;
   font-size: 11px;
-  color: #6b7f75;
-  background: #f5f9f6;
+  color: var(--color-muted);
+  background: var(--color-surface-subtle);
   padding: 6px 10px;
   border-radius: 4px;
 }

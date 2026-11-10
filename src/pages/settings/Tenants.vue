@@ -4,12 +4,6 @@
       title="多租户管理"
       subtitle="中药产业链参与方的租户信息与生命周期管理"
     >
-      <template #actions>
-        <el-button @click="loadTenants">刷新列表</el-button>
-        <el-button type="primary" @click="openCreateDialog">
-          + 新增租户机构
-        </el-button>
-      </template>
     </PageHeader>
 
     <!-- Filter Bar -->
@@ -20,13 +14,11 @@
         style="width: 260px"
         clearable
       />
+      <template #actions><el-button type="primary" @click="openCreateDialog"><el-icon><Plus /></el-icon>新增</el-button></template>
     </FilterBar>
 
     <!-- Tenants Table Panel -->
     <div class="panel">
-      <div class="panel-header">
-        <h2>协同租户列表 ({{ total }})</h2>
-      </div>
       <div class="panel-body">
         <el-table :data="tenants" v-loading="loading" style="width: 100%" empty-text="暂无匹配的租户记录">
           <el-table-column prop="id" label="租户 ID" width="110" class-name="mono" />
@@ -166,7 +158,7 @@ const loading = ref(false);
 const submitting = ref(false);
 const keyword = ref('');
 const page = ref(1);
-const pageSize = ref(20);
+const pageSize = ref(10);
 const total = ref(0);
 
 const dialogVisible = ref(false);
@@ -339,7 +331,7 @@ const confirmDelete = (row: TenantItem) => {
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border-subtle);
-  background: #fbfdfc;
+  background: var(--color-surface);
 }
 
 .panel-header h2 {
@@ -371,7 +363,7 @@ const confirmDelete = (row: TenantItem) => {
 }
 
 .detail-header-card {
-  background: #edf6f1;
+  background: var(--color-brand-soft);
   border: 1px solid #cce5d7;
   border-radius: 6px;
   padding: 14px;
@@ -397,7 +389,7 @@ const confirmDelete = (row: TenantItem) => {
 }
 
 .kv-list {
-  background: #f8faf9;
+  background: var(--color-surface-subtle);
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 8px 12px;
@@ -407,7 +399,7 @@ const confirmDelete = (row: TenantItem) => {
   display: flex;
   justify-content: space-between;
   padding: 6px 0;
-  border-bottom: 1px solid #edf0ee;
+  border-bottom: 1px solid var(--color-border-subtle);
   font-size: 12.5px;
 }
 
@@ -420,7 +412,7 @@ const confirmDelete = (row: TenantItem) => {
 }
 
 .desc-box {
-  background: #f8faf9;
+  background: var(--color-surface-subtle);
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 12px;

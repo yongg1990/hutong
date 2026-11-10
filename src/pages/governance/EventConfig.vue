@@ -1,11 +1,6 @@
 <template>
   <div class="governance-page">
     <PageHeader title="事件与 Schema 配置" subtitle="事件类型定义、Schema 草稿、测试与发布">
-      <template #actions>
-        <el-button @click="$router.push('/governance/event-authorizations')">事件类型授权</el-button>
-        <el-button @click="openCreateEventType">创建事件类型</el-button>
-        <el-button type="primary" @click="openSchemaDialog">创建 Schema 草稿</el-button>
-      </template>
     </PageHeader>
 
 
@@ -15,11 +10,12 @@
       <el-select v-model="queryForm.status" placeholder="Schema 状态" clearable><el-option label="草稿" value="DRAFT" /><el-option label="已测试" value="TESTED" /><el-option label="已发布" value="PUBLISHED" /></el-select>
       <el-button type="primary" :loading="querying" @click="searchSchemas">查询 Schema</el-button>
       <el-button @click="resetQuery">重置</el-button>
+      <el-button @click="$router.push('/governance/event-authorizations')">事件类型授权</el-button>
+      <el-button type="primary" @click="openSchemaDialog"><el-icon><Plus /></el-icon>新增</el-button>
     </div>
 
     <div class="panel">
-      <div class="panel-header">Schema 定义</div>
-      <el-table :data="schemas" empty-text="暂无 Schema 定义">
+      <el-table :data="schemas" v-loading="querying" empty-text="暂无 Schema 定义">
         <el-table-column prop="eventType" label="事件类型" min-width="180" class-name="mono" />
         <el-table-column prop="schemaVersion" label="Schema 版本" width="130" class-name="mono" />
         <el-table-column prop="contentDigest" label="内容摘要" min-width="220" class-name="mono" show-overflow-tooltip />
@@ -35,33 +31,35 @@
           </template>
         </el-table-column>
       </el-table>
-      <div class="pagination-row"><el-pagination v-model:current-page="schemaPage" :page-size="20" :total="schemaTotal" layout="total, prev, pager, next" @current-change="querySchema" /></div>
+      <div class="pagination-row"><el-pagination v-model:current-page="schemaPage" :page-size="10" :total="schemaTotal" layout="total, prev, pager, next" @current-change="querySchema" /></div>
     </div>
 
-    <div class="panel result-panel">
-      <div class="panel-header">事件类型</div>
+    <div class="query-table-section result-panel">
       <FilterBar @search="searchEventTypes" @reset="resetEventTypes">
         <el-input v-model="eventFilters.eventType" placeholder="事件类型代码" clearable style="width: 180px" />
         <el-input v-model="eventFilters.scenarioCode" placeholder="场景代码" clearable style="width: 160px" />
         <el-select v-model="eventFilters.status" placeholder="状态" clearable style="width: 140px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
+        <template #actions><el-button type="primary" @click="openCreateEventType"><el-icon><Plus /></el-icon>新增</el-button></template>
       </FilterBar>
-      <el-table :data="eventTypes" empty-text="暂无事件类型">
-        <el-table-column prop="id" label="定义 ID" width="220" class-name="mono" show-overflow-tooltip />
-        <el-table-column prop="eventType" label="事件类型" min-width="180" class-name="mono" />
-        <el-table-column prop="eventName" label="名称" min-width="180" />
-        <el-table-column prop="scenarioCode" label="场景代码" min-width="160" class-name="mono" />
-        <el-table-column prop="description" label="说明" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="lockVersion" label="锁版本" width="90" />
-        <el-table-column prop="updatedAt" label="更新时间" width="175" />
-        <el-table-column label="状态" width="110">
-          <template #default="{ row }"><StatusTag :code="row.status" /></template>
-        </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right"><template #default="{ row }">
-          <el-button link @click="viewEventType(row)">详情</el-button><el-button link @click="editEventType(row)">编辑</el-button>
-          <el-button link @click="toggleEventType(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button>
-        </template></el-table-column>
-      </el-table>
-      <div class="pagination-row"><el-pagination v-model:current-page="eventPage" :page-size="20" :total="eventTotal" layout="total, prev, pager, next" @current-change="loadEventTypes" /></div>
+      <div class="table-surface">
+        <el-table :data="eventTypes" v-loading="eventTypesLoading" empty-text="暂无事件类型">
+          <el-table-column prop="id" label="定义 ID" width="220" class-name="mono" show-overflow-tooltip />
+          <el-table-column prop="eventType" label="事件类型" min-width="180" class-name="mono" />
+          <el-table-column prop="eventName" label="名称" min-width="180" />
+          <el-table-column prop="scenarioCode" label="场景代码" min-width="160" class-name="mono" />
+          <el-table-column prop="description" label="说明" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="lockVersion" label="锁版本" width="90" />
+          <el-table-column prop="updatedAt" label="更新时间" width="175" />
+          <el-table-column label="状态" width="110">
+            <template #default="{ row }"><StatusTag :code="row.status" /></template>
+          </el-table-column>
+          <el-table-column label="操作" width="200" fixed="right"><template #default="{ row }">
+            <el-button link @click="viewEventType(row)">详情</el-button><el-button link @click="editEventType(row)">编辑</el-button>
+            <el-button link @click="toggleEventType(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button>
+          </template></el-table-column>
+        </el-table>
+        <div class="pagination-row"><el-pagination v-model:current-page="eventPage" :page-size="10" :total="eventTotal" layout="total, prev, pager, next" @current-change="loadEventTypes" /></div>
+      </div>
     </div>
     <el-dialog :model-value="!!eventTypeDetail" title="事件类型详情" width="640px" @close="eventTypeDetail = null">
       <el-descriptions v-if="eventTypeDetail" :column="1" border><el-descriptions-item v-for="(value, key) in eventTypeDetail" :key="key" :label="String(key)">{{ value ?? '-' }}</el-descriptions-item></el-descriptions>
@@ -192,6 +190,8 @@ const resetEventTypes = () => { eventFilters.value = emptyEventFilters(); applie
 const schemas = ref<SchemaSnapshot[]>([]);
 const eventTypes = ref<EventTypeRow[]>([]);
 const querying = ref(false);
+const eventTypesLoading = ref(false);
+let eventTypeRequests = 0;
 const publishingKey = ref('');
 
 const eventTypeVisible = ref(false);
@@ -291,7 +291,7 @@ const validateSchema = (fields: EventSchemaField[], rules: EventSchemaReferenceR
 const querySchema = async () => {
   querying.value = true;
   try {
-    const result = await eventsApi.listSchemaDefinitions({ ...paramsFor(appliedSchemaFilters.value), page: schemaPage.value, size: 20 });
+    const result = await eventsApi.listSchemaDefinitions({ ...paramsFor(appliedSchemaFilters.value), page: schemaPage.value, size: 10 });
     schemas.value = result.records;
     schemaTotal.value = Number(result.total || 0);
   } catch (error) {
@@ -303,11 +303,13 @@ const querySchema = async () => {
 
 const resetQuery = () => { queryForm.value = emptySchemaFilters(); appliedSchemaFilters.value = emptySchemaFilters(); schemaPage.value = 1; void querySchema(); };
 const loadEventTypes = async () => {
+  ++eventTypeRequests;
+  eventTypesLoading.value = true;
   try {
-    const result = await eventsApi.listEventTypes({ ...paramsFor(appliedEventFilters.value), page: eventPage.value, size: 20 });
+    const result = await eventsApi.listEventTypes({ ...paramsFor(appliedEventFilters.value), page: eventPage.value, size: 10 });
     eventTypes.value = result.records || [];
     eventTotal.value = Number(result.total || 0);
-  } catch (error) { ElMessage.error(apiErrorMessage(error, '查询事件类型失败')); }
+  } catch (error) { ElMessage.error(apiErrorMessage(error, '查询事件类型失败')); } finally { eventTypesLoading.value = --eventTypeRequests > 0; }
 };
 
 const createEventType = async () => {
@@ -456,8 +458,9 @@ onMounted(async () => {
 
 <style scoped>
 .query-bar {
-  display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(150px, 1fr) minmax(140px, 0.8fr) auto auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
   padding: 12px;
   margin-bottom: 12px;
@@ -473,6 +476,8 @@ onMounted(async () => {
 }
 
 .result-panel { margin-top: 12px; }
+.query-bar > .el-input, .query-bar > .el-select { flex: 1 1 160px; min-width: 0; }
+.query-bar > .el-button { margin-left: 0; }
 
 .panel-header {
   padding: 11px 14px;

@@ -167,7 +167,7 @@ function handle(method: string, path: string, data: Row, params: Row): any {
   const filtered = rows.filter(r => Object.entries(params).every(([key, value]) => !value || ['page', 'size', 'limit'].includes(key) || r[key] == null || String(r[key]).includes(String(value))));
   return path.startsWith('/exchange-query/') || (['users', 'roles', 'permissions'].includes(name) && id !== 'page') ? filtered : page(filtered, params);
 }
-function page(rows: Row[], params: Row) { const page = Number(params.page || 1), size = Number(params.size || 20); return { records: rows.slice((page - 1) * size, page * size), total: rows.length, page, size }; }
+function page(rows: Row[], params: Row) { const page = Number(params.page || 1), size = Number(params.size || 10); return { records: rows.slice((page - 1) * size, page * size), total: rows.length, page, size }; }
 function saveCollection(name: string, data: Row, id?: string) {
   const rows = demo.collections[name] ||= [], existing = id ? required(rows, id) : null;
   const value = id || nextId();

@@ -1,11 +1,10 @@
 <template>
   <div class="trust-page">
     <PageHeader title="文件上传与凭证" subtitle="文件会话、元数据和脱敏凭证">
-      <template #actions><el-button type="primary" @click="openCreate">{{ tab === 'files' ? '创建上传会话' : '登记凭证' }}</el-button></template>
     </PageHeader>
     <el-tabs v-model="tab"><el-tab-pane label="文件" name="files" /><el-tab-pane label="脱敏凭证" name="credentials" /></el-tabs>
     <div class="panel body">
-      <div class="toolbar"><el-input v-model="lookupId" :placeholder="tab === 'files' ? '文件 ID 或上传会话 ID' : '凭证 ID'" clearable style="max-width:300px" /><el-button type="primary" :loading="loading" @click="lookup">查询</el-button><el-switch v-if="tab === 'files'" v-model="sessionLookup" active-text="按会话查询" inactive-text="按文件查询" /></div>
+      <div class="toolbar query-surface"><el-input v-model="lookupId" :placeholder="tab === 'files' ? '文件 ID 或上传会话 ID' : '凭证 ID'" clearable style="max-width:300px" /><el-button type="primary" :loading="loading" @click="lookup">查询</el-button><el-switch v-if="tab === 'files'" v-model="sessionLookup" active-text="按会话查询" inactive-text="按文件查询" /><el-button type="primary" style="margin-left: auto" @click="openCreate"><el-icon><Plus /></el-icon>新增</el-button></div>
       <el-alert v-if="tab === 'files'" type="info" :closable="false" title="创建会话后按返回的上传 URL 传输文件，取得对象版本或 ETag 后确认完成。文件内容不通过业务 JSON 接口上传。" />
       <el-descriptions v-if="result" :column="1" border style="margin-top:16px"><el-descriptions-item v-for="(value,key) in result" :key="key" :label="String(key)"><pre>{{ format(value) }}</pre></el-descriptions-item></el-descriptions>
       <el-empty v-else description="输入 ID 查询，或创建记录" />

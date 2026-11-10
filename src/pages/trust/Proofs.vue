@@ -4,14 +4,6 @@
       title="存证状态与链记录"
       subtitle="按主体查询存证处理状态、链记录、交易哈希与对账结果"
     >
-      <template #actions>
-        <el-button type="primary" @click="createVisible=true">创建存证任务</el-button>
-        <el-button @click="operationVisible=true">运维补偿</el-button>
-        <el-button @click="loadProofs">刷新存证状态</el-button>
-        <el-button type="primary" :disabled="!proofs.length" @click="batchVerify">
-          批量验真
-        </el-button>
-      </template>
     </PageHeader>
 
     <!-- Filter Bar -->
@@ -26,16 +18,13 @@
       <el-input v-model="subjectId" placeholder="主体 ID" style="width: 220px" />
       <el-input v-model="chainType" placeholder="链类型（可选）" style="width: 180px" clearable />
       <el-switch v-model="includeReceipts" active-text="包含回执" />
+      <template #actions><el-button @click="operationVisible=true">运维补偿</el-button><el-button :disabled="!proofs.length" @click="batchVerify">批量验真</el-button><el-button type="primary" @click="createVisible=true"><el-icon><Plus /></el-icon>新增</el-button></template>
     </FilterBar>
 
     <!-- Proofs Table Panel -->
     <div class="panel">
-      <div class="panel-header">
-        <h2>存证与链记录 ({{ filteredProofs.length }})</h2>
-        <span v-if="failedCount" class="sub-text">失败链记录 {{ failedCount }} 条</span>
-      </div>
       <div class="panel-body">
-        <el-table :data="filteredProofs" v-loading="loading" style="width: 100%" empty-text="未检索到匹配的存证记录">
+        <LocalPaginatedTable :data="filteredProofs" v-loading="loading" style="width: 100%" empty-text="未检索到匹配的存证记录">
           <el-table-column prop="proofNo" label="存证记录 ID" min-width="130" class-name="mono">
             <template #default="{ row }">
               <span class="proof-no-cell">{{ row.proofNo }}</span>
@@ -78,7 +67,7 @@
               <el-button v-if="isStaticMode() && row.proofNo" size="small" link @click="completeStaticProof(row)">模拟存证 / 对账</el-button>
             </template>
           </el-table-column>
-        </el-table>
+        </LocalPaginatedTable>
       </div>
     </div>
 
@@ -144,6 +133,7 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { demo, isStaticMode } from '@/stores/demoStore';
@@ -257,7 +247,7 @@ const batchVerify = async () => {
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border-subtle);
-  background: #fbfdfc;
+  background: var(--color-surface);
 }
 
 .panel-header h2 {
@@ -296,7 +286,7 @@ const batchVerify = async () => {
 }
 
 .meta-table {
-  background: #f8faf9;
+  background: var(--color-surface-subtle);
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 8px 12px;
@@ -306,7 +296,7 @@ const batchVerify = async () => {
   display: flex;
   justify-content: space-between;
   padding: 7px 0;
-  border-bottom: 1px solid #edf0ee;
+  border-bottom: 1px solid var(--color-border-subtle);
   font-size: 12.5px;
 }
 

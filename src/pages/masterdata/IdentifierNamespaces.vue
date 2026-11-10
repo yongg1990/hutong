@@ -1,10 +1,6 @@
 <template>
   <div class="master-data-page namespace-page">
     <PageHeader title="标识命名空间" subtitle="统一管理外部标识规则、目标类型和启停状态">
-      <template #actions>
-        <el-button :loading="loading" @click="loadNamespaces">刷新</el-button>
-        <el-button type="primary" @click="openCreate">新增命名空间</el-button>
-      </template>
     </PageHeader>
 
     <FilterBar @search="handleSearch" @reset="handleReset">
@@ -16,10 +12,10 @@
       <el-select v-model="filters.status" clearable placeholder="状态" style="width: 130px">
         <el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" />
       </el-select>
+      <template #actions><el-button type="primary" @click="openCreate"><el-icon><Plus /></el-icon>新增</el-button></template>
     </FilterBar>
 
     <section class="panel table-panel">
-      <div class="panel-header"><h2>命名空间列表 ({{ total }})</h2><span v-if="inactiveCount" class="panel-hint">本页停用 {{ inactiveCount }}</span></div>
       <div class="panel-body">
         <el-table :data="namespaces" v-loading="loading" row-key="namespaceId" empty-text="暂无命名空间记录" style="width: 100%">
           <el-table-column prop="namespaceId" label="命名空间 ID" width="170"><template #default="{ row }"><span class="mono">{{ row.namespaceId }}</span></template></el-table-column>
@@ -75,7 +71,7 @@ import StatusTag from '@/components/common/StatusTag.vue';
 import { masterDataApi, type NamespaceDefResponse } from '@/api/masterData';
 import { apiErrorMessage } from '@/api/client';
 
-const namespaces = ref<NamespaceDefResponse[]>([]); const loading = ref(false); const page = ref(1); const pageSize = ref(20); const total = ref(0);
+const namespaces = ref<NamespaceDefResponse[]>([]); const loading = ref(false); const page = ref(1); const pageSize = ref(10); const total = ref(0);
 const filters = reactive({ namespaceCode: '', namespaceName: '', targetType: '', status: '' });
 const inactiveCount = computed(() => namespaces.value.filter(item => item.status === 'INACTIVE').length);
 const dialogVisible = ref(false); const detailVisible = ref(false); const detailLoading = ref(false); const detail = ref<NamespaceDefResponse | null>(null); const editing = ref(false); const editingId = ref(''); const submitting = ref(false); const formRef = ref<FormInstance>();

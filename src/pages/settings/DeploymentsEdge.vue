@@ -1,11 +1,11 @@
 <template>
   <div class="settings-page">
     <PageHeader title="前置节点部署" subtitle="登记部署实例，并按部署实例 ID 查询配置与运行状态">
-      <template #actions><el-button type="primary" @click="openCreateDialog">登记部署实例</el-button></template>
     </PageHeader>
 
     <FilterBar @search="loadInstance" @reset="handleReset">
       <el-input v-model="instanceId" placeholder="部署实例 ID" clearable style="width: 280px" @keyup.enter="loadInstance" />
+      <template #actions><el-button type="primary" @click="openCreateDialog"><el-icon><Plus /></el-icon>新增</el-button></template>
     </FilterBar>
 
     <div class="panel" v-loading="loading">
@@ -25,12 +25,14 @@
           </el-descriptions>
           <div class="capability-section">
             <h3>能力及版本配置</h3>
-            <el-table :data="capabilityRows" empty-text="暂无能力配置">
-              <el-table-column prop="key" label="配置项" min-width="200" class-name="mono" />
-              <el-table-column label="配置值" min-width="320">
-                <template #default="{ row }"><span class="mono value-text">{{ formatValue(row.value) }}</span></template>
-              </el-table-column>
-            </el-table>
+            <div class="table-surface">
+              <LocalPaginatedTable :data="capabilityRows" empty-text="暂无能力配置">
+                <el-table-column prop="key" label="配置项" min-width="200" class-name="mono" />
+                <el-table-column label="配置值" min-width="320">
+                  <template #default="{ row }"><span class="mono value-text">{{ formatValue(row.value) }}</span></template>
+                </el-table-column>
+              </LocalPaginatedTable>
+            </div>
           </div>
         </template>
         <el-empty v-else description="请输入部署实例 ID 查询" />
@@ -62,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { computed, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
@@ -147,7 +150,7 @@ const createInstance = async () => {
 <style scoped>
 .settings-page { width: 100%; padding-bottom: 24px; }
 .panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; }
-.panel-header { display: flex; align-items: center; min-height: 54px; padding: 0 16px; border-bottom: 1px solid var(--color-border); background: #fbfdfc; }
+.panel-header { display: flex; align-items: center; min-height: 54px; padding: 0 16px; border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
 .panel-header h2, .capability-section h3 { margin: 0; font-size: 15px; }
 .panel-body { padding: 16px; }
 .capability-section { margin-top: 20px; }

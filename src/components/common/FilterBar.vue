@@ -10,6 +10,7 @@
       <el-button @click="$emit('reset')">
         <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon> 重置
       </el-button>
+      <slot name="actions"></slot>
     </div>
   </div>
 </template>
@@ -25,34 +26,26 @@ defineEmits(['search', 'reset']);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: flex-start;
+  gap: 10px 12px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 10px 14px;
   margin-bottom: 14px;
-  box-shadow: 0 1px 2px rgba(14, 95, 64, 0.03);
+  box-shadow: 0 1px 2px rgba(24, 35, 52, 0.03);
 }
 
 .filter-fields {
-  display: flex;
-  flex: 1 1 500px;
-  min-width: 0;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  display: contents;
 }
 .filter-fields :deep(.el-input), .filter-fields :deep(.el-select) { max-width: 100%; }
 
 .filter-actions {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
+  display: contents;
 }
+.filter-actions > :deep(.el-button) { margin-left: 0; }
 @media (max-width: 640px) {
   .filter-fields :deep(.el-input), .filter-fields :deep(.el-select) { width: 100% !important; }
-  .filter-actions { width: 100%; }
-  .filter-actions .el-button { flex: 1; }
 }
 </style>

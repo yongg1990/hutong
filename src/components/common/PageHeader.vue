@@ -1,92 +1,13 @@
 <template>
-  <div class="page-header">
-    <div class="header-titles">
-      <div class="title-wrap">
-        <span class="title-accent-bar"></span>
-        <h1>{{ title }}</h1>
-
-        <div v-if="showApiBadge && effectiveApiInfo?.hasApi && apiLabels.length" class="api-status-badge">
-          <el-popover
-            placement="bottom-start"
-            :width="460"
-            trigger="hover"
-            popper-class="api-header-popover"
-            :show-after="100"
-          >
-            <template #reference>
-              <div class="api-badge-pill" :title="`对接接口：${apiLabels.join('、')}`">
-                <span v-for="label in apiLabels" :key="label" class="api-badge-label">{{ label }}</span>
-              </div>
-            </template>
-
-            <div class="api-popover-card">
-              <div class="popover-header">
-                <div class="popover-title-row">
-                  <span class="popover-pulse-dot"></span>
-                  <span class="popover-title">{{ effectiveApiInfo.moduleName }}</span>
-                  <span class="popover-status-badge">按已发布契约接入</span>
-                </div>
-                <span class="popover-spec-badge">OpenAPI v3</span>
-              </div>
-
-              <div class="popover-meta-box">
-                <div class="meta-row">
-                  <span class="meta-k">接口规范路径:</span>
-                  <span class="meta-v mono">{{ effectiveApiInfo.apiPath }}</span>
-                </div>
-                <div class="meta-row">
-                  <span class="meta-k">调用规范协议:</span>
-                  <span class="meta-v">{{ effectiveApiInfo.protocol }} ({{ effectiveApiInfo.specDoc }})</span>
-                </div>
-                <div class="meta-row">
-                  <span class="meta-k">网关运行模式:</span>
-                  <span class="meta-v highlight">当前分组调用真实后端，以接口响应为准</span>
-                </div>
-              </div>
-
-              <div class="popover-endpoints-section">
-                <div class="endpoints-heading">
-                  <span>本组对接端点</span>
-                  <span class="endpoint-count">共 {{ effectiveApiInfo.endpoints.length }} 个接口</span>
-                </div>
-                <div class="endpoints-list">
-                  <div
-                    v-for="ep in effectiveApiInfo.endpoints"
-                    :key="ep.method + ep.path"
-                    class="endpoint-row"
-                  >
-                    <span class="method-tag" :class="'method-' + ep.method.toLowerCase()">
-                      {{ ep.method }}
-                    </span>
-                    <span class="endpoint-path mono">{{ ep.path }}</span>
-                    <span class="endpoint-desc">{{ ep.desc }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="popover-footer-tip">
-                <el-icon style="margin-right: 4px;"><InfoFilled /></el-icon>
-                <span>接口存在不代表已完成登录联调，也不代表事件已完成链上存证。</span>
-              </div>
-            </div>
-          </el-popover>
-        </div>
-      </div>
-      <div class="subtitle" v-if="subtitle">{{ subtitle }}</div>
-    </div>
-    <div class="header-actions">
-      <slot name="actions"></slot>
-    </div>
+  <div v-if="$slots.actions" class="page-actions">
+    <slot name="actions"></slot>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
-import { InfoFilled } from '@element-plus/icons-vue';
-import { getPageApiInfo, type PageApiInfo } from '@/config/pageApiRegistry';
+import type { PageApiInfo } from '@/config/pageApiRegistry';
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     title: string;
     subtitle?: string;
@@ -99,27 +20,18 @@ const props = withDefaults(
   }
 );
 
-const route = useRoute();
-
-const effectiveApiInfo = computed(() => {
-  if (props.apiInfo !== undefined) {
-    return props.apiInfo;
-  }
-  return getPageApiInfo(route.path);
-});
-const apiLabels = computed(() => {
-  const info = effectiveApiInfo.value;
-  if (!info) return [];
-  const groups = info.specDoc.match(/APP-\d{2}.*$/i)?.[0].split(/、(?=APP-\d{2})/i) ?? [];
-  return groups.map(group => {
-    const code = group.match(/^APP-\d{2}/i)?.[0].toLowerCase();
-    const name = group.replace(/^APP-\d{2}\s*/i, '').trim() || info.moduleName;
-    return `${code} ${name}`;
-  });
-});
 </script>
 
 <style scoped>
+.page-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.page-actions:empty { display: none; }
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -154,7 +66,7 @@ const apiLabels = computed(() => {
   margin: 0;
   font-weight: 700;
   color: var(--color-ink);
-  letter-spacing: -0.2px;
+  letter-spacing: 0;
 }
 
 /* API Status Badge on Page */
@@ -214,7 +126,7 @@ const apiLabels = computed(() => {
   color: #047857;
   background-color: #ffffff;
   padding: 1px 6px;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid #a7f3d0;
   max-width: 180px;
   white-space: nowrap;

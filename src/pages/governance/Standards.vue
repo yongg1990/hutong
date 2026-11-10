@@ -4,31 +4,27 @@
       title="数据元与值域标准"
       subtitle="全平台统一中药追溯数据字典、国家中药标准规范集与 Code/Name 代码表管理"
     >
-      <template #actions>
-        <el-button @click="loadRemote">刷新</el-button>
-        <el-button @click="openDataElementModal">新增数据元</el-button>
-        <el-button @click="openValueSetModal">新增值域</el-button>
-        <el-button type="primary" :disabled="!selectedValueSet" @click="openValueSetItemModal">新增代码项</el-button>
-      </template>
     </PageHeader>
 
     <!-- Standards Overview Cards -->
-    <div class="panel" style="margin-bottom: 14px">
-      <div class="panel-header flex-between"><h2>值域定义</h2></div>
+    <div class="query-table-section" style="margin-bottom: 14px">
       <FilterBar @search="searchValueSets" @reset="resetValueSets">
         <el-input v-model="valueFilters.valueSetCode" placeholder="值域编码" clearable style="width: 150px" />
         <el-input v-model="valueFilters.valueSetName" placeholder="值域名称" clearable style="width: 150px" />
         <el-input v-model="valueFilters.version" placeholder="版本" clearable style="width: 110px" />
         <el-select v-model="valueFilters.status" placeholder="状态" clearable style="width: 110px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
+        <template #actions><el-button type="primary" @click="openValueSetModal"><el-icon><Plus /></el-icon>新增</el-button></template>
       </FilterBar>
-      <el-table :data="valueSets" highlight-current-row @current-change="selectValueSet">
-        <el-table-column prop="valueSetCode" label="编码" min-width="160" />
-        <el-table-column prop="valueSetName" label="名称" min-width="160" />
-        <el-table-column prop="version" label="版本" width="100" />
-        <el-table-column prop="status" label="状态" width="100" />
-        <el-table-column label="操作" width="130"><template #default="{ row }"><el-button link @click.stop="editValueSet(row)">编辑</el-button><el-button link @click.stop="toggleValueSet(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button></template></el-table-column>
-      </el-table>
-      <div class="pagination-row"><el-pagination v-model:current-page="valuePage" :page-size="20" :total="valueTotal" layout="total, prev, pager, next" @current-change="loadValueSets" /></div>
+      <div class="table-surface">
+        <el-table :data="valueSets" v-loading="valueSetsLoading" highlight-current-row @current-change="selectValueSet">
+          <el-table-column prop="valueSetCode" label="编码" min-width="160" />
+          <el-table-column prop="valueSetName" label="名称" min-width="160" />
+          <el-table-column prop="version" label="版本" width="100" />
+          <el-table-column prop="status" label="状态" width="100" />
+          <el-table-column label="操作" width="130"><template #default="{ row }"><el-button link @click.stop="editValueSet(row)">编辑</el-button><el-button link @click.stop="toggleValueSet(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button></template></el-table-column>
+        </el-table>
+        <div class="pagination-row"><el-pagination v-model:current-page="valuePage" :page-size="10" :total="valueTotal" layout="total, prev, pager, next" @current-change="loadValueSets" /></div>
+      </div>
     </div>
     <div class="standards-banner">
       <div v-for="std in standards" :key="std.code" class="std-card">
@@ -43,10 +39,7 @@
     </div>
 
     <div class="grid-two">
-      <div class="panel">
-        <div class="panel-header flex-between">
-          <h2>数据元目录 (Data Elements)</h2>
-        </div>
+      <div class="query-table-section">
         <FilterBar @search="searchElements" @reset="resetElements">
           <el-input v-model="elementFilters.elementCode" placeholder="数据元编码" clearable style="width: 150px" />
           <el-input v-model="elementFilters.elementName" placeholder="数据元名称" clearable style="width: 150px" />
@@ -54,48 +47,55 @@
           <el-input v-model="elementFilters.valueSetCode" placeholder="关联值域编码" clearable style="width: 150px" />
           <el-select v-model="elementFilters.securityClass" placeholder="安全级别" clearable style="width: 140px"><el-option v-for="item in securityClasses" :key="item" :label="item" :value="item" /></el-select>
           <el-select v-model="elementFilters.status" placeholder="状态" clearable style="width: 110px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
+          <template #actions><el-button type="primary" @click="openDataElementModal"><el-icon><Plus /></el-icon>新增</el-button></template>
         </FilterBar>
-        <el-table
-          :data="dataElements"
-          style="width: 100%"
-        >
-          <el-table-column prop="code" label="数据元编码" width="180" class-name="mono" />
-          <el-table-column prop="name" label="中文名称" min-width="140" />
-          <el-table-column prop="type" label="类型" width="100" />
-          <el-table-column prop="valueSet" label="关联值域" min-width="150" class-name="mono" />
-          <el-table-column prop="securityClass" label="安全级别" width="130" />
-          <el-table-column prop="status" label="状态" width="100" />
-          <el-table-column prop="lockVersion" label="锁版本" width="90" />
-          <el-table-column label="操作" width="130"><template #default="{ row }"><el-button link @click.stop="editElement(row)">编辑</el-button><el-button link @click.stop="toggleElement(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button></template></el-table-column>
-        </el-table>
-        <div class="pagination-row"><el-pagination v-model:current-page="elementPage" :page-size="20" :total="elementTotal" layout="total, prev, pager, next" @current-change="loadElements" /></div>
+        <div class="table-surface">
+          <el-table
+            :data="dataElements"
+            v-loading="elementsLoading"
+            style="width: 100%"
+          >
+            <el-table-column prop="code" label="数据元编码" width="180" class-name="mono" />
+            <el-table-column prop="name" label="中文名称" min-width="140" />
+            <el-table-column prop="type" label="类型" width="100" />
+            <el-table-column prop="valueSet" label="关联值域" min-width="150" class-name="mono" />
+            <el-table-column prop="securityClass" label="安全级别" width="130" />
+            <el-table-column prop="status" label="状态" width="100" />
+            <el-table-column prop="lockVersion" label="锁版本" width="90" />
+            <el-table-column label="操作" width="130"><template #default="{ row }"><el-button link @click.stop="editElement(row)">编辑</el-button><el-button link @click.stop="toggleElement(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button></template></el-table-column>
+          </el-table>
+          <div class="pagination-row"><el-pagination v-model:current-page="elementPage" :page-size="10" :total="elementTotal" layout="total, prev, pager, next" @current-change="loadElements" /></div>
+        </div>
       </div>
 
-      <div class="panel">
+      <div class="query-table-section">
         <div class="panel-header flex-between">
           <h2>
             <span>值域明细: </span>
             <strong class="mono">{{ activeValueSet || '全部值域' }}</strong>
           </h2>
-          <div><el-switch v-model="onlyActiveItems" :disabled="!selectedValueSet" active-text="全部有效项" @change="loadItems" /><el-tag size="small" type="success">{{ itemTotal }} 个代码项</el-tag></div>
+          <div><el-switch v-model="onlyActiveItems" :disabled="!selectedValueSet" active-text="全部有效项" @change="loadItems" /><el-tag size="small" type="success">{{ itemTotal }} 个代码项</el-tag><el-button v-if="onlyActiveItems" type="primary" :disabled="!selectedValueSet" @click="openValueSetItemModal"><el-icon><Plus /></el-icon>新增</el-button></div>
         </div>
         <FilterBar v-if="selectedValueSet && !onlyActiveItems" @search="searchItems" @reset="resetItems">
           <el-input v-model="itemFilters.itemCode" placeholder="代码项编码" clearable style="width: 140px" />
           <el-input v-model="itemFilters.itemName" placeholder="代码项名称" clearable style="width: 140px" />
           <el-select v-model="itemFilters.status" placeholder="状态" clearable style="width: 110px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
           <el-date-picker v-model="itemFilters.effectiveAt" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="生效时间" style="width: 185px" />
+          <template #actions><el-button type="primary" @click="openValueSetItemModal"><el-icon><Plus /></el-icon>新增</el-button></template>
         </FilterBar>
-        <el-table :data="activeValueSetItems">
-          <template #empty>请选择值域</template>
-          <el-table-column prop="code" label="代码" width="140" class-name="mono" />
-          <el-table-column prop="name" label="名称" min-width="140" />
-          <el-table-column prop="valueSet" label="所属值域" width="160" class-name="mono" />
-          <el-table-column label="状态" width="90">
-            <template #default="{ row }"><StatusTag :code="row.status" /></template>
-          </el-table-column>
-          <el-table-column label="操作" width="130"><template #default="{ row }"><el-button link @click="editItem(row)">编辑</el-button><el-button link @click="toggleItem(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button></template></el-table-column>
-        </el-table>
-        <div v-if="selectedValueSet && !onlyActiveItems" class="pagination-row"><el-pagination v-model:current-page="itemPage" :page-size="20" :total="itemTotal" layout="total, prev, pager, next" @current-change="loadItems" /></div>
+        <div class="table-surface">
+          <component :is="onlyActiveItems ? LocalPaginatedTable : ElTable" :data="activeValueSetItems" v-loading="itemsLoading">
+            <template #empty>请选择值域</template>
+            <el-table-column prop="code" label="代码" width="140" class-name="mono" />
+            <el-table-column prop="name" label="名称" min-width="140" />
+            <el-table-column prop="valueSet" label="所属值域" width="160" class-name="mono" />
+            <el-table-column label="状态" width="90">
+              <template #default="{ row }"><StatusTag :code="row.status" /></template>
+            </el-table-column>
+            <el-table-column label="操作" width="130"><template #default="{ row }"><el-button link @click="editItem(row)">编辑</el-button><el-button link @click="toggleItem(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button></template></el-table-column>
+          </component>
+          <div v-if="selectedValueSet && !onlyActiveItems" class="pagination-row"><el-pagination v-model:current-page="itemPage" :page-size="10" :total="itemTotal" layout="total, prev, pager, next" @current-change="loadItems" /></div>
+        </div>
       </div>
     </div>
 
@@ -162,7 +162,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElTable } from 'element-plus';
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
@@ -172,6 +173,8 @@ import { apiErrorMessage } from '@/api/client';
 
 const standards = ref<any[]>([]);
 const valueSets = ref<ValueSet[]>([]);
+const elementsLoading = ref(false), valueSetsLoading = ref(false), itemsLoading = ref(false);
+let elementRequests = 0, valueSetRequests = 0, itemRequests = 0;
 const selectedValueSet = ref<ValueSet | null>(null);
 const onlyActiveItems = ref(false);
 const editingElement = ref<DataElement | null>(null);
@@ -226,30 +229,36 @@ const activeValueSetItems = valueSetItems;
 const reportError = (error: unknown) => { ElMessage.error(apiErrorMessage(error, '操作失败')); };
 
 async function loadElements() {
+  ++elementRequests;
+  elementsLoading.value = true;
   try {
-    const result = await standardsApi.dataElements({ ...queryParams(appliedElementFilters.value), page: elementPage.value, size: 20 });
+    const result = await standardsApi.dataElements({ ...queryParams(appliedElementFilters.value), page: elementPage.value, size: 10 });
     dataElements.value = (result.records || []).map(item => ({ ...item, code: item.elementCode, name: item.elementName, type: item.dataType, valueSet: item.valueSetCode || '' }));
     elementTotal.value = Number(result.total || 0);
-  } catch (error) { reportError(error); }
+  } catch (error) { reportError(error); } finally { elementsLoading.value = --elementRequests > 0; }
 }
 async function loadValueSets() {
+  ++valueSetRequests;
+  valueSetsLoading.value = true;
   try {
-    const result = await standardsApi.valueSets({ ...queryParams(appliedValueFilters.value), page: valuePage.value, size: 20 });
+    const result = await standardsApi.valueSets({ ...queryParams(appliedValueFilters.value), page: valuePage.value, size: 10 });
     valueSets.value = result.records || [];
     valueTotal.value = Number(result.total || 0);
-  } catch (error) { reportError(error); }
+  } catch (error) { reportError(error); } finally { valueSetsLoading.value = --valueSetRequests > 0; }
 }
 async function loadItems() {
   if (!selectedValueSet.value) return;
+  ++itemRequests;
+  itemsLoading.value = true;
   try {
     const valueSet = selectedValueSet.value;
     const result = onlyActiveItems.value
       ? { records: await standardsApi.activeItems(valueSet.valueSetId), total: '' }
-      : await standardsApi.items(valueSet.valueSetId, { ...queryParams(appliedItemFilters.value), page: itemPage.value, size: 20 });
+      : await standardsApi.items(valueSet.valueSetId, { ...queryParams(appliedItemFilters.value), page: itemPage.value, size: 10 });
     if (selectedValueSet.value?.valueSetId !== valueSet.valueSetId) return;
     valueSetItems.value = (result.records || []).map(item => ({ ...item, code: item.itemCode, name: item.itemName, valueSet: valueSet.valueSetCode }));
     itemTotal.value = onlyActiveItems.value ? result.records.length : Number(result.total || 0);
-  } catch (error) { reportError(error); }
+  } catch (error) { reportError(error); } finally { itemsLoading.value = --itemRequests > 0; }
 }
 function loadRemote() { void loadElements(); void loadValueSets(); if (selectedValueSet.value) void loadItems(); }
 onMounted(async () => { standards.value = await governanceApi.getStandards(); loadRemote(); });

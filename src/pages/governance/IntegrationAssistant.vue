@@ -8,7 +8,7 @@
       <el-form-item label="来源密钥" required><ApiOptionSelect v-model="selection.sourceSystemKeyId" :loader="loadKeys" value-key="id" :label="keyLabel" :disabled="!selection.sourceSystemId" :scope="selection.sourceSystemId" @select="selectedKey = $event || null" /></el-form-item>
       <el-form-item label="授权事件" required><ApiOptionSelect v-model="selection.eventType" :loader="loadEvents" value-key="eventType" :label="eventLabel" :disabled="!selection.tenantId || !selection.projectSpaceId" :scope="eventScope" /></el-form-item>
       <el-form-item label="Schema 版本" required><ApiOptionSelect v-model="selection.schemaVersion" :loader="loadSchemas" value-key="schemaVersion" :label="schemaLabel" :disabled="!selection.eventType" :scope="schemaScope" @select="selectSchema" /></el-form-item>
-      <el-form-item label="幂等键"><el-input v-model="idempotencyKey" :maxlength="128" clearable /></el-form-item>
+      <el-form-item label="业务请求标识 requestId" required><el-input v-model="idempotencyKey" :maxlength="128" clearable /></el-form-item>
     </el-form>
     <el-descriptions v-if="selectedKey" :column="2" border class="section">
       <el-descriptions-item label="密钥算法">{{ selectedKey.keyAlgorithm }}</el-descriptions-item><el-descriptions-item label="数据算法">{{ selectedKey.dataAlgorithm }}</el-descriptions-item>
@@ -18,96 +18,90 @@
     <template v-if="schema">
       <div class="section-heading"><h2>已发布 Schema</h2><el-button link @click="schemaVisible = true">完整定义</el-button></div>
       <div class="digest">{{ schema.contentDigest }}</div>
-      <el-table :data="schema.fields" empty-text="暂无字段">
-        <el-table-column prop="fieldName" label="字段代码" min-width="150" /><el-table-column prop="displayName" label="名称" min-width="140" />
-        <el-table-column prop="dataType" label="类型" width="110" /><el-table-column label="必填" width="80"><template #default="{ row }">{{ row.required ? '是' : '否' }}</template></el-table-column>
-        <el-table-column prop="description" label="说明" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="valueSetCode" label="值域" min-width="140" /><el-table-column prop="codeSchemeCode" label="编码体系" min-width="140" />
-      </el-table>
+      <div class="table-surface">
+        <LocalPaginatedTable :data="schema.fields" empty-text="暂无字段">
+          <el-table-column prop="fieldName" label="字段代码" min-width="150" /><el-table-column prop="displayName" label="名称" min-width="140" />
+          <el-table-column prop="dataType" label="类型" width="110" /><el-table-column label="必填" width="80"><template #default="{ row }">{{ row.required ? '是' : '否' }}</template></el-table-column>
+          <el-table-column prop="description" label="说明" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="valueSetCode" label="值域" min-width="140" /><el-table-column prop="codeSchemeCode" label="编码体系" min-width="140" />
+        </LocalPaginatedTable>
+      </div>
     </template>
-    <div class="section-heading"><h2>标准事件样例</h2><el-button :icon="Refresh" :disabled="!schema || busy" @click="resetSample">重置样例</el-button></div>
-    <fieldset :disabled="busy"><JsonEditor v-model="sampleEventJson" :rows="15" label="标准事件 JSON" /></fieldset>
     <div class="actions"><el-button type="primary" :icon="Document" :loading="generating" :disabled="!ready || busy" @click="generate">生成明文模板</el-button></div>
     <template v-if="example">
       <div class="section-heading"><h2>SDK 明文输入</h2><div class="actions"><el-button :icon="Download" @click="download('plaintext-request.json', plaintext)">下载明文</el-button><el-button type="primary" :loading="validating" :disabled="busy || !plaintext.trim()" @click="validate">校验明文</el-button></div></div>
       <el-descriptions :column="1" border><el-descriptions-item label="上报端点">{{ example.method }} {{ example.endpoint }}</el-descriptions-item><el-descriptions-item label="Schema 摘要">{{ example.schemaDigest }}</el-descriptions-item></el-descriptions>
       <fieldset :disabled="busy"><JsonEditor v-model="plaintext" :rows="17" label="SDK 明文输入 JSON" /></fieldset>
+      <el-button :disabled="busy || !plaintext.trim()" @click="encryptVisible = true">生成模拟加密请求</el-button>
       <div class="section-heading"><h2>SDK 配置</h2><el-button :icon="Download" @click="download('sdk-config.json', pretty(example.sdkConfig))">下载配置</el-button></div>
       <pre class="json-output">{{ pretty(example.sdkConfig) }}</pre>
     </template>
     <section v-if="validation" class="section">
       <div class="section-heading"><h2>校验结果</h2><el-tag :type="validation.valid ? 'success' : 'danger'">{{ validation.valid ? '通过' : '未通过' }}</el-tag></div>
       <p v-if="validation.scope">{{ validation.scope }}</p>
-      <h3>错误</h3><el-table :data="validation.errors || []" empty-text="无错误"><el-table-column prop="path" label="字段路径" min-width="200" /><el-table-column prop="code" label="代码" min-width="160" /><el-table-column prop="message" label="说明" min-width="280" /></el-table>
-      <h3>待确认业务字段</h3><el-table :data="validation.requiredInputs || []" empty-text="无待确认字段"><el-table-column prop="path" label="字段路径" min-width="200" /><el-table-column prop="code" label="代码" min-width="160" /><el-table-column prop="message" label="说明" min-width="280" /></el-table>
+      <h3>错误</h3><div class="table-surface">
+<LocalPaginatedTable :data="validation.errors || []" empty-text="无错误"><el-table-column prop="path" label="字段路径" min-width="200" /><el-table-column prop="code" label="代码" min-width="160" /><el-table-column prop="message" label="说明" min-width="280" /></LocalPaginatedTable>
+</div>
+      <h3>待确认业务字段</h3><div class="table-surface">
+<LocalPaginatedTable :data="validation.requiredInputs || []" empty-text="无待确认字段"><el-table-column prop="path" label="字段路径" min-width="200" /><el-table-column prop="code" label="代码" min-width="160" /><el-table-column prop="message" label="说明" min-width="280" /></LocalPaginatedTable>
+</div>
     </section>
     <el-dialog v-model="schemaVisible" title="Schema 完整定义" width="min(920px, 94vw)"><pre class="json-output">{{ pretty(schema) }}</pre></el-dialog>
+    <el-dialog v-model="encryptVisible" title="模拟加密请求" width="min(640px,94vw)" :close-on-click-modal="false" @closed="privateKey = ''"><el-form label-position="top"><el-form-item label="对接方 PKCS#8 私钥 Base64" required><el-input v-model="privateKey" type="password" show-password autocomplete="off" /></el-form-item></el-form><template #footer><el-button @click="encryptVisible = false">取消</el-button><el-button type="primary" :loading="encrypting" @click="encrypt">生成</el-button></template></el-dialog>
+    <el-drawer v-model="encryptedVisible" title="加密请求结果" size="min(800px,94vw)"><pre class="json-output">{{ encrypted }}</pre><el-button :icon="Download" @click="download('event-encrypted.json', encrypted)">下载加密请求</el-button></el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
-import { Document, Download, Refresh } from '@element-plus/icons-vue';
+import { Document, Download } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import ApiOptionSelect from '@/components/common/ApiOptionSelect.vue';
 import JsonEditor from '@/components/common/JsonEditor.vue';
 import { apiErrorMessage } from '@/api/client';
 import { integrationApi, type IntegrationSelection, type IntegrationSchema, type IntegrationExample, type IntegrationValidation, type SourceSystemKey, type TenantOption, type ProjectOption, type EventAuthorization } from '@/api/integration';
 import type { SourceSystemManagement } from '@/api/governance';
-import type { EventSchemaField } from '@/api/events';
 
 const selection = reactive<IntegrationSelection>({ tenantId: '', projectSpaceId: '', sourceSystemId: '', sourceSystemKeyId: '', eventType: '', schemaVersion: '' });
 const schema = ref<IntegrationSchema | null>(null), selectedKey = ref<SourceSystemKey | null>(null);
 const example = ref<IntegrationExample | null>(null), validation = ref<IntegrationValidation | null>(null);
-const sampleEventJson = ref(''), plaintext = ref(''), idempotencyKey = ref('');
+const plaintext = ref(''), idempotencyKey = ref('');
 const generating = ref(false), validating = ref(false), schemaVisible = ref(false);
-const busy = computed(() => generating.value || validating.value);
+const encryptVisible = ref(false), encrypting = ref(false), privateKey = ref(''), encrypted = ref(''), encryptedVisible = ref(false);
+const busy = computed(() => generating.value || validating.value || encrypting.value);
 const ready = computed(() => Object.values(selection).every(Boolean));
 const eventScope = computed(() => `${selection.tenantId}|${selection.projectSpaceId}`);
 const schemaScope = computed(() => `${eventScope.value}|${selection.eventType}`);
 const pretty = (value: unknown) => JSON.stringify(value, null, 2);
-const loadTenants = (keyword: string, page: number) => integrationApi.tenants({ tenantName: keyword || undefined, page, size: 20 });
-const loadProjects = (keyword: string, page: number) => integrationApi.projects({ projectName: keyword || undefined, page, size: 20 });
-const loadSources = (keyword: string, page: number) => integrationApi.sources({ tenantId: selection.tenantId, keyword: keyword || undefined, page, size: 20 });
-const loadKeys = (keyword: string, page: number) => integrationApi.keys({ sourceSystemId: selection.sourceSystemId, keyword: keyword || undefined, page, size: 20 });
-const loadEvents = (keyword: string, page: number) => integrationApi.events({ tenantId: selection.tenantId, projectSpaceId: selection.projectSpaceId, keyword: keyword || undefined, page, size: 20 });
-const loadSchemas = (keyword: string, page: number) => integrationApi.schemas({ tenantId: selection.tenantId, projectSpaceId: selection.projectSpaceId, eventType: selection.eventType, schemaVersion: keyword || undefined, page, size: 20 });
+const loadTenants = (keyword: string, page: number) => integrationApi.tenants({ tenantName: keyword || undefined, page, size: 10 });
+const loadProjects = (keyword: string, page: number) => integrationApi.projects({ projectName: keyword || undefined, page, size: 10 });
+const loadSources = (keyword: string, page: number) => integrationApi.sources({ tenantId: selection.tenantId, keyword: keyword || undefined, page, size: 10 });
+const loadKeys = (keyword: string, page: number) => integrationApi.keys({ sourceSystemId: selection.sourceSystemId, keyword: keyword || undefined, page, size: 10 });
+const loadEvents = (keyword: string, page: number) => integrationApi.events({ tenantId: selection.tenantId, projectSpaceId: selection.projectSpaceId, keyword: keyword || undefined, page, size: 10 });
+const loadSchemas = (keyword: string, page: number) => integrationApi.schemas({ tenantId: selection.tenantId, projectSpaceId: selection.projectSpaceId, eventType: selection.eventType, schemaVersion: keyword || undefined, page, size: 10 });
 const tenantLabel = (item: TenantOption) => `${item.tenantName} (${item.tenantId})`;
 const projectLabel = (item: ProjectOption) => `${item.projectName} (${item.projectCode}) · ${item.status}`;
 const sourceLabel = (item: SourceSystemManagement) => `${item.sourceSystemName} (${item.sourceSystemCode})`;
 const keyLabel = (item: SourceSystemKey) => `${item.id} · ${item.keyAlgorithm}/${item.dataAlgorithm}`;
 const eventLabel = (item: EventAuthorization) => `${item.eventName} (${item.eventType})`;
 const schemaLabel = (item: IntegrationSchema) => item.schemaVersion;
-function clearOutput() { example.value = null; plaintext.value = ''; validation.value = null; }
+function clearOutput() { example.value = null; plaintext.value = ''; validation.value = null; encrypted.value = ''; encryptedVisible.value = false; privateKey.value = ''; encryptVisible.value = false; }
 watch(() => selection.tenantId, () => { selection.sourceSystemId = ''; selection.sourceSystemKeyId = ''; selectedKey.value = null; selection.eventType = ''; selection.schemaVersion = ''; }, { flush: 'sync' });
 watch(() => selection.projectSpaceId, () => { selection.eventType = ''; selection.schemaVersion = ''; }, { flush: 'sync' });
 watch(() => selection.sourceSystemId, () => { selection.sourceSystemKeyId = ''; selectedKey.value = null; }, { flush: 'sync' });
 watch(() => selection.eventType, () => { selection.schemaVersion = ''; }, { flush: 'sync' });
-watch(() => selection.schemaVersion, () => { schema.value = null; sampleEventJson.value = ''; }, { flush: 'sync' });
+watch(() => selection.schemaVersion, () => { schema.value = null; }, { flush: 'sync' });
 watch(() => ({ ...selection }), clearOutput, { flush: 'sync' });
-watch([sampleEventJson, idempotencyKey], clearOutput, { flush: 'sync' });
+watch(idempotencyKey, clearOutput, { flush: 'sync' });
 watch(plaintext, () => { validation.value = null; }, { flush: 'sync' });
-function selectSchema(value?: IntegrationSchema) {
-  schema.value = value || null;
-  if (value) resetSample();
-}
-function sampleValue(field: EventSchemaField): unknown {
-  switch (field.dataType) {
-    case 'INTEGER': case 'DECIMAL': return null;
-    case 'BOOLEAN': return false;
-    case 'OBJECT': return {};
-    case 'ARRAY': return [];
-    default: return '';
-  }
-}
-function resetSample() {
-  if (!schema.value) return;
-  const date = new Date();
-  const pad = (value: number) => String(value).padStart(2, '0');
-  const occurredAt = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-  sampleEventJson.value = pretty({ eventType: selection.eventType, schemaVersion: selection.schemaVersion, sourceBusinessKey: '', occurredAt,
-    payload: Object.fromEntries((schema.value.fields || []).map(field => [field.fieldName, sampleValue(field)])) });
+async function selectSchema(value?: IntegrationSchema) {
+  schema.value = null;
+  if (!value) return;
+  const scope = schemaScope.value, version = selection.schemaVersion;
+  try { const result = await integrationApi.schemaFields({ tenantId: selection.tenantId, projectSpaceId: selection.projectSpaceId, eventType: selection.eventType, schemaVersion: version }); if (scope === schemaScope.value && version === selection.schemaVersion) schema.value = result; }
+  catch (error) { ElMessage.error(apiErrorMessage(error, '加载 Schema 字段失败')); }
 }
 function requireJsonObject(text: string) {
   if (new TextEncoder().encode(text).length > 2097152) throw new Error('JSON 不得超过 2 MiB');
@@ -118,16 +112,13 @@ function requireJsonObject(text: string) {
 async function generate() {
   if (!ready.value || busy.value) return;
   try {
-    if (idempotencyKey.value && !/^[A-Za-z0-9._:-]{1,128}$/.test(idempotencyKey.value)) throw new Error('幂等键仅支持字母、数字及 . _ : -');
-    if (sampleEventJson.value.trim()) {
-      const sample = requireJsonObject(sampleEventJson.value);
-      if (sample.eventType !== selection.eventType || sample.schemaVersion !== selection.schemaVersion) throw new Error('样例事件类型和版本必须与当前选择一致');
-    }
+    if (!/^[A-Za-z0-9._:-]{1,128}$/.test(idempotencyKey.value)) throw new Error('请填写业务请求标识，仅支持字母、数字及 . _ : -');
   } catch (cause) { ElMessage.warning(cause instanceof Error ? cause.message : '样例 JSON 格式错误'); return; }
   generating.value = true; clearOutput();
   try {
-    const result = await integrationApi.example({ ...selection, ...(sampleEventJson.value.trim() ? { sampleEventJson: sampleEventJson.value } : {}), ...(idempotencyKey.value ? { idempotencyKey: idempotencyKey.value } : {}) });
-    example.value = result; plaintext.value = pretty(result.plaintextRequest); validation.value = result.validation;
+    const result = await integrationApi.example({ ...selection, requestId: idempotencyKey.value });
+    if (!result.plaintextRequest) throw new Error('接口未返回明文请求信封');
+    example.value = result; plaintext.value = typeof result.plaintextRequest === 'string' ? result.plaintextRequest : pretty(result.plaintextRequest); validation.value = result.validation;
   } catch (cause) { ElMessage.error(apiErrorMessage(cause, '生成明文模板失败')); }
   finally { generating.value = false; }
 }
@@ -141,9 +132,16 @@ async function validate() {
   finally { validating.value = false; }
 }
 function download(filename: string, text: string) {
+  if (!text) return;
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json;charset=utf-8' }));
   const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+async function encrypt() {
+  if (busy.value || !privateKey.value.trim()) return ElMessage.warning('请输入对接方私钥');
+  encrypting.value = true;
+  try { encrypted.value = pretty(await integrationApi.encrypt(requireJsonObject(plaintext.value), privateKey.value.trim())); privateKey.value = ''; encryptVisible.value = false; encryptedVisible.value = true; }
+  catch (error) { ElMessage.error(apiErrorMessage(error, '加密失败')); } finally { encrypting.value = false; }
 }
 </script>
 

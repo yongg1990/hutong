@@ -43,16 +43,10 @@
     <!-- TAB 1: Primary Processing Section -->
     <div v-if="activeTab === 'PRIMARY'" class="grid-two">
       <div class="panel">
-        <div class="panel-header">
-          <div class="header-title">
-            <h2>初加工与产地趁鲜切制批次列表</h2>
-            <el-tag size="small" type="success">产地趁鲜切制</el-tag>
-          </div>
-          <span class="count-text">共 {{ primaryBatches.length }} 批</span>
-        </div>
 
-        <el-table
+        <LocalPaginatedTable
           :data="primaryBatches"
+          v-loading="loading"
           @row-click="selectPrimaryBatch"
           highlight-current-row
         >
@@ -82,7 +76,7 @@
               </el-button>
             </template>
           </el-table-column>
-        </el-table>
+        </LocalPaginatedTable>
       </div>
 
       <!-- Right Side Selected Primary Batch Details Card -->
@@ -135,11 +129,7 @@
     <!-- TAB 2: Quality Inspection Section -->
     <div v-else-if="activeTab === 'QUALITY'" class="grid-two">
       <div class="panel">
-        <div class="panel-header">
-          <h2>质检事件与批次检验记录</h2>
-          <span class="count-text">共 {{ inspectEvents.length }} 份检验报告</span>
-        </div>
-        <el-table :data="inspectEvents">
+        <LocalPaginatedTable :data="inspectEvents" v-loading="loading">
           <el-table-column prop="businessKey" label="报告单号 *" width="140" class-name="mono" />
           <el-table-column label="关联批次 *" width="140" class-name="mono">
             <template #default="{ row }">{{ row.payload?.batchNo || 'SQ-260731-08' }}</template>
@@ -158,7 +148,7 @@
               </el-button>
             </template>
           </el-table-column>
-        </el-table>
+        </LocalPaginatedTable>
       </div>
 
       <div class="panel">
@@ -173,7 +163,7 @@
 
           <el-divider style="margin: 12px 0;" />
           <h4 style="font-size: 13px; margin-bottom: 8px;">包含实测指标项:</h4>
-          <el-table :data="inspectEvents[0].payload?.indicators || []" size="small">
+          <LocalPaginatedTable :data="inspectEvents[0].payload?.indicators || []" size="small">
             <el-table-column prop="name" label="指标名称" min-width="120" />
             <el-table-column prop="result" label="实测值" width="100" class-name="mono" />
             <el-table-column prop="limit" label="标准限值" width="110" class-name="mono" />
@@ -184,7 +174,7 @@
                 </el-tag>
               </template>
             </el-table-column>
-          </el-table>
+          </LocalPaginatedTable>
         </div>
       </div>
     </div>
@@ -202,6 +192,7 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import PageHeader from '@/components/common/PageHeader.vue';
@@ -295,7 +286,7 @@ const selectPrimaryBatch = (row: PrimaryProcessingBatch) => {
 }
 
 .success-color {
-  color: #176b4d !important;
+  color: #2563eb !important;
 }
 
 .kpi-card .sub {
@@ -327,12 +318,12 @@ const selectPrimaryBatch = (row: PrimaryProcessingBatch) => {
 }
 
 .tab-item:hover {
-  background: #f4f8f6;
+  background: var(--color-surface-subtle);
 }
 
 .tab-item.active {
   box-shadow: inset 0 3px var(--color-brand);
-  background: #ebf4f0;
+  background: var(--color-brand-soft);
 }
 
 .tab-item strong {
@@ -391,7 +382,7 @@ const selectPrimaryBatch = (row: PrimaryProcessingBatch) => {
   justify-content: space-between;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #edf0ee;
+  border-bottom: 1px solid var(--color-border-subtle);
   font-size: 13px;
 }
 
@@ -413,7 +404,7 @@ const selectPrimaryBatch = (row: PrimaryProcessingBatch) => {
 .cross-actions-title {
   font-size: 12px;
   font-weight: 600;
-  color: #435b50;
+  color: var(--color-text-secondary);
   margin-bottom: 8px;
 }
 

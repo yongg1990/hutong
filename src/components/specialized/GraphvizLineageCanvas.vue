@@ -18,12 +18,12 @@
         <svg class="lineage-svg" :width="canvasWidth" height="420" :viewBox="`0 0 ${canvasWidth} 420`">
           <defs>
             <marker id="lineage-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="#0e5f40" />
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--color-brand)" />
             </marker>
           </defs>
           <g v-for="edge in renderedEdges" :key="edge.key">
-            <line :x1="edge.x1" :y1="edge.y1" :x2="edge.x2" :y2="edge.y2" stroke="#0e5f40" stroke-width="2" marker-end="url(#lineage-arrow)" />
-            <text v-if="edge.label" :x="(edge.x1 + edge.x2) / 2" :y="edge.y1 - 10" text-anchor="middle" font-size="11" fill="#4a6155">{{ edge.label }}</text>
+            <line :x1="edge.x1" :y1="edge.y1" :x2="edge.x2" :y2="edge.y2" stroke="var(--color-brand)" stroke-width="2" marker-end="url(#lineage-arrow)" />
+            <text v-if="edge.label" :x="(edge.x1 + edge.x2) / 2" :y="edge.y1 - 10" text-anchor="middle" font-size="11" fill="var(--color-text-secondary)">{{ edge.label }}</text>
           </g>
           <g
             v-for="node in renderedNodes"
@@ -32,11 +32,11 @@
             :transform="`translate(${node.x}, ${node.y})`"
             @click="emit('node-click', { ...node.raw, id: node.id, label: node.label, type: node.type })"
           >
-            <rect width="170" height="82" rx="6" fill="#ffffff" stroke="#0e5f40" stroke-width="1.8" />
-            <rect width="170" height="6" rx="3" fill="#0e5f40" />
-            <text x="85" y="31" text-anchor="middle" font-size="12" font-weight="700" fill="#12211b">{{ node.shortLabel }}</text>
-            <text x="85" y="52" text-anchor="middle" font-size="11" fill="#4a6155">{{ node.shortId }}</text>
-            <text x="85" y="70" text-anchor="middle" font-size="10" fill="#0e5f40">{{ node.type }}</text>
+            <rect width="170" height="82" rx="6" fill="#ffffff" stroke="var(--color-brand-border)" stroke-width="1.8" />
+            <rect width="170" height="6" rx="3" fill="var(--color-brand)" />
+            <text x="85" y="31" text-anchor="middle" font-size="12" font-weight="700" fill="var(--color-ink)">{{ node.shortLabel }}</text>
+            <text x="85" y="52" text-anchor="middle" font-size="11" fill="var(--color-text-secondary)">{{ node.shortId }}</text>
+            <text x="85" y="70" text-anchor="middle" font-size="10" fill="var(--color-brand)">{{ node.type }}</text>
           </g>
         </svg>
       </div>
@@ -96,12 +96,12 @@ const resetZoom = () => { zoomScale.value = 1; };
 
 <style scoped>
 .graphviz-canvas-wrapper { display: flex; flex-direction: column; min-height: 520px; width: 100%; }
-.canvas-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 16px; background: #fbfdfc; border-bottom: 1px solid var(--color-border); }
+.canvas-toolbar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 16px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
 .toolbar-left, .tool-actions { display: flex; align-items: center; gap: 8px; }
 .pulse-node { width: 7px; height: 7px; border-radius: 50%; background: var(--color-brand); }
 .title { font-size: 13px; font-weight: 700; color: var(--color-ink); }
 .spec-label { font-size: 11px; background: var(--color-brand-soft); color: var(--color-brand); border: 1px solid var(--color-brand-border); padding: 2px 6px; border-radius: 3px; }
-.canvas-stage-wrapper { flex: 1; overflow: auto; background-color: #fafcfb; background-image: radial-gradient(#d5e2da 1px, transparent 1px); background-size: 20px 20px; }
+.canvas-stage-wrapper { flex: 1; overflow: auto; background-color: var(--color-surface-subtle); background-image: radial-gradient(#dce1ea 1px, transparent 1px); background-size: 20px 20px; }
 .canvas-stage { transform-origin: left top; transition: transform 0.2s ease; }
 .graph-node { cursor: pointer; }
 .graph-node:hover rect:first-child { stroke-width: 2.5; }

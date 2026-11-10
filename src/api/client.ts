@@ -77,7 +77,7 @@ request.interceptors.request.use((config) => {
     return config;
   }
   if (!connectable) {
-    return Promise.reject(Object.assign(new Error('该接口所属分组未标注“可对接”，当前不进行后端调用'), { code: 'UNSUPPORTED_ENDPOINT' }));
+    return Promise.reject(Object.assign(new Error('该接口未纳入当前 Swagger 对接范围'), { code: 'UNSUPPORTED_ENDPOINT' }));
   }
   if (method === 'GET') beginQuery(config);
   // Retrieve token from weappauthorization or tcmirp_token
@@ -129,25 +129,22 @@ request.interceptors.request.use((config) => {
 });
 
 // Response Interceptor
-request.interceptors.response.use((response: AxiosResponse) => {
+request.interceptors.response.use(async (response: AxiosResponse) => {
   finishQuery(response.config);
   apiStatus.isOnline = true;
   apiStatus.checkedAt = new Date().toLocaleTimeString();
   apiStatus.lastError = undefined;
 
   // If backend returns standard envelope { code: 200, data: ..., message: "..." }
-  const res = response.data;
+  const res = response.data instanceof Blob && response.data.type.includes('json')
+    ? JSON.parse(await response.data.text()) : response.data;
   if (res && typeof res === 'object' && 'code' in res) {
-    // 401/403: Token invalid or expired, clear and return to login
-    if (res.code === 401 || res.code === '401' || res.code === 403 || res.code === '403') {
+    // Authentication expiry clears the session; forbidden operations preserve it.
+    if (res.code === 401 || res.code === '401') {
       localStorage.removeItem('weappauthorization');
       localStorage.removeItem('tcmirp_token');
       localStorage.removeItem('tcmirp_user');
       localStorage.removeItem('tcmirp_session_source');
-      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-        const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
-        window.location.href = `/login?redirect=${redirectUrl}`;
-      }
       const authError = Object.assign(new Error(res.message || '登录令牌已失效，请重新登录'), {
         response: { status: Number(res.code) },
         businessMessage: res.message
@@ -157,26 +154,28 @@ request.interceptors.response.use((response: AxiosResponse) => {
     }
 
     if (res.code === 200 || res.code === 0 || res.code === '0' || res.code === '200') {
+      if (response.config.responseType === 'blob' && typeof res.data === 'string') {
+        return new Blob([Uint8Array.from(atob(res.data), char => char.charCodeAt(0))]);
+      }
       return res.data !== undefined ? res.data : res;
     }
     return Promise.reject(Object.assign(new Error(res.message || 'API Error'), { businessMessage: res.message, config: response.config }));
   }
   return res;
-}, (error) => {
+}, async (error) => {
   finishQuery(error?.config);
+  if (error?.response?.data instanceof Blob && error.response.data.type.includes('json')) {
+    try { error.response.data = JSON.parse(await error.response.data.text()); } catch { /* Keep the original response when it is not JSON. */ }
+  }
   apiStatus.checkedAt = new Date().toLocaleTimeString();
   apiStatus.lastError = error.message || '网络连接超时或无法触达后端服务';
 
-  // Handle HTTP 401 / 403
-  if (error?.response?.status === 401 || error?.response?.status === 403) {
+  // Only authentication failures invalidate the local session.
+  if (error?.response?.status === 401) {
     localStorage.removeItem('weappauthorization');
     localStorage.removeItem('tcmirp_token');
     localStorage.removeItem('tcmirp_user');
     localStorage.removeItem('tcmirp_session_source');
-    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-      const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = `/login?redirect=${redirectUrl}`;
-    }
   }
 
   // Do not crash the app, bubble error for caller fallback

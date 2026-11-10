@@ -3,14 +3,14 @@
     <PageHeader title="交换数据查询" subtitle="授权范围内的对象、事件、处理状态和已发布元数据" />
     <el-tabs v-model="kind" @tab-change="result=null"><el-tab-pane label="业务对象" name="objects" /><el-tab-pane label="事件" name="events" /><el-tab-pane label="事件处理状态" name="status" /><el-tab-pane label="已发布元数据" name="metadata" /></el-tabs>
     <el-form label-position="top" class="query-grid" @submit.prevent="query">
-      <el-form-item :label="kind==='metadata'?'规范包代码':'查询 ID'" required><el-input v-model="id" /></el-form-item>
-      <el-form-item v-if="kind==='metadata'" label="版本（可选）"><el-input v-model="version" /></el-form-item>
+      <el-form-item><el-input v-model="id" :aria-label="kind==='metadata'?'规范包代码':'查询 ID'" :placeholder="kind==='metadata'?'规范包代码':'查询 ID'" /></el-form-item>
+      <el-form-item v-if="kind==='metadata'"><el-input v-model="version" aria-label="版本" placeholder="版本（可选）" /></el-form-item>
       <template v-else>
-        <el-form-item label="项目空间 ID" required><el-input v-model="params.projectSpaceId" /></el-form-item>
-        <el-form-item label="访问用途" required><el-input v-model="params.purposeCode" /></el-form-item>
-        <el-form-item label="主体类型" required><el-select v-model="params.subjectType"><el-option v-for="v in ['EVENT','OBJECT','BATCH']" :key="v" :value="v" :label="v" /></el-select></el-form-item>
-        <el-form-item label="主体 ID" required><el-input v-model="params.subjectId" /></el-form-item>
-        <el-form-item label="展开项（可选）"><el-input v-model="params.expand" /></el-form-item>
+        <el-form-item><el-input v-model="params.projectSpaceId" aria-label="项目空间 ID" placeholder="项目空间 ID" /></el-form-item>
+        <el-form-item><el-input v-model="params.purposeCode" aria-label="访问用途" placeholder="访问用途" /></el-form-item>
+        <el-form-item><el-select v-model="params.subjectType" aria-label="主体类型" placeholder="主体类型"><el-option v-for="v in ['EVENT','OBJECT','BATCH']" :key="v" :value="v" :label="v" /></el-select></el-form-item>
+        <el-form-item><el-input v-model="params.subjectId" aria-label="主体 ID" placeholder="主体 ID" /></el-form-item>
+        <el-form-item><el-input v-model="params.expand" aria-label="展开项" placeholder="展开项（可选）" /></el-form-item>
       </template>
       <el-form-item><el-button type="primary" :icon="Search" :loading="loading" @click="query">查询</el-button></el-form-item>
     </el-form>

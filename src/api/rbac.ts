@@ -501,11 +501,11 @@ export const rbacApi = {
     if (params?.tenantName) {
       query.append('tenantName', params.tenantName);
     }
-    if (params?.page) query.append('page', String(params.page));
-    if (params?.size) query.append('size', String(params.size));
+    query.append('page', String(params?.page || 1));
+    query.append('size', String(params?.size || 10));
 
     const page = params?.page || 1;
-    const size = params?.size || 20;
+    const size = params?.size || 10;
     const res: any = await request.get(`/tenant-access/tenants?${query.toString()}`);
     return {
       records: (res.records || []).map(mapTenantResponse),
@@ -523,7 +523,7 @@ export const rbacApi = {
   async getPermittedTenants(): Promise<TenantItem[]> {
     const records: TenantItem[] = [];
     for (let page = 1; ; page++) {
-      const result: any = await request.get('/tenant-access/tenants/permitted', { params: { page, size: 200 } });
+      const result: any = await request.get('/tenant-access/tenants/permitted', { params: { page, size: 10 } });
       records.push(...(result.records || []).map(mapTenantResponse));
       if (!result.records?.length || records.length >= Number(result.total)) return records;
     }
@@ -568,13 +568,13 @@ export const rbacApi = {
     const query = new URLSearchParams();
     if (params?.tenantId != null && params.tenantId !== '') query.set('tenantId', String(params.tenantId));
     query.set('page', String(params?.page || 1));
-    query.set('size', String(params?.size || 20));
+    query.set('size', String(params?.size || 10));
     const res: any = await request.get('/tenant-access/users/page?' + query.toString());
     return {
       records: (res.records || []).map(mapUserResponse),
       total: Number(res.total ?? 0),
       page: Number(res.page ?? params?.page ?? 1),
-      size: Number(res.size ?? params?.size ?? 20)
+      size: Number(res.size ?? params?.size ?? 10)
     };
   },
 
@@ -664,13 +664,13 @@ export const rbacApi = {
     const query = new URLSearchParams();
     if (params?.tenantId != null && params.tenantId !== '') query.set('tenantId', String(params.tenantId));
     query.set('page', String(params?.page || 1));
-    query.set('size', String(params?.size || 20));
+    query.set('size', String(params?.size || 10));
     const res: any = await request.get('/tenant-access/roles/page?' + query.toString());
     return {
       records: (res.records || []).map(mapRoleResponse),
       total: Number(res.total ?? 0),
       page: Number(res.page ?? params?.page ?? 1),
-      size: Number(res.size ?? params?.size ?? 20)
+      size: Number(res.size ?? params?.size ?? 10)
     };
   },
 
@@ -679,12 +679,12 @@ export const rbacApi = {
     if (params?.tenantId != null && params.tenantId !== '') query.set('tenantId', String(params.tenantId));
     const keyword = params?.keyword?.trim().toLowerCase();
     const records: RoleItem[] = [];
-    query.set('size', '200');
+    query.set('size', '10');
     for (let page = 1; ; page++) {
       query.set('page', String(page));
       const res: any = await request.get(`/tenant-access/roles?${query}`);
       records.push(...res.map(mapRoleResponse));
-      if (res.length < 200) break;
+      if (res.length < 10) break;
     }
     return records.filter((r: RoleItem) => !keyword ||
       (r.roleCode || '').toLowerCase().includes(keyword) ||

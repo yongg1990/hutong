@@ -367,7 +367,7 @@ const handleContinue = () => {
 .section-header {
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border);
-  background: #f7f9f8;
+  background: var(--color-surface-subtle);
 }
 
 .section-header h3 {
@@ -510,8 +510,8 @@ const handleContinue = () => {
 }
 
 .info-table {
-  background: #f8faf8;
-  border: 1px solid #e1ece4;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   padding: 12px 14px;
   margin-bottom: 18px;
@@ -523,7 +523,7 @@ const handleContinue = () => {
   align-items: center;
   padding: 6px 0;
   font-size: 13px;
-  border-bottom: 1px solid #edf3ef;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .info-row:last-child {

@@ -1,87 +1,36 @@
 <template>
   <div class="master-data-page object-page">
     <PageHeader title="业务对象登记" subtitle="统一登记项目空间内的业务实体，维护归属关系与动态属性版本">
-      <template #actions>
-        <el-button :icon="Refresh" :loading="loading" @click="loadObjects">刷新数据</el-button>
-        <el-button type="primary" :icon="Plus" @click="openCreate">登记业务对象</el-button>
-      </template>
     </PageHeader>
 
-    <section class="overview-band" aria-label="业务对象概览">
-      <div class="overview-primary">
-        <span class="overview-icon"><el-icon><Box /></el-icon></span>
-        <div>
-          <span class="metric-label">业务对象总数</span>
-          <strong>{{ total }}</strong>
-        </div>
-      </div>
-      <div class="overview-metrics">
-        <div class="metric-item">
-          <span class="metric-dot active"></span>
-          <div><span>本页启用</span><strong>{{ activeCount }}</strong></div>
-        </div>
-        <div class="metric-item">
-          <span class="metric-dot inactive"></span>
-          <div><span>本页停用</span><strong>{{ inactiveCount }}</strong></div>
-        </div>
-        <div class="metric-item">
-          <span class="metric-dot type"></span>
-          <div><span>对象类型</span><strong>{{ typeCount }}</strong></div>
-        </div>
-      </div>
-      <div class="context-info">
-        <span>当前项目空间</span>
-        <strong class="mono">{{ filters.projectSpaceId || '全部空间' }}</strong>
-      </div>
-    </section>
-
     <section class="query-panel">
-      <div class="section-heading">
-        <div>
-          <h2>筛选对象</h2>
-          <span>按空间、类型、归属主体和状态定位业务对象</span>
-        </div>
-      </div>
       <div class="query-grid">
-        <label class="query-field">
-          <span>项目空间 ID</span>
-          <el-input v-model="filters.projectSpaceId" clearable placeholder="请输入项目空间 ID" @keyup.enter="handleSearch" />
-        </label>
-        <label class="query-field">
-          <span>对象类型</span>
-          <el-select v-model="filters.objectType" clearable filterable allow-create placeholder="全部对象类型">
+        <div class="query-field">
+          <el-input v-model="filters.projectSpaceId" clearable aria-label="项目空间 ID" placeholder="项目空间 ID" @keyup.enter="handleSearch" />
+        </div>
+        <div class="query-field">
+          <el-select v-model="filters.objectType" clearable filterable allow-create aria-label="对象类型" placeholder="对象类型">
             <el-option v-for="item in objectTypes" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
-        </label>
-        <label class="query-field">
-          <span>所有者主体 ID</span>
-          <el-input v-model="filters.ownerPartyId" clearable placeholder="请输入主体 ID" @keyup.enter="handleSearch" />
-        </label>
-        <label class="query-field status-field">
-          <span>对象状态</span>
-          <el-select v-model="filters.status" clearable placeholder="全部状态">
+        </div>
+        <div class="query-field">
+          <el-input v-model="filters.ownerPartyId" clearable aria-label="所有者主体 ID" placeholder="所有者主体 ID" @keyup.enter="handleSearch" />
+        </div>
+        <div class="query-field status-field">
+          <el-select v-model="filters.status" clearable aria-label="对象状态" placeholder="对象状态">
             <el-option label="启用" value="ACTIVE" />
             <el-option label="停用" value="INACTIVE" />
           </el-select>
-        </label>
+        </div>
         <div class="query-actions">
-          <el-button @click="handleReset">重置</el-button>
           <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
+          <el-button @click="handleReset">重置</el-button>
+          <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
         </div>
       </div>
     </section>
 
     <section class="object-list">
-      <div class="list-header">
-        <div>
-          <h2>对象清单</h2>
-          <span>共 {{ total }} 条记录，本页展示 {{ objects.length }} 条</span>
-        </div>
-        <div class="list-legend">
-          <span><i class="legend-dot active"></i>启用</span>
-          <span><i class="legend-dot inactive"></i>停用</span>
-        </div>
-      </div>
       <div class="table-wrap">
         <el-table
           :data="objects"
@@ -244,9 +193,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
-import { Box, EditPen, Plus, Refresh, Search, View } from '@element-plus/icons-vue';
+import { Box, EditPen, Plus, Search, View } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import JsonEditor from '@/components/common/JsonEditor.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
@@ -269,12 +218,9 @@ const storedProjectSpaceId = localStorage.getItem('tcmirp_project_space_id') || 
 const objects = ref<BusinessObjectSummaryResponse[]>([]);
 const loading = ref(false);
 const page = ref(1);
-const pageSize = ref(20);
+const pageSize = ref(10);
 const total = ref(0);
 const filters = reactive({ projectSpaceId: storedProjectSpaceId, objectType: '', ownerPartyId: '', status: '' });
-const activeCount = computed(() => objects.value.filter(item => item.status === 'ACTIVE').length);
-const inactiveCount = computed(() => objects.value.filter(item => item.status === 'INACTIVE').length);
-const typeCount = computed(() => new Set(objects.value.map(item => item.objectType).filter(Boolean)).size);
 
 const formVisible = ref(false);
 const formLoading = ref(false);
@@ -452,109 +398,86 @@ onMounted(loadObjects);
 
 <style scoped>
 .object-page { padding-bottom: 28px; }
-.overview-band { display: grid; grid-template-columns: minmax(220px, 1.1fr) minmax(420px, 2fr) minmax(190px, auto); align-items: stretch; min-height: 100px; margin-bottom: 16px; overflow: hidden; background: #fff; border: 1px solid #dce7e3; border-radius: 8px; box-shadow: 0 3px 12px rgba(23, 67, 63, 0.05); }
-.overview-primary { display: flex; align-items: center; gap: 16px; padding: 20px 22px; background: #f0f8f5; border-right: 1px solid #dce7e3; }
-.overview-icon, .heading-icon { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; color: #fff; background: #176f63; }
-.overview-icon { width: 44px; height: 44px; border-radius: 8px; font-size: 22px; }
-.overview-primary > div { display: flex; flex-direction: column; }
-.metric-label, .metric-item span:not(.metric-dot), .context-info span { color: #6b7f7b; font-size: 12px; line-height: 18px; }
-.overview-primary strong { color: #173f3b; font-size: 30px; font-weight: 700; line-height: 34px; }
-.overview-metrics { display: grid; grid-template-columns: repeat(3, minmax(110px, 1fr)); align-items: center; padding: 14px 4px; }
-.metric-item { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 4px 22px; border-right: 1px solid #e6eeeb; }
-.metric-item:last-child { border-right: 0; }
-.metric-item > div { display: flex; min-width: 0; flex-direction: column; }
-.metric-item strong { color: #233c39; font-size: 21px; font-weight: 700; line-height: 26px; }
-.metric-dot, .legend-dot { display: inline-block; flex: 0 0 auto; border-radius: 50%; }
-.metric-dot { width: 9px; height: 9px; }
-.metric-dot.active, .legend-dot.active { background: #22a06b; }
-.metric-dot.inactive, .legend-dot.inactive { background: #d8902f; }
-.metric-dot.type { background: #367ea5; }
-.context-info { display: flex; min-width: 190px; flex-direction: column; justify-content: center; padding: 18px 22px; background: #fbfcfc; border-left: 1px solid #e6eeeb; }
-.context-info strong { max-width: 220px; overflow: hidden; color: #294d48; font-size: 13px; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; }
-.query-panel, .object-list { background: #fff; border: 1px solid #dce7e3; border-radius: 8px; box-shadow: 0 3px 12px rgba(23, 67, 63, 0.04); }
+.heading-icon { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; color: #fff; background: var(--color-brand); }
+.legend-dot { display: inline-block; flex: 0 0 auto; border-radius: 50%; }
+.legend-dot.active { background: #22a06b; }
+.legend-dot.inactive { background: #d8902f; }
+.query-panel, .object-list { background: #fff; border: 1px solid var(--color-border); border-radius: 8px; box-shadow: 0 3px 12px rgba(24, 35, 52, 0.04); }
 .query-panel { margin-bottom: 16px; padding: 16px 18px 18px; }
-.section-heading { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
-.section-heading h2, .list-header h2, .dialog-heading h2, .drawer-heading h2 { margin: 0; color: #1d3834; letter-spacing: 0; }
-.section-heading h2, .list-header h2 { font-size: 15px; line-height: 22px; }
-.section-heading span, .list-header > div > span { display: block; margin-top: 2px; color: #7a8e8a; font-size: 12px; line-height: 18px; }
+.list-header h2, .dialog-heading h2, .drawer-heading h2 { margin: 0; color: var(--color-ink); letter-spacing: 0; }
+.list-header h2 { font-size: 15px; line-height: 22px; }
+.list-header > div > span { display: block; margin-top: 2px; color: var(--color-muted); font-size: 12px; line-height: 18px; }
 .query-grid { display: grid; grid-template-columns: minmax(155px, 1fr) minmax(200px, 1.25fr) minmax(155px, 1fr) minmax(130px, .72fr) auto; align-items: end; gap: 14px; }
 .query-field { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
-.query-field > span { color: #4d625e; font-size: 12px; font-weight: 600; line-height: 18px; }
 .query-field :deep(.el-select), .query-field :deep(.el-input) { width: 100%; }
 .query-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .query-actions .el-button { min-width: 72px; margin-left: 0; }
 .object-list { overflow: hidden; }
-.list-header { display: flex; align-items: center; justify-content: space-between; min-height: 66px; padding: 12px 18px; border-bottom: 1px solid #e5eeeb; }
-.list-legend { display: flex; align-items: center; gap: 18px; color: #667a76; font-size: 12px; }
+.list-header { display: flex; align-items: center; justify-content: space-between; min-height: 66px; padding: 12px 18px; border-bottom: 1px solid var(--color-border-subtle); }
+.list-legend { display: flex; align-items: center; gap: 18px; color: var(--color-text-secondary); font-size: 12px; }
 .list-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .legend-dot { width: 7px; height: 7px; }
 .table-wrap { padding: 0 18px; }
-.object-table :deep(th.el-table__cell) { height: 44px; background: #f6f9f8; color: #526762; font-size: 12px; font-weight: 600; }
-.object-table :deep(td.el-table__cell) { height: 64px; border-bottom-color: #edf2f0; }
-.object-table :deep(.el-table__row:hover > td.el-table__cell) { background: #f5faf8; }
+.object-table :deep(th.el-table__cell) { height: 44px; background: #f6f9f8; color: var(--color-text-secondary); font-size: 12px; font-weight: 600; }
+.object-table :deep(td.el-table__cell) { height: 64px; border-bottom-color: var(--color-border-subtle); }
+.object-table :deep(.el-table__row:hover > td.el-table__cell) { background: #f6f9ff; }
 .object-table :deep(.cell) { line-height: 20px; }
 .object-cell { display: flex; min-width: 0; align-items: center; gap: 11px; }
-.object-type-icon { display: inline-flex; flex: 0 0 auto; width: 34px; height: 34px; align-items: center; justify-content: center; color: #176f63; background: #eaf5f1; border: 1px solid #d3e9e1; border-radius: 7px; font-size: 17px; }
+.object-type-icon { display: inline-flex; flex: 0 0 auto; width: 34px; height: 34px; align-items: center; justify-content: center; color: var(--color-brand); background: var(--color-brand-soft); border: 1px solid var(--color-brand-border); border-radius: 7px; font-size: 17px; }
 .object-type-icon.large { width: 42px; height: 42px; font-size: 20px; }
 .object-cell > div { display: flex; min-width: 0; flex-direction: column; }
-.object-cell strong { overflow: hidden; color: #24423e; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.object-cell span { color: #7b8f8b; font-size: 11px; }
-.id-text { color: #405f5a; font-size: 12px; }
+.object-cell strong { overflow: hidden; color: var(--color-ink); font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.object-cell span { color: var(--color-muted); font-size: 11px; }
+.id-text { color: var(--color-text-secondary); font-size: 12px; }
 .id-text.muted { color: #9aa9a6; }
 .version-chip { display: inline-flex; min-width: 38px; height: 24px; align-items: center; justify-content: center; color: #246b91; background: #edf6fb; border: 1px solid #d5e8f3; border-radius: 4px; font-size: 11px; font-weight: 700; }
-.time-text { color: #617570; font-size: 12px; }
+.time-text { color: var(--color-text-secondary); font-size: 12px; }
 .row-actions { display: flex; align-items: center; justify-content: center; gap: 6px; }
-.row-actions .el-button { width: 28px; height: 28px; margin-left: 0; color: #45625d; background: #fff; border-color: #dbe6e2; }
-.row-actions .el-button:hover { color: #176f63; background: #edf7f4; border-color: #a9cec4; }
+.row-actions .el-button { width: 28px; height: 28px; margin-left: 0; color: var(--color-text-secondary); background: #fff; border-color: var(--color-border); }
+.row-actions .el-button:hover { color: var(--color-brand); background: var(--color-brand-soft); border-color: var(--color-brand-border); }
 .pagination-row { padding: 16px 0 18px; }
 .dialog-heading, .drawer-heading { display: flex; align-items: center; gap: 12px; }
 .heading-icon { width: 38px; height: 38px; border-radius: 7px; font-size: 18px; }
 .dialog-heading h2, .drawer-heading h2 { font-size: 17px; line-height: 24px; }
-.dialog-heading p, .drawer-heading p { margin: 2px 0 0; color: #738682; font-size: 12px; line-height: 18px; }
+.dialog-heading p, .drawer-heading p { margin: 2px 0 0; color: var(--color-muted); font-size: 12px; line-height: 18px; }
 .form-section { padding: 2px 0 4px; }
-.form-section + .form-section { margin-top: 12px; padding-top: 18px; border-top: 1px solid #e4ece9; }
+.form-section + .form-section { margin-top: 12px; padding-top: 18px; border-top: 1px solid var(--color-border-subtle); }
 .form-section-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
-.form-section-heading > span, .form-section-heading > div > span { color: #29433f; font-size: 14px; font-weight: 700; }
-.form-section-heading small { display: block; margin-top: 2px; color: #81918e; font-size: 11px; font-weight: 400; }
+.form-section-heading > span, .form-section-heading > div > span { color: var(--color-text); font-size: 14px; font-weight: 700; }
+.form-section-heading small { display: block; margin-top: 2px; color: var(--color-muted); font-size: 11px; font-weight: 400; }
 .form-section-heading > span + small { margin: 0 0 0 10px; flex: 1; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
 .attribute-form-section :deep(.el-form-item) { margin-bottom: 0; }
-:deep(.json-input textarea) { padding: 14px 16px; color: #2e4945; background: #f8fbfa; font-family: "JetBrains Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; line-height: 1.65; }
-.detail-identity { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 16px; background: #f1f8f6; border: 1px solid #d6e9e3; border-radius: 8px; }
+:deep(.json-input textarea) { padding: 14px 16px; color: var(--color-text); background: var(--color-surface-subtle); font-family: "JetBrains Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; line-height: 1.65; }
+.detail-identity { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 16px; background: var(--color-brand-soft); border: 1px solid var(--color-brand-border); border-radius: 8px; }
 .detail-identity > div { display: flex; min-width: 0; flex-direction: column; }
-.detail-identity > div span { color: #294843; font-size: 13px; font-weight: 600; }
-.detail-identity > div strong { overflow: hidden; color: #748783; font-size: 12px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.detail-identity > div span { color: var(--color-text); font-size: 13px; font-weight: 600; }
+.detail-identity > div strong { overflow: hidden; color: var(--color-muted); font-size: 12px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .detail-section, .attribute-section { margin-top: 22px; }
-.detail-section h3, .attribute-title { margin: 0 0 10px; color: #29433f; font-size: 13px; font-weight: 700; line-height: 20px; }
-.detail-grid { display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; border: 1px solid #e0e9e6; border-radius: 7px; }
+.detail-section h3, .attribute-title { margin: 0 0 10px; color: var(--color-text); font-size: 13px; font-weight: 700; line-height: 20px; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; border: 1px solid var(--color-border); border-radius: 7px; }
 .detail-grid > div { display: flex; min-width: 0; min-height: 68px; flex-direction: column; justify-content: center; padding: 10px 14px; border-right: 1px solid #e8efed; border-bottom: 1px solid #e8efed; }
 .detail-grid > div:nth-child(2n) { border-right: 0; }
 .detail-grid > div:nth-last-child(-n + 2) { border-bottom: 0; }
-.detail-grid span, .timeline-list span { color: #7c8d89; font-size: 11px; line-height: 18px; }
-.detail-grid strong { overflow: hidden; color: #334f4a; font-size: 12px; line-height: 22px; text-overflow: ellipsis; white-space: nowrap; }
+.detail-grid span, .timeline-list span { color: var(--color-muted); font-size: 11px; line-height: 18px; }
+.detail-grid strong { overflow: hidden; color: var(--color-text); font-size: 12px; line-height: 22px; text-overflow: ellipsis; white-space: nowrap; }
 .detail-grid .version-text { color: #246b91; }
-.timeline-list { border-top: 1px solid #e4ece9; }
-.timeline-list > div { display: grid; grid-template-columns: 100px 1fr; gap: 14px; padding: 10px 4px; border-bottom: 1px solid #edf2f0; }
-.timeline-list strong { color: #465e59; font-size: 12px; font-weight: 500; text-align: right; }
+.timeline-list { border-top: 1px solid var(--color-border-subtle); }
+.timeline-list > div { display: grid; grid-template-columns: 100px 1fr; gap: 14px; padding: 10px 4px; border-bottom: 1px solid var(--color-border-subtle); }
+.timeline-list strong { color: var(--color-text-secondary); font-size: 12px; font-weight: 500; text-align: right; }
 .attribute-title { display: flex; align-items: center; justify-content: space-between; }
 .attribute-title small { padding: 2px 7px; color: #246b91; background: #edf6fb; border-radius: 4px; font-size: 10px; }
-.attribute-json { max-height: 360px; margin: 0; padding: 15px 16px; overflow: auto; white-space: pre-wrap; word-break: break-word; color: #294342; background: #f5f9f8; border: 1px solid #dfe9e6; border-radius: 7px; font-size: 12px; line-height: 1.7; }
-:deep(.object-form-dialog .el-dialog__header) { margin-right: 0; padding: 20px 22px 16px; border-bottom: 1px solid #e5ecea; }
+.attribute-json { max-height: 360px; margin: 0; padding: 15px 16px; overflow: auto; white-space: pre-wrap; word-break: break-word; color: var(--color-text); background: var(--color-surface-subtle); border: 1px solid var(--color-border); border-radius: 7px; font-size: 12px; line-height: 1.7; }
+:deep(.object-form-dialog .el-dialog__header) { margin-right: 0; padding: 20px 22px 16px; border-bottom: 1px solid var(--color-border-subtle); }
 :deep(.object-form-dialog .el-dialog__body) { padding: 20px 22px 22px; }
-:deep(.object-form-dialog .el-dialog__footer) { padding: 14px 22px; background: #f8faf9; border-top: 1px solid #e5ecea; }
-:deep(.object-detail-drawer .el-drawer__header) { margin-bottom: 0; padding: 20px 22px 16px; border-bottom: 1px solid #e5ecea; }
+:deep(.object-form-dialog .el-dialog__footer) { padding: 14px 22px; background: var(--color-surface-subtle); border-top: 1px solid var(--color-border-subtle); }
+:deep(.object-detail-drawer .el-drawer__header) { margin-bottom: 0; padding: 20px 22px 16px; border-bottom: 1px solid var(--color-border-subtle); }
 :deep(.object-detail-drawer .el-drawer__body) { padding: 20px 22px; }
 @media (max-width: 1100px) {
-  .overview-band { grid-template-columns: minmax(200px, .8fr) minmax(400px, 2fr); }
-  .context-info { display: none; }
   .query-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .query-actions { grid-column: 2; }
 }
 @media (max-width: 720px) {
-  .overview-band { grid-template-columns: 1fr; }
-  .overview-primary { border-right: 0; border-bottom: 1px solid #dce7e3; }
-  .overview-metrics { grid-template-columns: repeat(3, 1fr); }
-  .metric-item { padding: 4px 12px; }
   .query-grid, .form-grid { grid-template-columns: 1fr; }
   .query-actions { grid-column: auto; }
   .list-legend { display: none; }

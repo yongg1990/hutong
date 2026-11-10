@@ -41,7 +41,7 @@ export interface TenantOption { tenantId: string; tenantName: string; tenantCode
 export interface ProjectOption { projectSpaceId: string; projectName: string; projectCode: string; status: string }
 export type OptionQuery = Record<string, string | number | undefined>;
 const assistant = '/ingestion-governance/integration-assistant';
-const keyPath = (id: string) => `/ingestion-governance/source-systems/${encodeURIComponent(id)}/keys`;
+const keyPath = '/openapi/v1/source-systems-keys';
 const authorizationPath = (tenantId: string, projectSpaceId: string) =>
   `/openapi/v1/event-fact/event-type-authorizations/tenants/${encodeURIComponent(tenantId)}/project-spaces/${encodeURIComponent(projectSpaceId)}/event-types`;
 
@@ -50,13 +50,13 @@ export const sourceKeysApi = {
     return request.get('/openapi/v1/source-systems-keys', { params });
   },
   create(sourceSystemId: string, data: KeyCreateRequest): Promise<{ key: SourceSystemKey }> {
-    return request.post(keyPath(sourceSystemId), data);
+    return request.post(keyPath, { ...data, sourceSystemId });
   },
   createForTenant(tenantId: string, sourceSystemId: string, data: KeyCreateRequest): Promise<{ key: SourceSystemKey }> {
-    return request.post(`/ingestion-governance/admin/tenants/${encodeURIComponent(tenantId)}/source-systems/${encodeURIComponent(sourceSystemId)}/keys`, data);
+    return request.post(keyPath, { ...data, tenantId, sourceSystemId });
   },
-  changeStatus(sourceSystemId: string, keyId: string, status: SourceSystemKey['status']): Promise<SourceSystemKey> {
-    return request.post(`${keyPath(sourceSystemId)}/${encodeURIComponent(keyId)}/status`, { status });
+  changeStatus(sourceSystemId: string, keyId: string, status: SourceSystemKey['status'], tenantId?: string): Promise<SourceSystemKey> {
+    return request.post(`${keyPath}/status`, { tenantId, sourceSystemId, keyId, status });
   }
 };
 export const eventAuthorizationsApi = {
@@ -73,8 +73,10 @@ export const integrationApi = {
   sources(params: OptionQuery): Promise<PageResult<SourceSystemManagement>> { return request.get(`${assistant}/source-systems`, { params }); },
   keys(params: OptionQuery): Promise<PageResult<SourceSystemKey>> { return request.get(`${assistant}/source-system-keys`, { params }); },
   events(params: OptionQuery): Promise<PageResult<EventAuthorization>> { return request.get(`${assistant}/event-types`, { params }); },
-  schemas(params: OptionQuery): Promise<PageResult<IntegrationSchema>> { return request.get(`${assistant}/schemas`, { params }); },
-  example(data: IntegrationSelection & { sampleEventJson?: string; idempotencyKey?: string }): Promise<IntegrationExample> {
+  schemas(params: OptionQuery): Promise<PageResult<IntegrationSchema>> { return request.get(`${assistant}/schema-versions`, { params }); },
+  schemaFields(params: OptionQuery): Promise<IntegrationSchema> { return request.get(`${assistant}/schema-fields`, { params }); },
+  encrypt(plaintext: Record<string, unknown>, clientPrivateKey: string): Promise<unknown> { return request.post(`${assistant}/request-examples/encrypt`, plaintext, { params: { clientPrivateKey } }); },
+  example(data: IntegrationSelection & { requestId: string }): Promise<IntegrationExample> {
     return request.post(`${assistant}/request-examples`, data);
   },
   validate(plaintextRequest: string): Promise<IntegrationValidation> {

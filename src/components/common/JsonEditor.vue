@@ -94,15 +94,15 @@ function indent(event: KeyboardEvent) {
 </script>
 
 <style scoped>
-.json-editor { width: 100%; min-width: 0; border: 1px solid var(--color-border); border-radius: 6px; background: #f8fbfa; overflow: hidden; }
-.json-editor:focus-within { border-color: var(--color-brand); box-shadow: 0 0 0 3px rgba(15, 118, 110, .12); }
+.json-editor { width: 100%; min-width: 0; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-surface-subtle); overflow: hidden; }
+.json-editor:focus-within { border-color: var(--color-brand); box-shadow: 0 0 0 3px var(--color-focus-ring); }
 .json-editor.invalid { border-color: var(--color-danger); }
-.editor-toolbar { display: flex; align-items: center; justify-content: space-between; min-height: 32px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--color-border-subtle); background: #f2f7f5; }
+.editor-toolbar { display: flex; align-items: center; justify-content: space-between; min-height: 32px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--color-border-subtle); background: var(--color-surface-subtle); }
 .editor-status { color: var(--color-success); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-status.invalid { color: var(--color-danger); }
 .editor-body { display: flex; min-width: 0; }
 .line-numbers, textarea, .highlight { padding: 10px 0; font: 12px/1.6 "JetBrains Mono", Consolas, monospace; letter-spacing: 0; }
-.line-numbers { width: 38px; flex: none; overflow: hidden; text-align: right; color: var(--color-muted); background: #f2f7f5; user-select: none; }
+.line-numbers { width: 38px; flex: none; overflow: hidden; text-align: right; color: var(--color-muted); background: var(--color-surface-subtle); user-select: none; }
 .line-numbers span { display: block; padding-right: 8px; }
 .code-area { position: relative; flex: 1; min-width: 0; }
 .highlight, textarea { width: 100%; min-width: 0; min-height: 80px; margin: 0; padding: 10px 12px; border: 0; tab-size: 2; white-space: pre; overflow: auto; }
@@ -112,6 +112,6 @@ function indent(event: KeyboardEvent) {
 .highlight :deep(.token-number) { color: #7454a1; }
 .highlight :deep(.token-literal) { color: #a34862; }
 textarea { position: relative; display: block; outline: 0; resize: vertical; background: transparent; color: transparent; caret-color: var(--color-ink); -webkit-text-fill-color: transparent; }
-textarea::selection { background: #b7dfda; -webkit-text-fill-color: var(--color-ink); }
+textarea::selection { background: #dce9ff; -webkit-text-fill-color: var(--color-ink); }
 textarea::placeholder { color: var(--color-muted); -webkit-text-fill-color: var(--color-muted); }
 </style>

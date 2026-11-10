@@ -9,7 +9,7 @@
     <el-drawer v-model="resultVisible" title="告警处理结果" size="min(560px,94vw)"><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{{ JSON.stringify(actionResult,null,2) }}</pre></el-drawer>
 
     <div class="panel">
-      <el-table :data="alerts">
+      <LocalPaginatedTable :data="alerts" v-loading="loading">
         <el-table-column prop="alertId" label="预警 ID *" width="160" class-name="mono" />
         <el-table-column prop="level" label="严重级别 *" width="100">
           <template #default="{ row }">
@@ -23,12 +23,13 @@
         <el-table-column label="处理状态 *" width="110">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>
-      </el-table>
+      </LocalPaginatedTable>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, reactive, onMounted, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { extendedServices } from '@/api/extendedServices';

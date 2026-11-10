@@ -61,6 +61,19 @@ const router = createRouter({
           component: () => import('@/pages/business/EventEntry.vue')
         },
         // Governance
+        { path: 'governance/data-elements', name: 'GovernanceDataElements', component: () => import('@/pages/governance/DataElements.vue') },
+        { path: 'governance/value-sets', name: 'GovernanceValueSets', component: () => import('@/pages/governance/ValueSets.vue') },
+        { path: 'governance/value-set-mappings', name: 'GovernanceValueSetMappings', component: () => import('@/pages/governance/ValueSetMappings.vue') },
+        { path: 'governance/raw-records', name: 'GovernanceRawRecords', component: () => import('@/pages/governance/RawRecords.vue') },
+        { path: 'governance/encrypted-ingestion', name: 'GovernanceEncryptedIngestion', component: () => import('@/pages/governance/EncryptedIngestion.vue') },
+        { path: 'governance/event-types', name: 'GovernanceEventTypes', component: () => import('@/pages/governance/EventTypes.vue') },
+        { path: 'governance/schemas', name: 'GovernanceSchemas', component: () => import('@/pages/governance/Schemas.vue') },
+        { path: 'settings/permissions', name: 'SettingsPermissions', component: () => import('@/pages/settings/Permissions.vue') },
+        { path: 'settings/uploaded-files', name: 'SettingsUploadedFiles', component: () => import('@/pages/settings/UploadedFiles.vue') },
+        { path: 'master-data/trace-codes', name: 'MasterTraceCodes', component: () => import('@/pages/masterdata/TraceCodes.vue') },
+        { path: 'exchange/profile-bindings', name: 'ExchangeProfileBindings', component: () => import('@/pages/exchange/ProfileBindings.vue') },
+        { path: 'exchange/integration-assistant', name: 'ExchangeIntegrationAssistant', component: () => import('@/pages/exchange/IntegrationAssistant.vue') },
+        { path: 'exchange/encrypted-query', name: 'ExchangeEncryptedQuery', component: () => import('@/pages/exchange/EncryptedQuery.vue') },
         { path: 'governance/source-keys', name: 'GovernanceSourceKeys', component: () => import('@/pages/governance/SourceKeys.vue') },
         { path: 'governance/event-authorizations', name: 'GovernanceEventAuthorizations', component: () => import('@/pages/governance/EventAuthorizations.vue') },
         { path: 'governance/integration-assistant', name: 'GovernanceIntegrationAssistant', component: () => import('@/pages/governance/IntegrationAssistant.vue') },
@@ -152,13 +165,14 @@ const router = createRouter({
           component: () => import('@/pages/trust/Proofs.vue')
         },
         // Exchange
+        { path: 'exchange/legacy-config', name: 'ExchangeLegacyConfig', component: () => import('@/pages/exchange/ProfileConfig.vue') },
         { path: 'trust/files-credentials', name: 'TrustFilesCredentials', component: () => import('@/pages/trust/FilesCredentials.vue') },
-        { path: 'exchange/profile-config', name: 'ExchangeProfileConfig', component: () => import('@/pages/exchange/ProfileConfig.vue') },
+        { path: 'exchange/profile-config', name: 'ExchangeProfileConfig', component: () => import('@/pages/exchange/QueryProfileConfig.vue') },
         { path: 'exchange/queries', name: 'ExchangeQueries', component: () => import('@/pages/exchange/Queries.vue') },
         {
           path: 'exchange/profiles',
           name: 'ExchangeProfiles',
-          component: () => import('@/pages/exchange/Profiles.vue')
+          component: () => import('@/pages/exchange/QueryProfiles.vue')
         },
         {
           path: 'exchange/projections',

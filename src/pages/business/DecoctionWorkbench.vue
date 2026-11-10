@@ -16,10 +16,7 @@
 
     <div class="grid-two">
       <div class="panel">
-        <div class="panel-header">
-          <h2>代煎处方任务队列</h2>
-        </div>
-        <el-table :data="orders" highlight-current-row @row-click="selectPrescription">
+        <LocalPaginatedTable :data="orders" v-loading="loading" highlight-current-row @row-click="selectPrescription">
           <el-table-column label="脱敏处方 Token *" min-width="160">
             <template #default="{ row }">
               <SensitiveValue :value="row.prescriptionNoToken" />
@@ -43,7 +40,7 @@
               </el-button>
             </template>
           </el-table-column>
-        </el-table>
+        </LocalPaginatedTable>
       </div>
 
       <div class="panel">
@@ -60,6 +57,7 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import PageHeader from '@/components/common/PageHeader.vue';

@@ -1,4 +1,5 @@
-// Swagger /v3/api-docs, 2026-10-19: only groups explicitly marked 可对接.
+import { navigationEndpoints } from './navigationEndpoints';
+// Swagger /v3/api-docs: connectable groups and the explicitly requested 2026-11-09 groups.
 export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export interface ContractEndpoint { method: ApiMethod; path: string; desc: string }
 const endpoint = (method: ApiMethod, path: string, desc: string): ContractEndpoint => ({ method, path, desc });
@@ -57,13 +58,13 @@ export const CONNECTABLE_GROUPS: Record<string, ContractEndpoint[]> = {
   'APP-03 来源系统管理': [...resource('/openapi/v1/source-systems', '来源系统'), endpoint('GET', '/openapi/v1/source-systems/tenant', '按所选租户查询可选来源系统')],
   'APP-03 来源系统密钥管理': [
     endpoint('GET', '/openapi/v1/source-systems-keys', '按租户、来源系统和状态查询密钥列表'),
-    endpoint('POST', '/ingestion-governance/source-systems/{sourceSystemId}/keys', '登记对接方公钥并生成密钥'),
-    endpoint('POST', '/ingestion-governance/source-systems/{sourceSystemId}/keys/{keyId}/status', '启用或停用密钥'),
-    endpoint('POST', '/ingestion-governance/admin/tenants/{tenantId}/source-systems/{sourceSystemId}/keys', '管理员为指定租户生成密钥')
+    endpoint('POST', '/openapi/v1/source-systems-keys', '登记对接方公钥并生成密钥'),
+    endpoint('POST', '/openapi/v1/source-systems-keys/status', '按租户、来源系统和密钥 ID 启用或停用密钥')
   ],
-  'APP-03 对接助手': [
-    ...['tenants', 'project-spaces', 'source-systems', 'source-system-keys', 'event-types', 'schemas'].map(path => endpoint('GET', `${assistant}/${path}`, '分页查询级联配置')),
-    endpoint('POST', `${assistant}/request-examples`, '生成明文模板与 SDK 配置'), endpoint('POST', `${assistant}/validate`, '只读校验 SDK 明文')
+  'APP-03 事件对接助手': [
+    ...['tenants', 'project-spaces', 'source-systems', 'source-system-keys', 'event-types', 'schema-versions', 'schema-fields'].map(path => endpoint('GET', `${assistant}/${path}`, '查询级联配置')),
+    endpoint('POST', `${assistant}/request-examples`, '生成明文请求信封'), endpoint('POST', `${assistant}/validate`, '只读校验 SDK 明文'),
+    endpoint('POST', `${assistant}/request-examples/encrypt`, '生成模拟加密请求')
   ],
   'APP-03 数据元管理': [...resource('/openapi/v1/data-elements', '数据元'), endpoint('POST', '/openapi/v1/data-elements/{id}/status', '启用或停用数据元')],
   'APP-03 值域管理': [
@@ -79,12 +80,17 @@ export const CONNECTABLE_GROUPS: Record<string, ContractEndpoint[]> = {
   ],
   'APP-04 事件 Schema 管理': [
     ...resource('/openapi/v1/event-fact/schemas/definitions', 'Schema 草稿'),
-    endpoint('POST', '/openapi/v1/event-fact/schemas/test', '测试未保存的 Schema'),
+    endpoint('GET', '/openapi/v1/event-fact/schemas/generators', '查询字段生成器'),
+    endpoint('POST', '/openapi/v1/event-fact/schemas/definitions/{id}/fields', '新增单个字段'),
+    endpoint('POST', '/openapi/v1/event-fact/schemas/definitions/{id}/fields/{fieldId}', '修改单个字段'),
+    endpoint('GET', '/openapi/v1/event-fact/schemas/definitions/{id}/fields/{fieldId}/delete', '删除字段'),
+    endpoint('POST', '/openapi/v1/event-fact/schemas/definitions/{id}/copy', '复制已发布版本'),
     endpoint('POST', '/openapi/v1/event-fact/schemas/definitions/{id}/test', '测试已保存的 Schema'),
     endpoint('POST', '/openapi/v1/event-fact/schemas/definitions/{id}/publish', '发布 Schema')
   ],
   'APP-04 事件类型授权': [endpoint('GET', authorization, '查询全部事件类型授权状态'), endpoint('POST', authorization, '保存授权目标集合及逐事件有效期')]
 };
+Object.assign(CONNECTABLE_GROUPS, navigationEndpoints);
 const endpointPatterns = Object.values(CONNECTABLE_GROUPS).flat().map(item => ({
   method: item.method,
   pattern: new RegExp('^' + item.path.split('/').map(part => /^\{.+\}$/.test(part)

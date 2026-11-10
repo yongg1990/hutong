@@ -75,7 +75,7 @@ async function hydrateProfile(item: any): Promise<ExchangeProfile> {
 
 export const exchangeApi = {
   async getProfiles(params?: { profileCode?: string; limit?: number }): Promise<ExchangeProfile[]> {
-    const res: any = await request.get('/exchange-query/profiles', { params: { profileCode: params?.profileCode || undefined, limit: params?.limit || 20 } });
+    const res: any = await request.get('/exchange-query/profiles', { params: { profileCode: params?.profileCode || undefined, limit: params?.limit || 10 } });
     return Array.isArray(res) ? Promise.all(res.map(hydrateProfile)) : [];
   },
 

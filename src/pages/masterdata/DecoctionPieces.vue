@@ -1,10 +1,6 @@
 <template>
   <div class="master-data-page piece-page">
     <PageHeader title="饮片品种管理" subtitle="统一维护饮片品种、炮制规格及医保和药监编码">
-      <template #actions>
-        <el-button :icon="Refresh" :loading="loading" @click="loadPieces">刷新</el-button>
-        <el-button type="primary" :icon="Plus" @click="openCreate">新增饮片品种</el-button>
-      </template>
     </PageHeader>
 
     <FilterBar @search="handleSearch" @reset="handleReset">
@@ -17,10 +13,10 @@
         <el-option label="启用" value="ACTIVE" />
         <el-option label="停用" value="INACTIVE" />
       </el-select>
+      <template #actions><el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button></template>
     </FilterBar>
 
     <section class="panel table-panel">
-      <div class="panel-header"><h2>饮片品种列表 ({{ total }})</h2><span v-if="inactiveCount" class="panel-hint">本页停用 {{ inactiveCount }}</span></div>
       <div class="panel-body">
         <el-table :data="pieces" v-loading="loading" row-key="productId" empty-text="暂无饮片品种记录" style="width: 100%">
           <el-table-column prop="productId" label="品种 ID" width="170">
@@ -148,7 +144,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
-import { Delete, Plus, Refresh } from '@element-plus/icons-vue';
+import { Delete, Plus } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import JsonEditor from '@/components/common/JsonEditor.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
@@ -162,7 +158,7 @@ type PieceCodeForm = PieceProductCodeItem & { validTo: string };
 const pieces = ref<PieceProductDetailResponse[]>([]);
 const loading = ref(false);
 const page = ref(1);
-const pageSize = ref(20);
+const pageSize = ref(10);
 const total = ref(0);
 const filters = reactive({ productName: '', materialName: '', processingMethod: '', medicalInsuranceCode: '', nmpaPieceCode: '', status: '' });
 const inactiveCount = computed(() => pieces.value.filter(item => item.status === 'INACTIVE').length);
@@ -317,12 +313,12 @@ onMounted(loadPieces);
 .section-heading { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 10px; padding-top: 12px; border-top: 1px solid var(--color-border); }
 .section-heading strong { display: block; color: var(--color-ink); font-size: 13px; }
 .section-heading span { color: var(--color-muted); font-size: 11px; }
-.code-row { display: grid; grid-template-columns: 1.1fr 1.1fr 1.1fr 1.2fr 1.2fr auto; gap: 10px; margin-bottom: 10px; padding: 12px 10px 2px; background: #fbfdfc; border: 1px solid var(--color-border); border-radius: 6px; }
+.code-row { display: grid; grid-template-columns: 1.1fr 1.1fr 1.1fr 1.2fr 1.2fr auto; gap: 10px; margin-bottom: 10px; padding: 12px 10px 2px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 6px; }
 .code-row :deep(.el-form-item) { margin-bottom: 12px; }
 .remove-code { align-self: center; margin-top: 5px; }
 .attribute-section { margin-top: 18px; }
 .attribute-title { margin-bottom: 8px; color: var(--color-ink); font-size: 13px; font-weight: 700; }
-.attribute-json { max-height: 280px; margin: 0; padding: 14px; overflow: auto; white-space: pre-wrap; word-break: break-word; background: #f4f9f7; border: 1px solid var(--color-border); border-radius: 6px; color: #294342; font-size: 12px; line-height: 1.65; }
+.attribute-json { max-height: 280px; margin: 0; padding: 14px; overflow: auto; white-space: pre-wrap; word-break: break-word; background: var(--color-surface-subtle); border: 1px solid var(--color-border); border-radius: 6px; color: var(--color-text); font-size: 12px; line-height: 1.65; }
 :deep(.mono-input input), :deep(.json-input textarea) { font-family: "JetBrains Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 @media (max-width: 1100px) { .code-row { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 760px) { .form-grid, .form-grid.three, .code-row { grid-template-columns: 1fr; } }

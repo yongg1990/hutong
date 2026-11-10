@@ -1,26 +1,28 @@
 <template>
   <div>
     <PageHeader title="互通规范配置" subtitle="版本、数据集、字段规则、一致性用例和项目绑定">
-      <template #actions><el-button :icon="Plus" type="primary" @click="openForm()">新建{{ definition.title }}</el-button></template>
     </PageHeader>
     <el-tabs v-model="kind" @tab-change="resetList"><el-tab-pane v-for="(item,key) in configDefinitions" :key="key" :label="item.title" :name="key" /></el-tabs>
-    <div class="toolbar">
+    <div class="toolbar query-surface">
       <el-input v-model="parentId" :placeholder="parentLabel" clearable style="max-width:300px" @keyup.enter="load" />
       <el-button type="primary" :loading="loading" :icon="Search" @click="load">查询</el-button>
+      <el-button :icon="Plus" type="primary" style="margin-left: auto" @click="openForm()">新增</el-button>
     </div>
-    <el-table :data="rows" v-loading="loading" border>
-      <el-table-column prop="id" label="ID" min-width="180" />
-      <el-table-column v-for="field in definition.fields" :key="field.key" :prop="field.key" :label="field.label" min-width="150" show-overflow-tooltip>
-        <template #default="{row}">{{ format(row[field.key]) }}</template>
-      </el-table-column>
-      <el-table-column prop="status" v-if="!definition.fields.some(f=>f.key==='status')" label="状态" width="120" />
-      <el-table-column label="操作" :width="kind==='version'?240:130" fixed="right"><template #default="{row}">
-        <el-button link type="primary" @click="showResult(row)">详情</el-button>
-        <el-button v-if="kind!=='version'" link @click="openForm(row)">编辑</el-button>
-        <el-button v-if="kind==='version'" link :disabled="row.status==='PUBLISHED'||busy" @click="versionAction(row,'test')">测试</el-button>
-        <el-button v-if="kind==='version'" link type="primary" :disabled="row.status!=='TESTED'||busy" @click="versionAction(row,'publish')">发布</el-button>
-      </template></el-table-column>
-    </el-table>
+    <div class="table-surface">
+      <LocalPaginatedTable :data="rows" v-loading="loading" border>
+        <el-table-column prop="id" label="ID" min-width="180" />
+        <el-table-column v-for="field in definition.fields" :key="field.key" :prop="field.key" :label="field.label" min-width="150" show-overflow-tooltip>
+          <template #default="{row}">{{ format(row[field.key]) }}</template>
+        </el-table-column>
+        <el-table-column prop="status" v-if="!definition.fields.some(f=>f.key==='status')" label="状态" width="120" />
+        <el-table-column label="操作" :width="kind==='version'?240:130" fixed="right"><template #default="{row}">
+          <el-button link type="primary" @click="showResult(row)">详情</el-button>
+          <el-button v-if="kind!=='version'" link @click="openForm(row)">编辑</el-button>
+          <el-button v-if="kind==='version'" link :disabled="row.status==='PUBLISHED'||busy" @click="versionAction(row,'test')">测试</el-button>
+          <el-button v-if="kind==='version'" link type="primary" :disabled="row.status!=='TESTED'||busy" @click="versionAction(row,'publish')">发布</el-button>
+        </template></el-table-column>
+      </LocalPaginatedTable>
+    </div>
     <el-dialog v-model="formVisible" :title="`${editingId?'编辑':'新建'}${definition.title}`" width="min(680px, 94vw)" :close-on-click-modal="false" destroy-on-close>
       <el-form label-position="top"><el-form-item v-for="field in definition.fields" :key="field.key" :label="field.label" :required="field.required">
         <el-select v-if="field.options" v-model="form[field.key]" style="width:100%"><el-option v-for="option in field.options" :key="option" :value="option" :label="option" /></el-select>
@@ -35,6 +37,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';

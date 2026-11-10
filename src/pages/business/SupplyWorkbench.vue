@@ -59,18 +59,10 @@
 
     <!-- Main Content Grid -->
     <div class="panel">
-      <div class="panel-header">
-        <div class="header-title">
-          <h2>供销与仓储交割订单列表</h2>
-          <el-tag v-if="currentStage !== 'ALL'" size="small" type="info">
-            环节: {{ currentStageName }}
-          </el-tag>
-        </div>
-        <span class="count-text">筛选共 {{ filteredOrders.length }} / {{ allOrders.length }} 笔订单</span>
-      </div>
 
-      <el-table
+      <LocalPaginatedTable
         :data="filteredOrders"
+        v-loading="loading"
         @row-click="selectOrder"
         highlight-current-row
         empty-text="暂无该环节对应的交割订单"
@@ -97,7 +89,7 @@
         </el-table-column>
         <el-table-column label="国家医保码 *" width="160" class-name="mono">
           <template #default="{ row }">
-            <span style="font-size: 12px; color: #3f4e48;">{{ row.insuranceCode }}</span>
+            <span style="font-size: 12px; color: var(--color-text-secondary);">{{ row.insuranceCode }}</span>
           </template>
         </el-table-column>
         <el-table-column label="下一步协同 / 操作" width="220" fixed="right">
@@ -127,7 +119,7 @@
             </el-button>
           </template>
         </el-table-column>
-      </el-table>
+      </LocalPaginatedTable>
     </div>
 
     <!-- Bottom 3 Dynamic Info Cards -->
@@ -135,7 +127,7 @@
       <div class="info-card">
         <strong>当前选中订单 {{ selectedOrder?.orderNo || 'XS-202608-018' }} 履约链路</strong>
         <p class="sub-text">国家医保码: {{ selectedOrder?.insuranceCode || '8691234567890123' }}</p>
-        <el-progress :percentage="getFulfillmentProgress(selectedOrder?.stage)" :stroke-width="8" color="#176B4D" />
+        <el-progress :percentage="getFulfillmentProgress(selectedOrder?.stage)" :stroke-width="8" color="#2563eb" />
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
           <span class="sub-text">环节: {{ getStageTitle(selectedOrder?.stage || 'WAREHOUSED') }}</span>
           <el-button size="small" type="primary" link @click="router.push('/trust/lineage?batchNo=' + (selectedOrder?.batchNo || 'SQ-260808-01'))">
@@ -166,6 +158,7 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
@@ -329,12 +322,12 @@ const handleReset = () => {
 }
 
 .stage-item:hover {
-  background: #f4f8f6;
+  background: var(--color-surface-subtle);
 }
 
 .stage-item.active {
   box-shadow: inset 0 3px var(--color-brand);
-  background: #ebf4f0;
+  background: var(--color-brand-soft);
 }
 
 .stage-header {
@@ -360,7 +353,7 @@ const handleReset = () => {
   background: rgba(23, 107, 77, 0.12);
   color: var(--color-brand);
   padding: 1px 6px;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .stage-sub {

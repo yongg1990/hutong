@@ -2,26 +2,26 @@
 @import "element-plus/dist/index.css";
 
 :root {
-  --color-brand: #176B4D;
-  --color-brand-soft: #e7f1ec;
-  --color-ink: #18211D;
-  --color-muted: #617068;
-  --color-border: #D9E0DC;
+  --color-brand: #2563eb;
+  --color-brand-soft: #eff5ff;
+  --color-ink: #202632;
+  --color-muted: #667085;
+  --color-border: #e3e6ec;
   --color-surface: #FFFFFF;
-  --color-canvas: #F4F6F5;
+  --color-canvas: #f5f6f8;
   --color-info: #166A8F;
   --color-warn: #A45C00;
   --color-danger: #B42318;
   --color-success: #157347;
-  --color-sidebar: #1D2B25;
+  --color-sidebar: #ffffff;
 
   /* Element Plus primary color override */
-  --el-color-primary: #176B4D;
-  --el-color-primary-light-3: #438f74;
-  --el-color-primary-light-5: #73b39d;
-  --el-color-primary-light-7: #a7d6c5;
-  --el-color-primary-light-9: #e7f1ec;
-  --el-color-primary-dark-2: #12523b;
+  --el-color-primary: #2563eb;
+  --el-color-primary-light-3: #6792f1;
+  --el-color-primary-light-5: #9ab8f7;
+  --el-color-primary-light-7: #c8dafe;
+  --el-color-primary-light-9: #eff5ff;
+  --el-color-primary-dark-2: #1d4ed8;
   --el-border-radius-base: 4px;
 }
 

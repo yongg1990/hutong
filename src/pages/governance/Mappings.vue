@@ -40,9 +40,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(issue, idx) in previewIssues" :key="idx"><td>{{ issue.fieldPath }}</td><td>{{ issue.ruleCode }}</td><td>{{ issue.errorCode }}</td><td>{{ issue.message }}</td></tr>
+              <tr v-for="(issue, idx) in issueRows" :key="idx"><td>{{ issue.fieldPath }}</td><td>{{ issue.ruleCode }}</td><td>{{ issue.errorCode }}</td><td>{{ issue.message }}</td></tr>
             </tbody>
           </table>
+          <div v-if="previewIssues.length > 10" class="pagination-row"><el-pagination v-model:current-page="issuePage" :page-size="10" :total="previewIssues.length" layout="total, prev, pager, next" /></div>
         </div>
       </div>
 
@@ -80,6 +81,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useLocalPagination } from '@/composables/useLocalPagination';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import JsonEditor from '@/components/common/JsonEditor.vue';
@@ -92,6 +94,7 @@ const sampleKeys = ref<string[]>([]);
 const prechecking = ref(false);
 const previewResult = ref<any>(null);
 const previewIssues = ref<MappingIssue[]>([]);
+const { page: issuePage, pageRows: issueRows } = useLocalPagination(previewIssues);
 
 const previewJsonText = computed(() => JSON.stringify(previewResult.value, null, 2));
 
@@ -158,7 +161,7 @@ const runPrecheck = async () => {
   padding: 10px 14px;
   font-weight: 600;
   font-size: 13px;
-  background: #f7f9f8;
+  background: var(--color-surface-subtle);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -190,22 +193,22 @@ const runPrecheck = async () => {
 }
 
 .rule-table th {
-  background: #f0f6f4;
-  color: #244b49;
+  background: var(--color-surface-subtle);
+  color: var(--color-text-secondary);
   font-weight: 700;
   padding: 8px 12px;
   font-size: 12px;
-  border-bottom: 1px solid #e3ece9;
+  border-bottom: 1px solid var(--color-border-subtle);
   text-align: left;
 }
 
 .rule-table td {
   padding: 8px 12px;
   font-size: 12px;
-  border-bottom: 1px solid #e3ece9;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.rule-table tbody tr:hover td { background: #f5faf8; }
+.rule-table tbody tr:hover td { background: #f6f9ff; }
 
 .preview-box {
   padding: 12px;

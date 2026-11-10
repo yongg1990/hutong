@@ -295,13 +295,13 @@ export const masterDataApi = {
     if (params?.targetType) query.set('targetType', params.targetType);
     if (params?.status) query.set('status', params.status);
     query.set('page', String(params?.page || 1));
-    query.set('size', String(params?.size || 20));
+    query.set('size', String(params?.size || 10));
     const response: any = await request.get('/openapi/v1/identifiers/namespaces?' + query.toString());
     return {
       records: Array.isArray(response?.records) ? response.records : [],
       total: Number(response?.total ?? 0),
       page: Number(response?.page ?? params?.page ?? 1),
-      size: Number(response?.size ?? params?.size ?? 20)
+      size: Number(response?.size ?? params?.size ?? 10)
     };
   },
 
@@ -334,13 +334,13 @@ export const masterDataApi = {
     if (params?.ownerPartyId) query.set('ownerPartyId', params.ownerPartyId);
     if (params?.status) query.set('status', params.status);
     query.set('page', String(params?.page || 1));
-    query.set('size', String(params?.size || 20));
+    query.set('size', String(params?.size || 10));
     const response: any = await request.get('/openapi/v1/business-objects?' + query.toString());
     return {
       records: Array.isArray(response?.records) ? response.records : [],
       total: Number(response?.total ?? 0),
       page: Number(response?.page ?? params?.page ?? 1),
-      size: Number(response?.size ?? params?.size ?? 20)
+      size: Number(response?.size ?? params?.size ?? 10)
     };
   },
 
@@ -374,9 +374,9 @@ export const masterDataApi = {
     (['productName', 'materialName', 'processingMethod', 'medicalInsuranceCode', 'nmpaPieceCode', 'status'] as const).forEach(key => {
       if (params?.[key]) query.set(key, params[key] as string);
     });
-    query.set('page', String(params?.page || 1)); query.set('size', String(params?.size || 20));
+    query.set('page', String(params?.page || 1)); query.set('size', String(params?.size || 10));
     const response: any = await request.get('/openapi/v1/decoction-piece-products?' + query.toString());
-    return { records: Array.isArray(response?.records) ? response.records : [], total: Number(response?.total ?? 0), page: Number(response?.page ?? params?.page ?? 1), size: Number(response?.size ?? params?.size ?? 20) };
+    return { records: Array.isArray(response?.records) ? response.records : [], total: Number(response?.total ?? 0), page: Number(response?.page ?? params?.page ?? 1), size: Number(response?.size ?? params?.size ?? 10) };
   },
 
   createPieceProduct(data: PieceProductRequest): Promise<PieceProductResponse> {
@@ -398,9 +398,9 @@ export const masterDataApi = {
   async getCodeSchemePage(params?: { schemeCode?: string; version?: string; schemeName?: string; issuerType?: string; status?: string; page?: number; size?: number }): Promise<CodeSchemePage> {
     const query = new URLSearchParams();
     (['schemeCode', 'version', 'schemeName', 'issuerType', 'status'] as const).forEach(key => { if (params?.[key]) query.set(key, params[key] as string); });
-    query.set('page', String(params?.page || 1)); query.set('size', String(params?.size || 20));
+    query.set('page', String(params?.page || 1)); query.set('size', String(params?.size || 10));
     const response: any = await request.get('/openapi/v1/code-schemes?' + query.toString());
-    return { records: Array.isArray(response?.records) ? response.records : [], total: Number(response?.total ?? 0), page: Number(response?.page ?? params?.page ?? 1), size: Number(response?.size ?? params?.size ?? 20) };
+    return { records: Array.isArray(response?.records) ? response.records : [], total: Number(response?.total ?? 0), page: Number(response?.page ?? params?.page ?? 1), size: Number(response?.size ?? params?.size ?? 10) };
   },
 
   createCodeScheme(data: CodeSchemeCreateRequest): Promise<CodeSchemeResponse> {

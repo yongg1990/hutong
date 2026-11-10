@@ -32,19 +32,20 @@
 
     <!-- Tabular Fallback View -->
     <div v-show="viewMode === 'TABLE'" class="table-fallback">
-      <el-table :data="tableLineageData" border>
+      <LocalPaginatedTable :data="tableLineageData" border>
         <el-table-column prop="depth" label="层级深度" width="90" />
         <el-table-column prop="sourceNode" label="源节点对象" min-width="180" />
         <el-table-column prop="relation" label="演化/交易关系" width="140" />
         <el-table-column prop="targetNode" label="目标节点对象" min-width="180" />
         <el-table-column prop="eventId" label="关联事件 ID" width="210" class-name="mono" />
         <el-table-column prop="time" label="发生时间" width="160" />
-      </el-table>
+      </LocalPaginatedTable>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, shallowRef, onMounted, onUnmounted, watch } from 'vue';
 import * as echarts from 'echarts';
 
@@ -83,7 +84,7 @@ const initChart = () => {
         data: [
           {
             name: '文山三七种植批次\n(CB-WS-2026-018)',
-            itemStyle: { color: '#176B4D' },
+            itemStyle: { color: '#2563eb' },
             children: [
               {
                 name: '蒸三七初加工\n(RAW-SQ-260731)',
@@ -91,7 +92,7 @@ const initChart = () => {
                 children: [
                   {
                     name: '三七饮片加工批次\n(SQ-260731-08)',
-                    itemStyle: { color: '#176B4D' },
+                    itemStyle: { color: '#2563eb' },
                     children: [
                       {
                         name: '昆明中心仓\n(INV-SQ-260731-08)',
@@ -177,7 +178,7 @@ watch([direction, maxDepth, viewMode], () => {
   align-items: center;
   gap: 20px;
   padding: 10px 16px;
-  background: #f7f9f8;
+  background: var(--color-surface-subtle);
   border-bottom: 1px solid var(--color-border);
 }
 

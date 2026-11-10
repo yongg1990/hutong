@@ -1,31 +1,22 @@
 <template>
   <div class="settings-page">
     <PageHeader
-      title="角色与权限体系"
+      title="角色管理"
       subtitle="角色目录与功能权限授权"
     >
-      <template #actions>
-        <el-button @click="loadRoles">刷新角色</el-button>
-        <el-button type="primary" @click="openCreateDialog">
-          + 新增业务角色
-        </el-button>
-      </template>
     </PageHeader>
 
     <!-- Filter Bar -->
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-input v-model="tenantFilter" placeholder="租户 ID（留空查询全部）" style="width: 260px" clearable />
+      <template #actions>
+        <el-button @click="$router.push('/settings/permissions')">管理权限</el-button>
+        <el-button type="primary" @click="openCreateDialog"><el-icon><Plus /></el-icon>新增</el-button>
+      </template>
     </FilterBar>
 
     <!-- Roles Table Panel -->
     <div class="panel">
-      <div class="panel-header">
-        <h2>系统角色权能清单 ({{ total }})</h2>
-        <div class="dictionary-actions">
-          <span class="sub-text">权限字典 {{ permissionCount }} 项</span>
-          <el-button link @click="openPermissionManager">管理权限</el-button>
-        </div>
-      </div>
       <div class="panel-body">
         <el-table :data="roles" v-loading="loading" style="width: 100%" empty-text="暂无匹配的角色定义">
           <el-table-column prop="roleId" label="角色 ID" width="110" />
@@ -131,76 +122,6 @@
       </div>
     </el-drawer>
 
-    <el-dialog v-model="permissionManagerVisible" title="编辑权限" width="min(960px, 96vw)" class="permission-manager-dialog" :close-on-click-modal="false">
-      <el-button type="primary" @click="openPermissionCreate">新增权限</el-button>
-      <el-input v-model="permissionNameFilter" placeholder="搜索权限名称" clearable class="permission-search" />
-      <el-table
-        :key="permissionNameFilter.trim() ? 'search' : 'all'"
-        :data="filteredPermissionTree"
-        :row-key="row => String(row.id)"
-        :tree-props="{ children: 'children' }"
-        :default-expand-all="!!permissionNameFilter.trim()"
-        v-loading="loadingPermissionItems"
-        height="min(520px, calc(80vh - 160px))"
-        style="width: 100%"
-        empty-text="暂无匹配的权限"
-      >
-        <el-table-column prop="label" label="权限名称" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="code" label="权限编码" min-width="180" show-overflow-tooltip />
-        <el-table-column prop="moduleCode" label="模块" width="110" />
-        <el-table-column prop="permissionType" label="类型" width="100" />
-        <el-table-column prop="status" label="状态" width="100" />
-        <el-table-column label="操作" width="130" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="openPermissionEdit(row)">修改</el-button>
-            <el-button link type="danger" @click="confirmDeletePermission(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-dialog>
-
-    <el-dialog v-model="permissionEditVisible" :title="editingPermission ? '修改权限' : '新增权限'" width="560px" append-to-body destroy-on-close :close-on-click-modal="false">
-      <el-form ref="permissionFormRef" :model="permissionForm" :rules="permissionRules" label-width="100px">
-        <el-form-item label="权限编码" prop="permissionCode">
-          <el-input v-model="permissionForm.permissionCode" />
-        </el-form-item>
-        <el-form-item label="权限名称" prop="permissionName">
-          <el-input v-model="permissionForm.permissionName" />
-        </el-form-item>
-        <el-form-item label="模块编码" prop="moduleCode">
-          <el-input v-model="permissionForm.moduleCode" />
-        </el-form-item>
-        <el-form-item label="权限类型" prop="permissionType">
-          <el-select v-model="permissionForm.permissionType" style="width: 100%">
-            <el-option label="目录" value="directory" />
-            <el-option label="菜单" value="menu" />
-            <el-option label="按钮" value="button" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="上级权限">
-          <el-select v-model="permissionForm.parentId" placeholder="根节点" clearable style="width: 100%">
-            <el-option v-for="item in parentOptions" :key="item.id" :label="item.label + ' (' + item.code + ')'" :value="String(item.id)" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="API 方法">
-          <el-input v-model="permissionForm.apiMethod" />
-        </el-form-item>
-        <el-form-item label="API 路径">
-          <el-input v-model="permissionForm.apiPath" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="permissionForm.status" style="width: 100%">
-            <el-option label="启用" value="ACTIVE" />
-            <el-option label="停用" value="INACTIVE" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="permissionEditVisible = false">取消</el-button>
-        <el-button type="primary" :loading="savingPermissionItem" @click="savePermissionItem">保存</el-button>
-      </template>
-    </el-dialog>
-
     <!-- Create / Edit Dialog -->
     <el-dialog
       v-model="dialogVisible"
@@ -256,7 +177,7 @@ import {
 const roles = ref<RoleItem[]>([]);
 const total = ref(0);
 const page = ref(1);
-const pageSize = ref(20);
+const pageSize = ref(10);
 const permissionTree = ref<PermissionNode[]>([]);
 const permissionCount = ref(0);
 const permissionItems = ref<PermissionNode[]>([]);
@@ -631,7 +552,7 @@ const savePermissions = async () => {
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border-subtle);
-  background: #fbfdfc;
+  background: var(--color-surface);
 }
 
 .panel-header h2 {
@@ -665,7 +586,7 @@ const savePermissions = async () => {
 }
 
 .perm-banner {
-  background: #edf6f1;
+  background: var(--color-brand-soft);
   border: 1px solid #cce5d7;
   border-radius: 6px;
   padding: 12px 14px;

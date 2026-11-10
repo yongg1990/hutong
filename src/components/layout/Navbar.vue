@@ -45,7 +45,7 @@
 
       <el-dropdown trigger="click" @command="handleUserCommand">
         <div class="user-badge cursor-pointer" title="点击展开用户会话与注销操作">
-          <el-avatar :size="28" style="background: #14724e; color: #ffffff; font-weight: 600; font-size: 13px;">
+          <el-avatar :size="28" style="background: var(--color-brand); color: #ffffff; font-weight: 600; font-size: 13px;">
             {{ (contextStore.userName || '张').charAt(0) }}
           </el-avatar>
           <div class="user-info">
@@ -61,15 +61,6 @@
               <div class="dh-tenant mono">{{ contextStore.tenantName }}</div>
               <div class="dh-code mono">租户ID: {{ contextStore.tenantId }}</div>
             </div>
-            <el-dropdown-item divided command="workspace">
-              综合控制台
-            </el-dropdown-item>
-            <el-dropdown-item command="users">
-              用户与账号管理
-            </el-dropdown-item>
-            <el-dropdown-item command="roles">
-              我的权限角色清单
-            </el-dropdown-item>
             <el-dropdown-item divided command="relogin">
               切换其他账号登录
             </el-dropdown-item>
@@ -80,11 +71,6 @@
         </template>
       </el-dropdown>
 
-      <el-tooltip content="安全退出当前账号会话" placement="bottom">
-        <button class="logout-icon-btn" @click="confirmLogout" aria-label="退出系统">
-          <el-icon><SwitchButton /></el-icon>
-        </button>
-      </el-tooltip>
     </div>
 
     <!-- Backend Swagger & Network Diagnostic Dialog -->
@@ -173,7 +159,7 @@ import { isStaticMode } from '@/stores/demoStore';
 function changeDataMode() { localStorage.setItem('tcmirp_data_mode', isStaticMode() ? 'backend' : 'static'); window.location.assign(`${import.meta.env.BASE_URL}login`); }
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ArrowDown, Plus, SwitchButton } from '@element-plus/icons-vue';
+import { ArrowDown, Plus } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useContextStore } from '@/stores/contextStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -204,13 +190,7 @@ const handleProjectChange = () => {
 };
 
 const handleUserCommand = (cmd: string) => {
-  if (cmd === 'workspace') {
-    router.push('/workspace');
-  } else if (cmd === 'users') {
-    router.push('/settings/users');
-  } else if (cmd === 'roles') {
-    router.push('/settings/roles');
-  } else if (cmd === 'relogin') {
+  if (cmd === 'relogin') {
     router.push('/login');
   } else if (cmd === 'logout') {
     confirmLogout();
@@ -281,7 +261,7 @@ const confirmLogout = () => {
 .brand-text .title {
   font-size: 14.5px;
   font-weight: 700;
-  letter-spacing: 0.3px;
+  letter-spacing: 0;
   color: #ffffff;
 }
 
@@ -395,14 +375,14 @@ const confirmLogout = () => {
 }
 
 .env-tag {
-  background: rgba(14, 95, 64, 0.4);
+  background: rgba(24, 35, 52, 0.4);
   border: 1px solid #1a8359;
   color: #79f3bf;
   font-size: 10px;
   padding: 2px 7px;
   border-radius: 3px;
   font-weight: 600;
-  letter-spacing: 0.2px;
+  letter-spacing: 0;
 }
 
 .header-actions {
@@ -428,26 +408,6 @@ const confirmLogout = () => {
   cursor: pointer;
 }
 
-.logout-icon-btn {
-  background: transparent;
-  border: 1px solid #1a2f26;
-  color: #9ebbb0;
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.logout-icon-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #ef4444;
-}
-
 .dropdown-user-header {
   padding: 8px 16px 10px;
   border-bottom: 1px solid #f1f5f3;
@@ -456,7 +416,7 @@ const confirmLogout = () => {
 .dh-name {
   font-weight: 700;
   font-size: 14px;
-  color: #14724e;
+  color: var(--color-brand);
 }
 
 .dh-tenant {
@@ -558,18 +518,27 @@ const confirmLogout = () => {
   background: #e2e8f0;
   padding: 1px 5px;
   border-radius: 3px;
-  color: #0f766e;
+  color: var(--color-brand);
   font-family: monospace;
 }
 
-.navbar { height: 64px; padding: 0 24px; background: linear-gradient(115deg, #0b3837 0%, #0d5550 58%, #0b4644 100%); border-bottom: 1px solid rgba(180, 232, 222, 0.18); box-shadow: 0 5px 18px rgba(8, 58, 55, 0.2); }
-.brand { gap: 14px; }
-.brand-logo-wrap, .brand-svg-logo { width: 38px; height: 38px; }
-.brand-text .title { font-size: 15px; letter-spacing: 0.4px; }
-.project-selector { border-radius: 7px; padding: 7px 12px; }
-.header-actions { gap: 12px; }
-.user-badge { border-radius: 8px; padding: 5px 9px; }
-.logout-icon-btn { width: 34px; height: 34px; border-radius: 7px; border-color: rgba(196, 235, 227, 0.2); }
+.navbar { height: 68px; flex-shrink: 0; gap: 20px; padding: 0 24px; background: var(--color-surface); color: var(--color-text); border-bottom: 1px solid var(--color-border); box-shadow: none; }
+.brand { gap: 12px; min-width: 0; }
+.brand-logo-wrap { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 8px; background: var(--color-brand-soft); }
+.brand-svg-logo { width: 30px; height: 30px; }
+.brand-text { min-width: 0; }
+.brand-text .title { font-size: 15px; letter-spacing: 0; color: var(--color-ink); }
+.brand-text .sub { color: var(--color-muted); font-size: 10px; line-height: 1.4; margin-top: 4px; }
+.project-selector { border-radius: 6px; padding: 7px 10px; background: var(--color-surface-subtle); border-color: var(--color-border); color: var(--color-text); }
+.project-selector:hover { background: var(--color-brand-soft); border-color: var(--color-brand-border); }
+.project-selector .label, .role, .arrow-icon { color: var(--color-muted); }
+.project-selector .name, .username { color: var(--color-text); }
+.header-actions { gap: 10px; flex-shrink: 0; }
+.user-badge { border-radius: 6px; padding: 5px 9px; }
+.user-badge:hover { background: var(--color-surface-subtle); }
+.brand-svg-logo :deep(path[stroke]) { stroke: #dbeafe; }
+.brand-svg-logo :deep(circle[fill]) { fill: #93b8fc; }
+@media (max-width: 1280px) { .brand-text .sub { display: none; } .brand-text .title { max-width: 330px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } .header-actions { gap: 6px; } }
 @media (max-width: 1100px) { .brand-text .sub { display: none; } .header-center { margin-left: auto; } .user-info { display: none; } }
 @media (max-width: 760px) { .navbar { padding: 0 14px; } .brand-text .title { max-width: 260px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } .header-center { display: none; } }
 </style>

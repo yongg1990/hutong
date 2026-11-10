@@ -2,13 +2,19 @@
   <div class="app-layout">
     <Navbar />
     <div class="app-body">
-      <Sidebar />
-      <main class="app-main">
+      <Sidebar :collapsed="sidebarCollapsed" />
+      <div class="app-content">
+      <header class="breadcrumb-bar">
+        <el-tooltip :content="sidebarCollapsed ? '展开菜单' : '收起菜单'" placement="bottom">
+          <el-button class="sidebar-toggle" text :icon="sidebarCollapsed ? Expand : Fold" :aria-label="sidebarCollapsed ? '展开菜单' : '收起菜单'" :aria-expanded="!sidebarCollapsed" aria-controls="main-sidebar" @click="sidebarCollapsed = !sidebarCollapsed" />
+        </el-tooltip>
         <el-select class="mobile-navigation" :model-value="$route.path" placeholder="页面导航" @change="$router.push($event)"><el-option v-for="item in mobilePages" :key="item.path" :label="item.title" :value="item.path" /></el-select>
-        <div class="query-progress" :class="{ active: queryActivity.visible }" role="status" :aria-label="queryActivity.pending ? '正在查询数据' : '查询已完成'" :aria-hidden="!queryActivity.visible">
-          <span class="query-progress-bar"></span>
-          <span class="query-progress-label"><el-icon class="is-loading"><Loading /></el-icon> 正在查询数据</span>
-        </div>
+        <el-breadcrumb class="page-breadcrumb" separator="/" aria-label="面包屑导航">
+          <el-breadcrumb-item :to="route.path === '/workspace' ? undefined : { path: '/workspace' }">工作台</el-breadcrumb-item>
+          <el-breadcrumb-item v-for="item in breadcrumbs" :key="item.title" :to="item.path ? { path: item.path } : undefined">{{ item.title }}</el-breadcrumb-item>
+        </el-breadcrumb>
+      </header>
+      <main class="app-main">
         <router-view v-slot="{ Component }">
           <transition name="slide-fade" mode="out-in">
             <div :key="$route.fullPath" class="page-wrapper">
@@ -17,27 +23,60 @@
           </transition>
         </router-view>
       </main>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Loading } from '@element-plus/icons-vue';
-import { queryActivity } from '@/api/client';
+import { computed, ref } from 'vue';
+import { Expand, Fold } from '@element-plus/icons-vue';
+import { useRoute } from 'vue-router';
 import Navbar from './Navbar.vue';
 import Sidebar from './Sidebar.vue';
-const mobilePages=[{path:'/workspace',title:'工作台'},{path:'/business/field',title:'田间种植'},{path:'/business/process-quality',title:'加工与质量'},{path:'/business/coding',title:'饮片赋码'},{path:'/business/supply',title:'供销交割'},{path:'/business/decoction',title:'处方代煎'},{path:'/trust/events',title:'事件查询'},{path:'/trust/lineage',title:'血缘分析图谱'},{path:'/trust/evidence',title:'证据文件'},{path:'/trust/proofs',title:'存证'},{path:'/exchange/projections',title:'互通投影'},{path:'/governance/cases',title:'治理案卷'},{path:'/operations/subscriptions-jobs',title:'订阅与任务'},{path:'/operations/audit-alerts',title:'审计与告警'}];
+import { menuGroups, mobilePages } from '@/config/navigation';
+
+const route = useRoute();
+const sidebarCollapsed = ref(false);
+const breadcrumbs = computed(() => {
+  if (route.path === '/workspace') return [];
+  const match = menuGroups.flatMap(group => group.items.map(item => ({ group, item })))
+    .filter(({ item }) => route.path === item.path || route.path.startsWith(`${item.path}/`))
+    .sort((a, b) => b.item.path.length - a.item.path.length)[0];
+  if (match) {
+    const items: { title: string; path?: string }[] = [{ title: match.group.title }, { title: match.item.title }];
+    if (route.name === 'TrustEventDetail') {
+      items[1].path = match.item.path;
+      items.push({ title: '事件详情' });
+    }
+    return items;
+  }
+  const extraPages: Record<string, { group?: string; title: string }> = {
+    '/governance/standards': { group: '接入与治理', title: '数据元与值域标准' },
+    '/governance/events': { group: 'APP-04 事件配置与事实引擎', title: '事件与 Schema 配置' },
+    '/page-load-error': { title: '页面加载失败' }
+  };
+  const page = extraPages[route.path];
+  return page ? [...(page.group ? [{ title: page.group }] : []), { title: page.title }] : [];
+});
 </script>
 
 <style scoped>
 .mobile-navigation { display:none; }
+.app-content { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.breadcrumb-bar { display: flex; align-items: center; gap: 12px; flex-shrink: 0; padding: 10px 26px; background: var(--color-surface); border-bottom: 1px solid var(--color-border); }
+.sidebar-toggle { flex: 0 0 32px; width: 32px; height: 32px; min-height: 32px; padding: 0; font-size: 19px; color: var(--color-text-secondary); }
+.page-breadcrumb { flex: 1; min-width: 0; }
+.page-breadcrumb { margin: 0; line-height: 22px; }
+.page-breadcrumb :deep(.el-breadcrumb__item) { float: none; display: inline; }
+.page-breadcrumb :deep(.el-breadcrumb__inner) { overflow-wrap: anywhere; }
 .app-layout {
   display: flex;
   flex-direction: column;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  background: linear-gradient(135deg, #f3f7f6 0%, #f8fbfa 48%, #eef5f3 100%);
+  background: var(--color-bg);
 }
 
 .app-body {
@@ -51,66 +90,18 @@ const mobilePages=[{path:'/workspace',title:'工作台'},{path:'/business/field'
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  min-height: 0;
   min-width: 0;
   max-width: 100%;
-  padding: 22px 26px 30px;
+  padding: 26px 30px 36px;
   background-color: var(--color-bg);
   position: relative;
   box-sizing: border-box;
 }
 
-.query-progress {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  height: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.16s ease;
-}
-
-.query-progress.active { opacity: 1; }
-.query-progress-bar {
-  position: absolute;
-  top: -22px;
-  left: -26px;
-  width: calc(100% + 52px);
-  height: 3px;
-  overflow: hidden;
-  background: #d6e9df;
-}
-.query-progress-bar::after {
-  content: '';
-  display: block;
-  width: 35%;
-  height: 100%;
-  background: var(--color-brand);
-  animation: query-sweep 1.15s ease-in-out infinite;
-}
-.query-progress-label {
-  position: absolute;
-  top: 0;
-  right: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 10px;
-  border: 1px solid var(--color-brand-border);
-  border-radius: 4px;
-  background: #fff;
-  box-shadow: var(--shadow-sm);
-  color: var(--color-brand-dark);
-  font-size: 12px;
-  font-weight: 650;
-}
-@keyframes query-sweep {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(300%); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .query-progress-bar::after { animation: none; width: 100%; }
-}
 @media (max-width: 800px) {
+  .breadcrumb-bar { display: block; padding: 12px 14px; }
+  .sidebar-toggle { display: none; }
   .mobile-navigation { display:block; width:100%;margin-bottom:12px; }
   :deep(.sidebar) { display:none; }
   .app-main { padding:14px; }
@@ -125,7 +116,6 @@ const mobilePages=[{path:'/workspace',title:'工作台'},{path:'/business/field'
   :deep(.indicator-grid-wrapper), :deep(.prescription-grid-wrapper) { overflow-x:auto; }
   :deep(.indicator-table), :deep(.item-table) { min-width:650px; }
   :deep(.stages-bar) { grid-template-columns:repeat(2,minmax(0,1fr)); }
-  .query-progress-bar { top: -14px; left: -14px; width: calc(100% + 28px); }
 }
 
 .page-wrapper {

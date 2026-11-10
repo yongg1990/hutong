@@ -3,7 +3,7 @@
     :remote-method="search" :loading="loading" style="width: 100%" @update:model-value="select">
     <el-option v-for="item in options" :key="String(item[valueKey])" :value="String(item[valueKey])" :label="label(item)" />
     <template #footer>
-      <el-pagination small :current-page="page" :page-size="20" :total="total" layout="prev, pager, next" :pager-count="5" @current-change="load" />
+      <el-pagination small :current-page="page" :page-size="10" :total="total" layout="prev, pager, next" :pager-count="5" @current-change="load" />
     </template>
     <template #empty><div class="option-empty">{{ loading ? '加载中' : '暂无数据' }}<el-button v-if="loadFailed" link @click="load(page)">重试</el-button></div></template>
   </el-select>

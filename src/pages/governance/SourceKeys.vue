@@ -2,30 +2,33 @@
   <div>
     <PageHeader title="来源系统密钥管理" />
     <el-form label-position="top" class="scope-form" :disabled="busy">
-      <el-form-item label="目标租户" required><el-select v-model="tenantId" clearable filterable placeholder="请选择目标租户" @change="changeTenant"><el-option v-for="tenant in tenants" :key="tenant.id" :value="String(tenant.id)" :label="tenant.tenantName" /></el-select></el-form-item>
-      <el-form-item label="来源系统" required><el-select v-model="sourceSystemId" clearable filterable :disabled="!tenantId || sourcesLoading" :loading="sourcesLoading" placeholder="请选择来源系统"><el-option v-for="source in sources" :key="source.sourceSystemId" :value="source.sourceSystemId" :label="source.sourceSystemName" /></el-select></el-form-item>
-      <el-form-item label="状态"><el-select v-model="status"><el-option :value="0" label="启用" /><el-option :value="1" label="停用" /></el-select></el-form-item>
+      <el-form-item><el-select v-model="tenantId" clearable filterable aria-label="目标租户" placeholder="请选择目标租户" @change="changeTenant"><el-option v-for="tenant in tenants" :key="tenant.id" :value="String(tenant.id)" :label="tenant.tenantName" /></el-select></el-form-item>
+      <el-form-item><el-select v-model="sourceSystemId" clearable filterable :disabled="!tenantId || sourcesLoading" :loading="sourcesLoading" aria-label="来源系统" placeholder="请选择来源系统" @change="clearResults"><el-option v-for="source in sources" :key="source.sourceSystemId" :value="source.sourceSystemId" :label="source.sourceSystemName" /></el-select></el-form-item>
+      <el-form-item><el-select v-model="status" aria-label="状态" placeholder="状态"><el-option :value="0" label="启用" /><el-option :value="1" label="停用" /></el-select></el-form-item>
       <div class="actions">
         <el-button type="primary" :icon="Search" :loading="loading" @click="load()">查询</el-button>
         <el-button :icon="RefreshRight" @click="reset">重置</el-button>
+        <el-button :icon="Plus" :disabled="!tenantId || !sourceSystemId || busy" @click="createSelected">生成密钥</el-button>
       </div>
     </el-form>
-    <el-table :data="rows" empty-text="暂无来源系统密钥数据" v-loading="loading">
-      <el-table-column prop="id" label="密钥 ID" min-width="200"><template #default="{ row }">{{ row.id || '未生成密钥' }}</template></el-table-column>
-      <el-table-column prop="tenantId" label="租户 ID" min-width="190" />
-      <el-table-column prop="sourceSystemId" label="来源系统 ID" min-width="190" />
-      <el-table-column prop="sourceSystemName" label="来源系统名称" min-width="160" />
-      <el-table-column prop="keyAlgorithm" label="密钥算法" width="100"><template #default="{ row }">{{ row.keyAlgorithm || '-' }}</template></el-table-column>
-      <el-table-column prop="dataAlgorithm" label="数据算法" width="100"><template #default="{ row }">{{ row.dataAlgorithm || '-' }}</template></el-table-column>
-      <el-table-column label="状态" width="90"><template #default="{ row }"><StatusTag v-if="row.status" :code="row.status" /><span v-else>-</span></template></el-table-column>
-      <el-table-column prop="createdAt" label="创建时间" width="180" />
-      <el-table-column prop="updatedAt" label="更新时间" width="180" />
-      <el-table-column label="操作" width="320" fixed="right"><template #default="{ row }">
-        <el-button link type="primary" :icon="Plus" :disabled="busy" @click="openCreate(row)">登记公钥并生成密钥</el-button>
-        <el-button v-if="row.id" link :disabled="busy" @click="detail = row">查看公钥</el-button>
-        <el-button v-if="row.id && row.tenantId === sessionTenantId" link :disabled="busy" @click="changeStatus(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button>
-      </template></el-table-column>
-    </el-table>
+    <div class="table-surface">
+      <LocalPaginatedTable :data="rows" empty-text="暂无来源系统密钥数据" v-loading="loading">
+        <el-table-column prop="id" label="密钥 ID" min-width="200"><template #default="{ row }">{{ row.id || '未生成密钥' }}</template></el-table-column>
+        <el-table-column prop="tenantId" label="租户 ID" min-width="190" />
+        <el-table-column prop="sourceSystemId" label="来源系统 ID" min-width="190" />
+        <el-table-column prop="sourceSystemName" label="来源系统名称" min-width="160" />
+        <el-table-column prop="keyAlgorithm" label="密钥算法" width="100"><template #default="{ row }">{{ row.keyAlgorithm || '-' }}</template></el-table-column>
+        <el-table-column prop="dataAlgorithm" label="数据算法" width="100"><template #default="{ row }">{{ row.dataAlgorithm || '-' }}</template></el-table-column>
+        <el-table-column label="状态" width="90"><template #default="{ row }"><StatusTag v-if="row.status" :code="row.status" /><span v-else>-</span></template></el-table-column>
+        <el-table-column prop="createdAt" label="创建时间" width="180" />
+        <el-table-column prop="updatedAt" label="更新时间" width="180" />
+        <el-table-column label="操作" width="320" fixed="right"><template #default="{ row }">
+          <el-button link type="primary" :icon="Plus" :disabled="busy" @click="openCreate(row)">登记公钥并生成密钥</el-button>
+          <el-button v-if="row.id" link :disabled="busy" @click="detail = row">查看公钥</el-button>
+          <el-button v-if="row.id" link :disabled="busy" @click="changeStatus(row)">{{ row.status === 'ACTIVE' ? '停用' : '启用' }}</el-button>
+        </template></el-table-column>
+      </LocalPaginatedTable>
+    </div>
     <el-dialog v-model="createVisible" title="登记对接方公钥" width="min(640px, 94vw)" :close-on-click-modal="false" :show-close="!saving">
       <el-form label-position="top" :disabled="saving">
         <el-form-item label="目标租户"><el-input :model-value="createTarget?.tenantName || createTarget?.tenantId" disabled /></el-form-item>
@@ -47,6 +50,7 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { computed, ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -68,6 +72,7 @@ type SourceKeyRow = Partial<SourceSystemKey> & { tenantId: string; sourceSystemI
 const sources = ref<SourceSystemManagement[]>([]);
 const sourcesLoading = ref(false);
 const status = ref<0 | 1>(0);
+const statusFilter = () => status.value === 0 ? 'ACTIVE' : 'INACTIVE';
 const createTarget = ref<SourceKeyRow | null>(null);
 const rows = computed<SourceKeyRow[]>(() => keys.value.map(key => ({
   ...key,
@@ -87,6 +92,7 @@ async function loadSources() {
   finally { sourcesLoading.value = false; }
 }
 async function changeTenant() {
+  clearResults();
   sourceSystemId.value = '';
   await loadSources();
 }
@@ -119,12 +125,20 @@ async function load() {
   catch (cause) { ElMessage.error(apiErrorMessage(cause, '查询密钥失败')); }
   finally { loading.value = false; }
 }
+function createSelected() {
+  const source = sources.value.find(item => item.sourceSystemId === sourceSystemId.value);
+  if (!source || !tenantId.value) return ElMessage.warning('请选择租户和来源系统');
+  openCreate({ tenantId: tenantId.value, sourceSystemId: source.sourceSystemId, sourceSystemName: source.sourceSystemName, tenantName: tenants.value.find(item => String(item.id) === tenantId.value)?.tenantName || tenantId.value });
+}
 function openCreate(row: SourceKeyRow) {
   if (busy.value) return;
+  detail.value = null;
+  if (!row.sourceSystemId || !row.tenantId) return;
   createTarget.value = { ...row };
   form.value = { keyAlgorithm: 'RSA', dataAlgorithm: 'AES', clientPublicKey: '' }; createVisible.value = true;
 }
 async function create() {
+  if (!createTarget.value?.sourceSystemId) return;
   if (saving.value || !createTarget.value) return;
   const target = createTarget.value;
   const clientPublicKey = form.value.clientPublicKey.trim();
@@ -132,9 +146,7 @@ async function create() {
   saving.value = true;
   try {
     const data = { ...form.value, clientPublicKey };
-    const result = target.tenantId !== sessionTenantId
-      ? await sourceKeysApi.createForTenant(target.tenantId, target.sourceSystemId, data)
-      : await sourceKeysApi.create(target.sourceSystemId, data);
+    const result = await sourceKeysApi.createForTenant(target.tenantId, target.sourceSystemId, data);
     createVisible.value = false; form.value.clientPublicKey = '';
     keys.value = [result.key, ...keys.value.filter(key => key.id !== result.key.id)]; detail.value = result.key;
     ElMessage.success('密钥生成成功');
@@ -142,22 +154,25 @@ async function create() {
   finally { saving.value = false; }
 }
 async function changeStatus(key: SourceSystemKey) {
+  detail.value = null;
+  if (!key.id) return;
   if (busy.value) return;
   const status = key.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
   updating.value = true;
   try {
     await ElMessageBox.confirm(`确认${status === 'ACTIVE' ? '启用' : '停用'}密钥 ${key.id}？`, '密钥状态', { type: 'warning' });
-    const result = await sourceKeysApi.changeStatus(key.sourceSystemId, key.id, status);
-    keys.value = keys.value.map(item => item.id === result.id ? result : item);
+    const result = await sourceKeysApi.changeStatus(key.sourceSystemId, key.id, status, key.tenantId);
+    keys.value = keys.value.map(item => item.id === result.id ? result : item).filter(item => item.status === (statusFilter()));
     ElMessage.success('密钥状态已更新');
   } catch (cause) { if (cause !== 'cancel' && cause !== 'close') ElMessage.error(apiErrorMessage(cause, '更新密钥状态失败')); }
   finally { updating.value = false; }
 }
 </script>
 
+
 <style scoped>
 .scope-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 16px; align-items: end; margin-bottom: 20px; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .actions .el-button + .el-button { margin-left: 0; }
 h3 { margin: 18px 0 8px; font-size: 14px; }
 @media (max-width: 720px) { .scope-form { grid-template-columns: minmax(0, 1fr); gap: 0; } }

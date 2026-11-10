@@ -4,20 +4,10 @@
       title="互通投影"
       subtitle="数据集投影与外发规范包管理，实时追踪对外数据推送结果与验证状态"
     >
-      <template #actions>
-        <el-button :loading="processing" @click="processProjection">执行补偿处理</el-button>
-        <el-button type="primary" @click="createDialogVisible = true">
-          <el-icon class="mr-1"><RefreshRight /></el-icon>
-          新建投影任务
-        </el-button>
-      </template>
     </PageHeader>
 
-    <div class="panel flex-1 flex flex-col bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
-      <div class="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-        <div class="flex items-center gap-2 text-sm font-medium text-gray-700">
-          当前查询结果 ({{ projections.length }})
-        </div>
+    <div class="projection-sections flex-1 flex flex-col">
+      <div class="query-surface p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
         <div class="projection-query">
           <el-input
             v-model="searchQuery" 
@@ -30,11 +20,13 @@
           <el-checkbox v-model="includeOutput">输出</el-checkbox>
           <el-checkbox v-model="includeValidationDetails">校验详情</el-checkbox>
           <el-button type="primary" :loading="loading" @click="loadProjections">查询</el-button>
+          <el-button :loading="processing" @click="processProjection">执行补偿处理</el-button>
+          <el-button type="primary" @click="createDialogVisible = true"><el-icon><Plus /></el-icon>新增</el-button>
         </div>
       </div>
       
-      <div class="p-4 flex-1 overflow-auto">
-        <el-table :data="filteredProjections" style="width: 100%" height="100%" border stripe>
+      <div class="table-surface p-4 flex-1 overflow-auto">
+        <LocalPaginatedTable :data="filteredProjections" v-loading="loading" style="width: 100%" height="100%" border stripe>
           <el-table-column type="expand">
             <template #default="props">
               <div class="projection-detail">
@@ -95,7 +87,7 @@
               </el-button>
             </template>
           </el-table-column>
-        </el-table>
+        </LocalPaginatedTable>
       </div>
     </div>
 
@@ -125,6 +117,7 @@
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { demo, isStaticMode } from '@/stores/demoStore';
@@ -254,7 +247,7 @@ async function processProjection(){if(!/^\d+$/.test(searchQuery.value)||!/^\d+$/
   max-height: 260px;
   overflow: auto;
   padding: 10px;
-  background: #f6f8f7;
+  background: var(--color-surface-subtle);
   white-space: pre-wrap;
   word-break: break-all;
 }

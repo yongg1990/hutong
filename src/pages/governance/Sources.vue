@@ -4,9 +4,6 @@
       title="来源系统"
       subtitle="来源系统注册与配置"
     >
-      <template #actions>
-        <el-button type="primary" @click="openRegister">注册新来源系统</el-button>
-      </template>
     </PageHeader>
 
     <FilterBar @search="searchSources" @reset="resetSources">
@@ -16,10 +13,11 @@
       <el-input v-model="filters.ownerPartyId" placeholder="所属主体 ID" clearable style="width: 160px" />
       <el-select v-model="filters.endpointType" placeholder="接入方式" clearable style="width: 130px"><el-option v-for="item in ['API', 'FILE', 'MESSAGE', 'DATABASE']" :key="item" :label="item" :value="item" /></el-select>
       <el-select v-model="filters.status" placeholder="状态" clearable style="width: 120px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
+      <template #actions><el-button type="primary" @click="openRegister"><el-icon><Plus /></el-icon>新增</el-button></template>
     </FilterBar>
 
     <div class="panel">
-      <el-table :data="sources" empty-text="暂无来源系统">
+      <el-table :data="sources" v-loading="loading" empty-text="暂无来源系统">
         <el-table-column prop="id" label="来源系统 ID" width="130" class-name="mono" />
         <el-table-column prop="code" label="系统标识" width="140" class-name="mono" />
         <el-table-column prop="name" label="系统名称" min-width="180" />
@@ -29,14 +27,14 @@
         <el-table-column prop="purposeCodes" label="默认用途代码" min-width="160" class-name="mono" />
         <el-table-column prop="version" label="配置版本" width="110" class-name="mono" />
         <el-table-column prop="registeredAt" label="注册时间" width="170" />
-        <el-table-column label="操作" width="150" fixed="right"><template #default="{ row }"><el-button link @click="openEdit(row.id)">编辑</el-button><el-button link @click="$router.push({ path: '/governance/source-keys', query: { sourceSystemId: row.id } })">密钥管理</el-button></template></el-table-column>
+        <el-table-column label="操作" width="210" fixed="right"><template #default="{ row }"><el-button link @click="viewSource(row.id)">详情</el-button><el-button link @click="openEdit(row.id)">编辑</el-button><el-button link @click="$router.push({ path: '/governance/source-keys', query: { sourceSystemId: row.id } })">密钥管理</el-button></template></el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }"><StatusTag :code="row.status" /></template>
         </el-table-column>
       </el-table>
     </div>
 
-    <div class="pagination-row"><el-pagination v-model:current-page="page" :page-size="20" :total="total" layout="total, prev, pager, next" @current-change="loadSources" /></div>
+    <div class="pagination-row"><el-pagination v-model:current-page="page" :page-size="10" :total="total" layout="total, prev, pager, next" @current-change="loadSources" /></div>
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑来源系统' : '注册新接入来源系统'" width="520px" :close-on-click-modal="false">
       <el-form :model="regForm" label-position="top">
         <el-form-item label="系统标识 (Source Code)" required>
@@ -64,6 +62,7 @@
         <el-button type="primary" :loading="saving" @click="confirmRegister">保存</el-button>
       </template>
     </el-dialog>
+    <el-drawer v-model="detailVisible" title="来源系统详情" size="min(760px,94vw)"><el-descriptions v-if="sourceDetail" :column="1" border><el-descriptions-item v-for="(value, key) in sourceDetail" :key="key" :label="String(key)"><pre style="white-space:pre-wrap;overflow-wrap:anywhere;margin:0">{{ typeof value === 'object' ? JSON.stringify(value, null, 2) : value }}</pre></el-descriptions-item></el-descriptions></el-drawer>
 
   </div>
 </template>
@@ -78,6 +77,8 @@ import { governanceApi, type SourceSystemRequest, type SourceSystemManagement } 
 import { apiErrorMessage } from '@/api/client';
 
 const dialogVisible = ref(false);
+const detailVisible = ref(false), sourceDetail = ref<SourceSystemManagement | null>(null);
+async function viewSource(id: string) { try { sourceDetail.value = await governanceApi.getSourceSystem(id); detailVisible.value = true; } catch (error) { ElMessage.error(apiErrorMessage(error, '查询来源系统详情失败')); } }
 const saving = ref(false);
 const emptyForm = () => ({
   systemCode: '',
@@ -87,6 +88,8 @@ const emptyForm = () => ({
 });
 const regForm = ref(emptyForm());
 const sources = ref<any[]>([]);
+const loading = ref(false);
+let sourceRequests = 0;
 const page = ref(1), total = ref(0);
 const emptyFilters = () => ({ sourceSystemCode: '', sourceSystemName: '', sourceSystemType: '', ownerPartyId: '', endpointType: '', status: '' });
 const filters = ref(emptyFilters());
@@ -96,12 +99,15 @@ const resetSources = () => { filters.value = emptyFilters(); appliedFilters.valu
 const editingId = ref(''), lockVersion = ref(0);
 const toRow = (item: SourceSystemManagement) => ({ id: item.sourceSystemId, code: item.sourceSystemCode, name: item.sourceSystemName, systemType: item.sourceSystemType, endpointType: item.endpointType, ownerPartyId: item.ownerPartyId, purposeCodes: (item.defaultPurposeCodes || []).join(', '), version: item.version, registeredAt: item.createdAt, status: item.status });
 async function loadSources() {
+  ++sourceRequests;
+  loading.value = true;
   try {
     const params = Object.fromEntries(Object.entries(appliedFilters.value).filter(([, value]) => value.trim()).map(([key, value]) => [key, value.trim()]));
-    const result = await governanceApi.listSourceSystems({ ...params, page: page.value, size: 20 });
+    const result = await governanceApi.listSourceSystems({ ...params, page: page.value, size: 10 });
     sources.value = (result.records || []).map(toRow); total.value = Number(result.total || 0);
   }
   catch (error) { ElMessage.error(apiErrorMessage(error, '查询来源系统失败')); }
+  finally { loading.value = --sourceRequests > 0; }
 }
 onMounted(loadSources);
 async function openEdit(id: string) {

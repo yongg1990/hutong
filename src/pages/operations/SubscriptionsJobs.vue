@@ -5,14 +5,16 @@
       subtitle="定时重试、补偿作业、后台批处理与死信队列 DLQ 监控"
     />
     <el-alert v-if="isStaticMode()" type="info" :closable="false" title="静态订阅与补偿任务" />
-    <el-table v-if="isStaticMode()" :data="demo.deliveries"><el-table-column prop="messageId" label="消息 ID" /><el-table-column prop="status" label="投递状态" /><el-table-column label="操作"><template #default="{row}"><el-button link @click="messageId=row.messageId;queryDelivery()">查看 / 重放</el-button></template></el-table-column></el-table>
+    <div class="table-surface" v-if="isStaticMode()">
+      <LocalPaginatedTable v-if="isStaticMode()" :data="demo.deliveries"><el-table-column prop="messageId" label="消息 ID" /><el-table-column prop="status" label="投递状态" /><el-table-column label="操作"><template #default="{row}"><el-button link @click="messageId=row.messageId;queryDelivery()">查看 / 重放</el-button></template></el-table-column></LocalPaginatedTable>
+    </div>
     <div class="panel" style="padding:16px; margin:12px 0"><div class="toolbar"><el-input v-model="messageId" placeholder="回调消息 ID" style="width:240px" /><el-switch v-model="includeAttempts" active-text="包含尝试" /><el-button type="primary" :loading="loadingDelivery" @click="queryDelivery">查询回调</el-button><el-button type="primary" @click="createVisible=true">创建订阅</el-button></div><el-descriptions v-if="delivery" :column="1" border><el-descriptions-item v-for="(value,key) in delivery" :key="key" :label="String(key)"><pre>{{ format(value) }}</pre></el-descriptions-item></el-descriptions><div v-if="delivery" class="toolbar"><el-button @click="replayVisible=true">人工重放</el-button></div></div>
     <el-dialog v-model="createVisible" title="创建订阅" width="600px"><el-form label-position="top"><el-form-item label="订阅代码" required><el-input v-model="subscriptionForm.subscriptionCode" /></el-form-item><el-form-item label="版本" required><el-input v-model="subscriptionForm.version" /></el-form-item><el-form-item label="HTTPS 回调地址" required><el-input v-model="subscriptionForm.callbackUrl" /></el-form-item><el-form-item label="事件过滤 JSON" required><JsonEditor v-model="filterText" :rows="6" label="事件过滤 JSON" /></el-form-item><el-form-item label="重试退避秒数（逗号分隔）" required><el-input v-model="backoffText" /></el-form-item><el-form-item label="要求签名"><el-switch v-model="subscriptionForm.signatureRequired" /></el-form-item><el-form-item v-if="subscriptionForm.signatureRequired" label="签名算法"><el-input v-model="subscriptionForm.signatureAlgorithm" /></el-form-item><el-form-item label="状态"><el-select v-model="subscriptionForm.status"><el-option v-for="value in ['DRAFT','ACTIVE','SUSPENDED','RETIRED']" :key="value" :label="value" :value="value" /></el-select></el-form-item></el-form><template #footer><el-button @click="createVisible=false">取消</el-button><el-button type="primary" :loading="saving" @click="createSubscription">创建</el-button></template></el-dialog>
     <el-dialog v-model="replayVisible" title="人工重放" width="460px"><el-form label-position="top"><el-form-item label="原因" required><el-input v-model="reason" /></el-form-item><el-form-item label="锁版本" required><el-input-number v-model="lockVersion" :min="0" /></el-form-item></el-form><template #footer><el-button @click="replayVisible=false">取消</el-button><el-button type="primary" :loading="saving" @click="replay">提交</el-button></template></el-dialog>
     <el-drawer v-model="resultVisible" title="订阅创建结果" size="500px"><el-descriptions v-if="createdSubscription" :column="1" border><el-descriptions-item v-for="(value,key) in createdSubscription" :key="key" :label="String(key)">{{ format(value) }}</el-descriptions-item></el-descriptions></el-drawer>
 
     <div class="panel">
-      <el-table :data="jobs">
+      <LocalPaginatedTable :data="jobs" v-loading="loading">
         <el-table-column prop="jobId" label="作业 ID *" width="160" class-name="mono" />
         <el-table-column prop="name" label="作业任务名称 *" min-width="200" />
         <el-table-column prop="triggerType" label="触发机制 *" width="130" />
@@ -26,12 +28,13 @@
             <el-button size="small" link :disabled="!isStaticMode()" @click="trigger(row.jobId)">执行补偿</el-button>
           </template>
         </el-table-column>
-      </el-table>
+      </LocalPaginatedTable>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, reactive, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
