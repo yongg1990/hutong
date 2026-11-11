@@ -135,8 +135,8 @@
         <el-form-item label="场景代码" required><el-input v-model="profileForm.scenarioCode" /></el-form-item>
         <el-form-item label="状态" required>
           <el-select v-model="profileForm.status" style="width: 100%">
-            <el-option label="启用 ACTIVE" value="ACTIVE" />
-            <el-option label="停用 INACTIVE" value="INACTIVE" />
+            <el-option label="启用" value="ACTIVE" />
+            <el-option label="停用" value="INACTIVE" />
           </el-select>
         </el-form-item>
       </el-form>

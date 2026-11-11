@@ -32,10 +32,8 @@ export interface IntegrationSchema {
   fields: EventSchemaField[]; referenceRules: EventSchemaReferenceRule[];
 }
 export interface IntegrationExample {
-  endpoint: string; method: string; plaintextRequest: Record<string, unknown>;
-  sdkConfig: Record<string, unknown>; fields: EventSchemaField[];
-  referenceRules: EventSchemaReferenceRule[]; schemaDigest: string;
-  validation: IntegrationValidation;
+  [key: string]: unknown;
+  payload: Record<string, unknown>;
 }
 export interface TenantOption { tenantId: string; tenantName: string; tenantCode: string }
 export interface ProjectOption { projectSpaceId: string; projectName: string; projectCode: string; status: string }

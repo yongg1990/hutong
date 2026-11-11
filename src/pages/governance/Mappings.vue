@@ -12,7 +12,7 @@
     <el-form :model="form" label-position="top" class="precheck-form">
       <el-form-item label="映射配置代码" required><el-input v-model="form.mappingProfileCode" /></el-form-item>
       <el-form-item label="映射配置版本" required><el-input v-model="form.mappingProfileVersion" /></el-form-item>
-      <el-form-item label="来源系统 ID" required><el-input v-model="form.sourceSystemId" placeholder="数字 ID 字符串" /></el-form-item>
+      <el-form-item label="来源系统" required><ResourceOptionSelect v-model="form.sourceSystemId" kind="sourceSystemId" /></el-form-item>
       <el-form-item label="目标事件类型" required><el-input v-model="form.targetEventType" /></el-form-item>
       <el-form-item label="目标 Schema 版本" required><el-input v-model="form.targetSchemaVersion" /></el-form-item>
       <el-form-item label="警告阻断"><el-switch v-model="form.failOnWarning" /></el-form-item>
@@ -84,6 +84,7 @@ import { ref, computed } from 'vue';
 import { useLocalPagination } from '@/composables/useLocalPagination';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 import JsonEditor from '@/components/common/JsonEditor.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { governanceApi, type MappingIssue } from '@/api/governance';

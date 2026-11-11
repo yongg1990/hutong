@@ -33,8 +33,8 @@
       <el-form label-position="top" :disabled="saving">
         <el-form-item label="目标租户"><el-input :model-value="createTarget?.tenantName || createTarget?.tenantId" disabled /></el-form-item>
         <el-form-item label="来源系统"><el-input :model-value="createTarget?.sourceSystemName + ' (' + createTarget?.sourceSystemId + ')'" disabled /></el-form-item>
-        <el-form-item label="密钥算法" required><el-select v-model="form.keyAlgorithm"><el-option v-for="value in ['RSA', 'SM2']" :key="value" :value="value" :label="value" /></el-select></el-form-item>
-        <el-form-item label="数据加密算法" required><el-select v-model="form.dataAlgorithm"><el-option v-for="value in ['SM4', 'AES']" :key="value" :value="value" :label="value" /></el-select></el-form-item>
+        <el-form-item label="密钥算法" required><el-select v-model="form.keyAlgorithm"><el-option v-for="value in ['RSA', 'SM2']" :key="value" :value="value" :label="enumLabel(value)" /></el-select></el-form-item>
+        <el-form-item label="数据加密算法" required><el-select v-model="form.dataAlgorithm"><el-option v-for="value in ['SM4', 'AES']" :key="value" :value="value" :label="enumLabel(value)" /></el-select></el-form-item>
         <el-form-item label="对接方公钥（Base64 X.509）" required><el-input v-model="form.clientPublicKey" type="textarea" :rows="8" :maxlength="4096" /></el-form-item>
       </el-form>
       <template #footer><el-button :disabled="saving" @click="createVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="create">生成密钥</el-button></template>
@@ -50,6 +50,7 @@
 </template>
 
 <script setup lang="ts">
+import { enumLabel } from '@/utils/enumLabels';
 import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { computed, ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
@@ -61,6 +62,8 @@ import { sourceKeysApi, type SourceSystemKey, type KeyCreateRequest } from '@/ap
 import { apiErrorMessage } from '@/api/client';
 import { rbacApi, type TenantItem } from '@/api/rbac';
 import { governanceApi, type SourceSystemManagement } from '@/api/governance';
+import { usePageOptions } from '@/composables/usePageOptions';
+const pageOptions = usePageOptions();
 
 const route = useRoute();
 const sessionTenantId = localStorage.getItem('tcmirp_tenant_id') || '';
@@ -87,7 +90,8 @@ async function loadSources() {
   sources.value = [];
   if (!tenantId.value) return;
   sourcesLoading.value = true;
-  try { sources.value = await governanceApi.listSelectableSources(tenantId.value); }
+  const targetTenant = tenantId.value;
+  try { const result = await pageOptions(`source-keys:sources:${targetTenant}`, () => governanceApi.listSelectableSources(targetTenant)); if (tenantId.value === targetTenant) sources.value = result; }
   catch (cause) { ElMessage.error(apiErrorMessage(cause, '加载来源系统选项失败')); }
   finally { sourcesLoading.value = false; }
 }
@@ -102,7 +106,7 @@ function reset() {
 }
 onMounted(async () => {
   try {
-    tenants.value = await rbacApi.getPermittedTenants();
+    tenants.value = await pageOptions('source-keys:tenants', () => rbacApi.getPermittedTenants());
     tenantId.value = tenants.value.find(tenant => String(tenant.id) === sessionTenantId)
       ? sessionTenantId : tenants.value.length === 1 ? String(tenants.value[0].id) : '';
     await loadSources();

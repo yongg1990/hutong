@@ -2,8 +2,8 @@
   <div>
     <PageHeader title="事件类型授权" />
     <el-form inline :disabled="loading || saving" class="scope-form">
-      <el-form-item><el-input v-model="tenantId" aria-label="租户 ID" placeholder="租户 ID" @input="clear" /></el-form-item>
-      <el-form-item><el-input v-model="projectSpaceId" aria-label="项目空间 ID" placeholder="项目空间 ID" @input="clear" /></el-form-item>
+      <el-form-item><ResourceOptionSelect v-model="tenantId" kind="tenantId" placeholder="租户" @change="clear" /></el-form-item>
+      <el-form-item><ResourceOptionSelect v-model="projectSpaceId" kind="projectSpaceId" placeholder="项目空间" @change="clear" /></el-form-item>
       <el-form-item><el-button :icon="Search" type="primary" :loading="loading" @click="load">查询</el-button></el-form-item>
     </el-form>
     <div v-if="loaded" class="toolbar"><span>已选 {{ selectedCount }} / {{ rows.length }}</span><el-button type="primary" :icon="Check" :loading="saving" @click="save">保存授权集合</el-button></div>
@@ -30,6 +30,7 @@ import { computed, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Search, Check } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { eventAuthorizationsApi, type EventAuthorization } from '@/api/integration';
 import { apiErrorMessage } from '@/api/client';

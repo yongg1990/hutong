@@ -4,7 +4,7 @@
     <FilterBar @search="page = 1; loadBindings()" @reset="resetFilters">
       <el-select v-model="filters.targetType" clearable placeholder="目标类型" style="width:140px"><el-option label="主体" value="PARTY" /><el-option label="对象" value="OBJECT" /></el-select>
       <el-input v-model="filters.targetId" placeholder="目标 ID" clearable style="width:150px" />
-      <el-input v-model="filters.sourceSystemId" placeholder="来源系统 ID" clearable style="width:160px" />
+      <ResourceOptionSelect v-model="filters.sourceSystemId" kind="sourceSystemId" placeholder="来源系统" style="width:190px" />
       <el-input v-model="filters.namespaceCode" placeholder="命名空间" clearable style="width:160px" />
       <el-select v-model="filters.status" clearable placeholder="状态" style="width:130px"><el-option label="生效" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /><el-option label="已替代" value="REPLACED" /></el-select>
       <template #actions><el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button></template>
@@ -20,7 +20,7 @@
           <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
             <div class="form-grid">
               <el-form-item label="来源系统 ID" prop="sourceSystemId">
-                <el-input v-model="form.sourceSystemId" class="mono" placeholder="请输入数字字符串 ID" />
+                <ResourceOptionSelect v-model="form.sourceSystemId" kind="sourceSystemId" />
               </el-form-item>
               <el-form-item label="目标类型" prop="targetType">
                 <el-select v-model="form.targetType" style="width: 100%">
@@ -63,6 +63,7 @@ import { reactive, ref, onMounted } from 'vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import { Plus } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import {
   masterDataApi,

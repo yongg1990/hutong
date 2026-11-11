@@ -6,7 +6,7 @@
     <section class="query-panel">
       <div class="query-grid">
         <div class="query-field">
-          <el-input v-model="filters.projectSpaceId" clearable aria-label="项目空间 ID" placeholder="项目空间 ID" @keyup.enter="handleSearch" />
+          <ResourceOptionSelect v-model="filters.projectSpaceId" kind="projectSpaceId" placeholder="项目空间" />
         </div>
         <div class="query-field">
           <el-select v-model="filters.objectType" clearable filterable allow-create aria-label="对象类型" placeholder="对象类型">
@@ -109,7 +109,7 @@
             <div class="form-section-heading"><span>基础信息</span><small>用于识别对象及其业务归属</small></div>
             <div class="form-grid">
             <el-form-item label="项目空间 ID" prop="projectSpaceId">
-              <el-input v-model="form.projectSpaceId" class="mono" :disabled="editing" placeholder="请输入数字字符串 ID" />
+              <ResourceOptionSelect v-model="form.projectSpaceId" kind="projectSpaceId" :disabled="editing" />
             </el-form-item>
             <el-form-item label="对象类型" prop="objectType">
               <el-select v-model="form.objectType" :disabled="editing" allow-create filterable style="width: 100%">
@@ -197,6 +197,7 @@ import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
 import { Box, EditPen, Plus, Search, View } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 import JsonEditor from '@/components/common/JsonEditor.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import {
@@ -407,10 +408,10 @@ onMounted(loadObjects);
 .list-header h2, .dialog-heading h2, .drawer-heading h2 { margin: 0; color: var(--color-ink); letter-spacing: 0; }
 .list-header h2 { font-size: 15px; line-height: 22px; }
 .list-header > div > span { display: block; margin-top: 2px; color: var(--color-muted); font-size: 12px; line-height: 18px; }
-.query-grid { display: grid; grid-template-columns: minmax(155px, 1fr) minmax(200px, 1.25fr) minmax(155px, 1fr) minmax(130px, .72fr) auto; align-items: end; gap: 14px; }
+.query-grid { display: grid; grid-template-columns: minmax(155px, 1fr) minmax(200px, 1.25fr) minmax(155px, 1fr) minmax(130px, .72fr) auto; align-items: center; gap: 10px 12px; }
 .query-field { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
 .query-field :deep(.el-select), .query-field :deep(.el-input) { width: 100%; }
-.query-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.query-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; justify-content: flex-start; }
 .query-actions .el-button { min-width: 72px; margin-left: 0; }
 .object-list { overflow: hidden; }
 .list-header { display: flex; align-items: center; justify-content: space-between; min-height: 66px; padding: 12px 18px; border-bottom: 1px solid var(--color-border-subtle); }

@@ -15,7 +15,7 @@
             style="width: 180px"
             @keyup.enter="loadProjections"
           />
-          <el-input v-model="projectSpaceId" placeholder="项目空间 ID" style="width:220px" />
+          <ResourceOptionSelect v-model="projectSpaceId" kind="projectSpaceId" placeholder="项目空间" style="width:220px" />
           <el-input v-model="purposeCode" placeholder="访问用途" style="width: 150px" />
           <el-checkbox v-model="includeOutput">输出</el-checkbox>
           <el-checkbox v-model="includeValidationDetails">校验详情</el-checkbox>
@@ -98,10 +98,10 @@
           <el-form-item label="规范包版本" required><el-input v-model="createForm.profileVersion" /></el-form-item>
           <el-form-item label="主体类型" required>
             <el-select v-model="createForm.subjectType" style="width: 100%">
-              <el-option label="EVENT" value="EVENT" /><el-option label="OBJECT" value="OBJECT" /><el-option label="BATCH" value="BATCH" />
+              <el-option label="事件" value="EVENT" /><el-option label="对象" value="OBJECT" /><el-option label="批次" value="BATCH" />
             </el-select>
           </el-form-item>
-          <el-form-item label="项目空间 ID" required><el-input v-model="createForm.projectSpaceId" /></el-form-item>
+          <el-form-item label="项目空间" required><ResourceOptionSelect v-model="createForm.projectSpaceId" kind="projectSpaceId" /></el-form-item>
         </div>
         <el-form-item label="主体 ID（逗号分隔）" required><el-input v-model="subjectIdsText" /></el-form-item>
         <el-form-item label="数据集代码（逗号分隔，可选）"><el-input v-model="datasetCodesText" /></el-form-item>
@@ -126,6 +126,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { extendedServices } from '@/api/extendedServices';
 import { RefreshRight } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { exchangeApi } from '@/api/exchange';
 import { apiErrorMessage } from '@/api/client';
@@ -233,9 +234,13 @@ async function processProjection(){if(!/^\d+$/.test(searchQuery.value)||!/^\d+$/
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
+  width: 100%;
+  min-width: 0;
+  gap: 10px 12px;
+  justify-content: flex-start;
 }
+.projection-query > :deep(.el-input) { max-width: 100%; }
+@media (max-width: 640px) { .projection-query > :deep(.el-input) { width: 100% !important; } }
 
 .form-grid {
   display: grid;

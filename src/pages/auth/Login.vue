@@ -185,7 +185,7 @@ const handleLogin = async () => {
       });
 
       ElMessage.success(`欢迎回来，${res.user.realName || res.user.username}！`);
-      
+
       const redirect = (route.query.redirect as string) || '/workspace';
       router.push(redirect);
     } catch (err: any) {
@@ -227,12 +227,12 @@ const tipForget = () => {
 }
 
 .tcm-scenery {
-  background: url('../../../assets/login-forest.jpg') center 48% / cover no-repeat;
+  background: url('../../../assets/login-forest.png') center 48% / cover no-repeat;
   animation: forest-breathe 26s ease-in-out infinite alternate;
 }
 
 .tcm-shade {
-  background: linear-gradient(90deg, rgba(9, 34, 26, 0.7), rgba(9, 34, 26, 0.22) 62%, rgba(9, 34, 26, 0.12));
+  background: linear-gradient(90deg, rgba(9, 34, 26, 0.5), rgba(9, 34, 26, 0.22) 62%, rgba(9, 34, 26, 0.12));
 }
 
 .tcm-header, .tcm-footer {
@@ -269,7 +269,7 @@ const tipForget = () => {
   gap: 72px;
   width: min(1280px, 100%);
   margin: 0 auto;
-  padding: 36px 64px 48px;
+  padding: 36px 4px 48px;
 }
 .tcm-intro { min-width: 0; padding-bottom: 24px; animation: content-arrive 0.8s ease-out both; }
 .tcm-eyebrow { display: flex; align-items: center; gap: 12px; color: #e2eee6; font-size: 13px; }

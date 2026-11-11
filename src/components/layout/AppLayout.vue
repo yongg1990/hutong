@@ -29,14 +29,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { Expand, Fold } from '@element-plus/icons-vue';
 import { useRoute } from 'vue-router';
 import Navbar from './Navbar.vue';
 import Sidebar from './Sidebar.vue';
 import { menuGroups, mobilePages } from '@/config/navigation';
+import { providePageOptions } from '@/composables/usePageOptions';
 
 const route = useRoute();
+const resetPageOptions = providePageOptions();
+watch(() => route.fullPath, resetPageOptions, { flush: 'sync' });
 const sidebarCollapsed = ref(false);
 const breadcrumbs = computed(() => {
   if (route.path === '/workspace') return [];

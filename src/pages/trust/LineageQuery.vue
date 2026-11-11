@@ -7,12 +7,12 @@
 
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-select v-model="rootType" placeholder="根主体类型" style="width: 160px">
-        <el-option label="EVENT" value="EVENT" />
-        <el-option label="OBJECT" value="OBJECT" />
-        <el-option label="BATCH" value="BATCH" />
+        <el-option label="事件" value="EVENT" />
+        <el-option label="对象" value="OBJECT" />
+        <el-option label="批次" value="BATCH" />
       </el-select>
       <el-input v-model="rootId" placeholder="根主体 ID" style="width: 210px" />
-      <el-input v-model="projectSpaceId" placeholder="项目空间 ID" style="width: 210px" />
+      <ResourceOptionSelect v-model="projectSpaceId" kind="projectSpaceId" placeholder="项目空间" style="width:210px" />
       <el-input v-model="purposeCode" placeholder="访问用途" style="width: 160px" />
       <el-select v-model="depth" placeholder="血缘展开深度" style="width: 140px">
         <el-option label="3 层 (推荐)" :value="3" />
@@ -64,6 +64,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import GraphvizLineageCanvas from '@/components/specialized/GraphvizLineageCanvas.vue';
 import { trustApi } from '@/api/trust';

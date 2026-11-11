@@ -45,7 +45,7 @@
           <el-form-item label="实例代码" required><el-input v-model="form.instanceCode" maxlength="64" show-word-limit /></el-form-item>
           <el-form-item label="部署模式" required>
             <el-select v-model="form.deploymentMode" style="width: 100%">
-              <el-option v-for="mode in deploymentModes" :key="mode" :label="mode" :value="mode" />
+              <el-option v-for="mode in deploymentModes" :key="mode" :label="enumLabel(mode)" :value="mode" />
             </el-select>
           </el-form-item>
           <el-form-item label="运行环境" required><el-input v-model="form.environment" /></el-form-item>
@@ -64,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+import { enumLabel } from '@/utils/enumLabels';
 import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { computed, ref } from 'vue';
 import { ElMessage } from 'element-plus';

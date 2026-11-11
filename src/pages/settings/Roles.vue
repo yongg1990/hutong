@@ -8,7 +8,7 @@
 
     <!-- Filter Bar -->
     <FilterBar @search="handleSearch" @reset="handleReset">
-      <el-input v-model="tenantFilter" placeholder="租户 ID（留空查询全部）" style="width: 260px" clearable />
+      <ResourceOptionSelect v-model="tenantFilter" kind="tenantId" placeholder="租户（留空查询全部）" style="width:260px" />
       <template #actions>
         <el-button @click="$router.push('/settings/permissions')">管理权限</el-button>
         <el-button type="primary" @click="openCreateDialog"><el-icon><Plus /></el-icon>新增</el-button>
@@ -138,7 +138,7 @@
           />
         </el-form-item>
         <el-form-item label="租户 ID">
-          <el-input v-model="roleTenantId" placeholder="留空创建平台角色" />
+          <ResourceOptionSelect v-model="roleTenantId" kind="tenantId" placeholder="留空创建平台角色" />
         </el-form-item>
         <el-form-item label="角色名称" prop="roleName">
           <el-input v-model="form.roleName" placeholder="如 业务协同审计员" />
@@ -165,6 +165,7 @@ import { ref, computed, onMounted, nextTick } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type ElTree } from 'element-plus';
 import { apiErrorMessage } from '@/api/client';
 import PageHeader from '@/components/common/PageHeader.vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import {

@@ -27,6 +27,7 @@ export interface FailedRecordDetail {
 }
 
 export interface SourceSystemRequest {
+  tenantId: string;
   sourceSystemCode: string;
   sourceSystemName: string;
   sourceSystemType: string;
@@ -54,7 +55,7 @@ export interface SourceSystemManagement extends SourceSystemRequest {
   version?: string;
   createdAt?: string;
 }
-export type SourceSystemUpdateRequest = Omit<SourceSystemRequest, 'sourceSystemCode'> & { ownerPartyId: string; lockVersion: number };
+export type SourceSystemUpdateRequest = Omit<SourceSystemRequest, 'sourceSystemCode' | 'tenantId'> & { ownerPartyId: string; lockVersion: number };
 export interface PreserveRawCommand {
   projectSpaceId: string;
   batchId?: string;

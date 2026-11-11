@@ -50,7 +50,7 @@
             <el-form-item label="编码体系名称" prop="schemeName"><el-input v-model="form.schemeName" maxlength="200" placeholder="请输入编码体系名称" /></el-form-item>
             <el-form-item label="发布机构类型" prop="issuerType">
               <el-select v-model="form.issuerType" filterable allow-create default-first-option placeholder="选择或输入机构类型" style="width:100%">
-                <el-option v-for="item in issuerTypes" :key="item" :label="item" :value="item" />
+                <el-option v-for="item in issuerTypes" :key="item" :label="enumLabel(item)" :value="item" />
               </el-select>
             </el-form-item>
             <el-form-item v-if="editing" label="状态" prop="status"><el-radio-group v-model="form.status"><el-radio-button label="ACTIVE">启用</el-radio-button><el-radio-button label="INACTIVE">停用</el-radio-button></el-radio-group></el-form-item>
@@ -151,6 +151,7 @@
 </template>
 
 <script setup lang="ts">
+import { enumLabel } from '@/utils/enumLabels';
 import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';

@@ -40,9 +40,15 @@ defineEmits(['search', 'reset']);
   display: contents;
 }
 .filter-fields :deep(.el-input), .filter-fields :deep(.el-select) { max-width: 100%; }
+.filter-fields > :deep(.api-option-select) { flex: 0 1 190px; width: 190px; min-width: 0; }
 
 .filter-actions {
-  display: contents;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 .filter-actions > :deep(.el-button) { margin-left: 0; }
 @media (max-width: 640px) {

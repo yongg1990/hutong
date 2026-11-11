@@ -138,6 +138,8 @@ import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { rbacApi, type UserItem, type TenantItem, type RoleItem } from '@/api/rbac';
 import { apiErrorMessage } from '@/api/client';
+import { usePageOptions } from '@/composables/usePageOptions';
+const pageOptions = usePageOptions();
 
 const users = ref<UserItem[]>([]);
 const total = ref(0);
@@ -156,6 +158,16 @@ const password = ref('');
 const selectedRoleIds = ref<(string | number)[]>([]);
 const roleDialogVisible = ref(false);
 const dialogRoles = ref<RoleItem[]>([]);
+const userRoleOptions = new Map<string, Promise<RoleItem[]>>();
+function loadUserRoleOptions(userId: string | number, tenantId?: string | number) {
+  const key = JSON.stringify([userId, tenantId]);
+  let pending = userRoleOptions.get(key);
+  if (!pending) {
+    pending = rbacApi.getUserRoles(userId, tenantId).catch(error => { userRoleOptions.delete(key); throw error; });
+    userRoleOptions.set(key, pending);
+  }
+  return pending;
+}
 const loadingDialogRoles = ref(false);
 const bindingRoleIds = ref<(string | number)[]>([]);
 const unbindingRoleIds = ref<(string | number)[]>([]);
@@ -185,8 +197,8 @@ const loadData = async () => {
   try {
     const [result, tList, rList] = await Promise.all([
       rbacApi.getUserPage({ tenantId: appliedTenantId.value || undefined, page: page.value, size: pageSize.value }),
-      rbacApi.getPermittedTenants(),
-      rbacApi.getRoles()
+      pageOptions('users:tenants', () => rbacApi.getPermittedTenants()),
+      pageOptions('users:roles', () => rbacApi.getRoles())
     ]);
     total.value = result.total;
     page.value = result.page;
@@ -290,9 +302,9 @@ const openRoleDialog = async (row: UserItem, action: 'bind' | 'unbind') => {
   loadingDialogRoles.value = true;
   try {
     if (action === 'unbind') {
-      dialogRoles.value = await rbacApi.getUserRoles(row.userId ?? row.id, row.tenantId);
+      dialogRoles.value = await loadUserRoleOptions(row.userId ?? row.id, row.tenantId);
     } else {
-      const roleList = await rbacApi.getRoles();
+      const roleList = await pageOptions('users:roles', () => rbacApi.getRoles());
       dialogRoles.value = roleList.filter(role =>
         row.tenantId == null || row.tenantId === '' || role.tenantId == null || String(role.tenantId) === String(row.tenantId)
       );
@@ -318,6 +330,17 @@ const submitRoleAction = async () => {
       await rbacApi.bindUserRoles(userId, bindingRoleIds.value, tenantId);
     } else {
       await rbacApi.unbindUserRoles(userId, unbindingRoleIds.value, tenantId);
+    }
+    const roleKey = JSON.stringify([userId, tenantId]);
+    const cachedRoles = userRoleOptions.get(roleKey);
+    if (cachedRoles) {
+      const action = roleAction.value;
+      const removedIds = [...unbindingRoleIds.value];
+      const added = dialogRoles.value.filter(role => bindingRoleIds.value.some(id => String(id) === String(role.id)));
+      userRoleOptions.set(roleKey, cachedRoles.then(current => {
+        if (action === 'unbind') return current.filter(role => !removedIds.some(id => String(id) === String(role.id)));
+        return [...current, ...added.filter(role => !current.some(item => String(item.id) === String(role.id)))];
+      }));
     }
     ElMessage.success(roleAction.value === 'bind' ? '角色绑定成功' : '角色解除成功');
     roleDialogVisible.value = false;

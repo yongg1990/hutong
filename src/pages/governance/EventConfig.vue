@@ -90,7 +90,7 @@
           <div class="form-grid three-columns">
             <el-form-item label="字段代码" required><el-input v-model="field.fieldName" /></el-form-item>
             <el-form-item label="显示名称" required><el-input v-model="field.displayName" /></el-form-item>
-            <el-form-item label="数据类型" required><el-select v-model="field.dataType"><el-option v-for="type in dataTypes" :key="type" :label="type" :value="type" /></el-select></el-form-item>
+            <el-form-item label="数据类型" required><el-select v-model="field.dataType"><el-option v-for="type in dataTypes" :key="type" :label="enumLabel(type)" :value="type" /></el-select></el-form-item>
             <el-form-item label="是否必填"><el-switch v-model="field.required" /></el-form-item>
             <template v-if="field.dataType === 'STRING'">
               <el-form-item label="最小长度"><el-input-number v-model="field.minLength" :min="0" :precision="0" controls-position="right" /></el-form-item>
@@ -168,6 +168,7 @@
 </template>
 
 <script setup lang="ts">
+import { enumLabel } from '@/utils/enumLabels';
 import { computed, ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
@@ -476,7 +477,7 @@ onMounted(async () => {
 }
 
 .result-panel { margin-top: 12px; }
-.query-bar > .el-input, .query-bar > .el-select { flex: 1 1 160px; min-width: 0; }
+.query-bar > .el-input, .query-bar > .el-select { flex: 0 1 240px; min-width: 0; }
 .query-bar > .el-button { margin-left: 0; }
 
 .panel-header {

@@ -86,4 +86,4 @@ const state = useRolePermissions();
 const { roles, total, page, pageSize, permissionTree, permissionCount, permissionItems, permissionNameFilter, filteredPermissionTree, permissionManagerVisible, permissionEditVisible, loadingPermissionItems, savingPermissionItem, editingPermission, permissionFormRef, permissionForm, permissionRules, parentOptions, loading, submitting, savingPerms, loadingPerms, tenantFilter, appliedTenantId, dialogVisible, drawerVisible, activeRole, treeRef, currentCheckedKeys, formRef, roleTenantId, form, rules, loadRoles, handleSearch, handleReset, handleSizeChange, loadPermissionItems, openPermissionManager, openPermissionCreate, openPermissionEdit, savePermissionItem, confirmDeletePermission, openCreateDialog, submitRoleForm, openPermissionDrawer, buildPermissionTree, syncParentChecks, updateParentIndeterminate, onTreeCheck, checkAllNodes, uncheckAllNodes, expandAllNodes, collapseAllNodes, savePermissions } = state;
 onMounted(() => { void loadPermissionItems(); });
 </script>
-<style scoped>.permission-search{max-width:260px;margin:0 12px 12px}</style>
+<style scoped>.permission-search{max-width:260px;margin:0}</style>

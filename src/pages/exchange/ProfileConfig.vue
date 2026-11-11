@@ -4,7 +4,8 @@
     </PageHeader>
     <el-tabs v-model="kind" @tab-change="resetList"><el-tab-pane v-for="(item,key) in configDefinitions" :key="key" :label="item.title" :name="key" /></el-tabs>
     <div class="toolbar query-surface">
-      <el-input v-model="parentId" :placeholder="parentLabel" clearable style="max-width:300px" @keyup.enter="load" />
+      <ResourceOptionSelect v-if="kind === 'binding'" v-model="parentId" kind="projectSpaceId" placeholder="项目空间" style="max-width:300px" />
+      <el-input v-else v-model="parentId" :placeholder="parentLabel" clearable style="max-width:300px" @keyup.enter="load" />
       <el-button type="primary" :loading="loading" :icon="Search" @click="load">查询</el-button>
       <el-button :icon="Plus" type="primary" style="margin-left: auto" @click="openForm()">新增</el-button>
     </div>
@@ -25,7 +26,8 @@
     </div>
     <el-dialog v-model="formVisible" :title="`${editingId?'编辑':'新建'}${definition.title}`" width="min(680px, 94vw)" :close-on-click-modal="false" destroy-on-close>
       <el-form label-position="top"><el-form-item v-for="field in definition.fields" :key="field.key" :label="field.label" :required="field.required">
-        <el-select v-if="field.options" v-model="form[field.key]" style="width:100%"><el-option v-for="option in field.options" :key="option" :value="option" :label="option" /></el-select>
+        <ResourceOptionSelect v-if="field.key === 'projectSpaceId'" v-model="form[field.key]" kind="projectSpaceId" />
+        <el-select v-else-if="field.options" v-model="form[field.key]" style="width:100%"><el-option v-for="option in field.options" :key="option" :value="option" :label="enumLabel(option)" /></el-select>
         <el-date-picker v-else-if="field.type==='date'" v-model="form[field.key]" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" style="width:100%" />
         <el-input-number v-else-if="field.type==='number'" v-model="form[field.key]" :min="0" :precision="0" />
         <JsonEditor v-else-if="field.type==='json'" v-model="form[field.key]" :rows="6" :label="field.label" />
@@ -37,12 +39,14 @@
   </div>
 </template>
 <script setup lang="ts">
+import { enumLabel } from '@/utils/enumLabels';
 import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Plus, Search } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 import JsonEditor from '@/components/common/JsonEditor.vue';
 import { configDefinitions, exchangeConfigApi, type ConfigKind, type ConfigRecord } from '@/api/exchangeConfig';
 import { apiErrorMessage } from '@/api/client';

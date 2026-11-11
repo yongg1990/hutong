@@ -2,7 +2,7 @@
   <div><PageHeader title="系统自有码值映射" />
     <ResourceWorkbench list-path="/openapi/v1/source-systems/{sourceSystemId}/value-set-mappings" :required-filters="['sourceSystemId']" :filters="filters" :columns="columns" :fields="fields" editable create-label="新增映射" />
     <el-divider />
-    <el-form inline class="query-surface" :disabled="bulkBusy"><el-form-item><el-input v-model="sourceId" aria-label="来源系统 ID" placeholder="来源系统 ID" @input="clearBulk" /></el-form-item><el-form-item><el-input v-model="valueSetId" aria-label="标准值域 ID" placeholder="标准值域 ID" @input="clearBulk" /></el-form-item><el-form-item><el-button :loading="bulkBusy" @click="loadBulk">加载全部标准项</el-button><el-button type="primary" :disabled="!bulkLoaded" :loading="bulkBusy" @click="saveBulk">整体保存</el-button></el-form-item></el-form>
+    <el-form inline class="query-surface" :disabled="bulkBusy"><el-form-item><ResourceOptionSelect v-model="sourceId" kind="sourceSystemId" placeholder="来源系统" :disabled="bulkBusy" @change="clearBulk" /></el-form-item><el-form-item><ResourceOptionSelect v-model="valueSetId" kind="valueSetId" placeholder="标准值域" :disabled="bulkBusy" @change="clearBulk" /></el-form-item><el-form-item><el-button :loading="bulkBusy" @click="loadBulk">加载全部标准项</el-button><el-button type="primary" :disabled="!bulkLoaded" :loading="bulkBusy" @click="saveBulk">整体保存</el-button></el-form-item></el-form>
     <div class="table-surface" v-if="bulkLoaded || bulkBusy">
       <LocalPaginatedTable v-if="bulkLoaded || bulkBusy" :data="bulkRows" v-loading="bulkBusy"><el-table-column prop="standardItemId" label="标准项 ID" min-width="190" /><el-table-column prop="itemCode" label="标准代码" min-width="140" /><el-table-column prop="itemName" label="标准名称" min-width="160" /><el-table-column prop="status" label="标准项状态" width="120" /><el-table-column label="系统码值" min-width="170"><template #default="{ row }"><el-input v-model="row.systemItemCode" :disabled="bulkBusy" /></template></el-table-column><el-table-column label="系统码值名称" min-width="180"><template #default="{ row }"><el-input v-model="row.systemItemName" :disabled="bulkBusy" /></template></el-table-column><el-table-column label="映射状态" width="140"><template #default="{ row }"><el-select v-model="row.mappingStatus" :disabled="bulkBusy"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select></template></el-table-column></LocalPaginatedTable>
     </div>
@@ -15,6 +15,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { request, apiErrorMessage } from '@/api/client';
 import PageHeader from '@/components/common/PageHeader.vue';
 import ResourceWorkbench from '@/components/common/ResourceWorkbench.vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 const sourceId = ref(''), valueSetId = ref(''), bulkRows = ref<any[]>([]), bulkBusy = ref(false), bulkLoaded = ref(false);
 let revision = 0;
 function clearBulk() { ++revision; bulkLoaded.value = false; bulkRows.value = []; }

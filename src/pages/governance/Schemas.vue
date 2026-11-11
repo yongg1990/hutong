@@ -43,11 +43,11 @@
           <div class="form-grid three-columns">
             <el-form-item label="字段代码" required><el-input v-model="field.fieldName" /></el-form-item>
             <el-form-item label="显示名称" required><el-input v-model="field.displayName" /></el-form-item>
-            <el-form-item label="数据类型" required><el-select v-model="field.dataType"><el-option v-for="type in dataTypes" :key="type" :label="type" :value="type" /></el-select></el-form-item>
+            <el-form-item label="数据类型" required><el-select v-model="field.dataType"><el-option v-for="type in dataTypes" :key="type" :label="enumLabel(type)" :value="type" /></el-select></el-form-item>
             <el-form-item label="是否必填"><el-switch v-model="field.required" /></el-form-item>
             <el-form-item label="父字段 ID"><el-input v-model="field.parentFieldId" /></el-form-item>
             <el-form-item label="值来源"><el-select v-model="field.valueSource"><el-option label="外部提供" value="EXTERNAL" /><el-option label="平台生成" value="PLATFORM" /></el-select></el-form-item>
-            <template v-if="field.dataType === 'ARRAY'"><el-form-item label="数组元素类型"><el-select v-model="field.itemDataType" clearable><el-option v-for="type in dataTypes" :key="type" :label="type" :value="type" /></el-select></el-form-item><el-form-item label="最少元素"><el-input-number v-model="field.minItems" :min="0" :precision="0" /></el-form-item><el-form-item label="最多元素"><el-input-number v-model="field.maxItems" :min="0" :precision="0" /></el-form-item></template>
+            <template v-if="field.dataType === 'ARRAY'"><el-form-item label="数组元素类型"><el-select v-model="field.itemDataType" clearable><el-option v-for="type in dataTypes" :key="type" :label="enumLabel(type)" :value="type" /></el-select></el-form-item><el-form-item label="最少元素"><el-input-number v-model="field.minItems" :min="0" :precision="0" /></el-form-item><el-form-item label="最多元素"><el-input-number v-model="field.maxItems" :min="0" :precision="0" /></el-form-item></template>
             <template v-if="field.valueSource === 'PLATFORM'"><el-form-item label="生成器" required><el-select v-model="field.generatorCode" filterable><el-option v-for="g in state.generators.value" :key="g.code" :label="g.name + ' (' + g.code + ')'" :value="g.code" /></el-select></el-form-item><el-form-item label="生成器参数 JSON"><el-input :model-value="JSON.stringify(field.generatorConfig ?? {})" type="textarea" @change="updateGenerator(field, $event)" /></el-form-item></template>
             <template v-if="field.dataType === 'STRING'">
               <el-form-item label="最小长度"><el-input-number v-model="field.minLength" :min="0" :precision="0" controls-position="right" /></el-form-item>
@@ -112,6 +112,7 @@
 </div>
 </template>
 <script setup lang="ts">
+import { enumLabel } from '@/utils/enumLabels';
 import { onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import type { EventSchemaField } from '@/api/events';
@@ -145,7 +146,7 @@ onMounted(() => { void querySchema(); });
 }
 
 .result-panel { margin-top: 12px; }
-.query-bar > .el-input, .query-bar > .el-select { flex: 1 1 160px; min-width: 0; }
+.query-bar > .el-input, .query-bar > .el-select { flex: 0 1 240px; min-width: 0; }
 .query-bar > .el-button { margin-left: 0; }
 .query-bar > .query-create { margin-left: auto; }
 

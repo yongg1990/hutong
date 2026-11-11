@@ -28,13 +28,11 @@
       </div>
     </template>
     <div class="actions"><el-button type="primary" :icon="Document" :loading="generating" :disabled="!ready || busy" @click="generate">生成明文模板</el-button></div>
+    <el-drawer v-model="plaintextVisible" title="明文模板" size="min(1000px,94vw)">
     <template v-if="example">
       <div class="section-heading"><h2>SDK 明文输入</h2><div class="actions"><el-button :icon="Download" @click="download('plaintext-request.json', plaintext)">下载明文</el-button><el-button type="primary" :loading="validating" :disabled="busy || !plaintext.trim()" @click="validate">校验明文</el-button></div></div>
-      <el-descriptions :column="1" border><el-descriptions-item label="上报端点">{{ example.method }} {{ example.endpoint }}</el-descriptions-item><el-descriptions-item label="Schema 摘要">{{ example.schemaDigest }}</el-descriptions-item></el-descriptions>
       <fieldset :disabled="busy"><JsonEditor v-model="plaintext" :rows="17" label="SDK 明文输入 JSON" /></fieldset>
       <el-button :disabled="busy || !plaintext.trim()" @click="encryptVisible = true">生成模拟加密请求</el-button>
-      <div class="section-heading"><h2>SDK 配置</h2><el-button :icon="Download" @click="download('sdk-config.json', pretty(example.sdkConfig))">下载配置</el-button></div>
-      <pre class="json-output">{{ pretty(example.sdkConfig) }}</pre>
     </template>
     <section v-if="validation" class="section">
       <div class="section-heading"><h2>校验结果</h2><el-tag :type="validation.valid ? 'success' : 'danger'">{{ validation.valid ? '通过' : '未通过' }}</el-tag></div>
@@ -46,6 +44,7 @@
 <LocalPaginatedTable :data="validation.requiredInputs || []" empty-text="无待确认字段"><el-table-column prop="path" label="字段路径" min-width="200" /><el-table-column prop="code" label="代码" min-width="160" /><el-table-column prop="message" label="说明" min-width="280" /></LocalPaginatedTable>
 </div>
     </section>
+    </el-drawer>
     <el-dialog v-model="schemaVisible" title="Schema 完整定义" width="min(920px, 94vw)"><pre class="json-output">{{ pretty(schema) }}</pre></el-dialog>
     <el-dialog v-model="encryptVisible" title="模拟加密请求" width="min(640px,94vw)" :close-on-click-modal="false" @closed="privateKey = ''"><el-form label-position="top"><el-form-item label="对接方 PKCS#8 私钥 Base64" required><el-input v-model="privateKey" type="password" show-password autocomplete="off" /></el-form-item></el-form><template #footer><el-button @click="encryptVisible = false">取消</el-button><el-button type="primary" :loading="encrypting" @click="encrypt">生成</el-button></template></el-dialog>
     <el-drawer v-model="encryptedVisible" title="加密请求结果" size="min(800px,94vw)"><pre class="json-output">{{ encrypted }}</pre><el-button :icon="Download" @click="download('event-encrypted.json', encrypted)">下载加密请求</el-button></el-drawer>
@@ -59,6 +58,7 @@ import { ElMessage } from 'element-plus';
 import { Document, Download } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import ApiOptionSelect from '@/components/common/ApiOptionSelect.vue';
+import { enumLabel } from '@/utils/enumLabels';
 import JsonEditor from '@/components/common/JsonEditor.vue';
 import { apiErrorMessage } from '@/api/client';
 import { integrationApi, type IntegrationSelection, type IntegrationSchema, type IntegrationExample, type IntegrationValidation, type SourceSystemKey, type TenantOption, type ProjectOption, type EventAuthorization } from '@/api/integration';
@@ -68,6 +68,7 @@ const selection = reactive<IntegrationSelection>({ tenantId: '', projectSpaceId:
 const schema = ref<IntegrationSchema | null>(null), selectedKey = ref<SourceSystemKey | null>(null);
 const example = ref<IntegrationExample | null>(null), validation = ref<IntegrationValidation | null>(null);
 const plaintext = ref(''), idempotencyKey = ref('');
+const plaintextVisible = ref(false);
 const generating = ref(false), validating = ref(false), schemaVisible = ref(false);
 const encryptVisible = ref(false), encrypting = ref(false), privateKey = ref(''), encrypted = ref(''), encryptedVisible = ref(false);
 const busy = computed(() => generating.value || validating.value || encrypting.value);
@@ -82,12 +83,12 @@ const loadKeys = (keyword: string, page: number) => integrationApi.keys({ source
 const loadEvents = (keyword: string, page: number) => integrationApi.events({ tenantId: selection.tenantId, projectSpaceId: selection.projectSpaceId, keyword: keyword || undefined, page, size: 10 });
 const loadSchemas = (keyword: string, page: number) => integrationApi.schemas({ tenantId: selection.tenantId, projectSpaceId: selection.projectSpaceId, eventType: selection.eventType, schemaVersion: keyword || undefined, page, size: 10 });
 const tenantLabel = (item: TenantOption) => `${item.tenantName} (${item.tenantId})`;
-const projectLabel = (item: ProjectOption) => `${item.projectName} (${item.projectCode}) · ${item.status}`;
+const projectLabel = (item: ProjectOption) => `${item.projectName} (${item.projectCode}) · ${enumLabel(item.status)}`;
 const sourceLabel = (item: SourceSystemManagement) => `${item.sourceSystemName} (${item.sourceSystemCode})`;
 const keyLabel = (item: SourceSystemKey) => `${item.id} · ${item.keyAlgorithm}/${item.dataAlgorithm}`;
 const eventLabel = (item: EventAuthorization) => `${item.eventName} (${item.eventType})`;
 const schemaLabel = (item: IntegrationSchema) => item.schemaVersion;
-function clearOutput() { example.value = null; plaintext.value = ''; validation.value = null; encrypted.value = ''; encryptedVisible.value = false; privateKey.value = ''; encryptVisible.value = false; }
+function clearOutput() { plaintextVisible.value = false; example.value = null; plaintext.value = ''; validation.value = null; encrypted.value = ''; encryptedVisible.value = false; privateKey.value = ''; encryptVisible.value = false; }
 watch(() => selection.tenantId, () => { selection.sourceSystemId = ''; selection.sourceSystemKeyId = ''; selectedKey.value = null; selection.eventType = ''; selection.schemaVersion = ''; }, { flush: 'sync' });
 watch(() => selection.projectSpaceId, () => { selection.eventType = ''; selection.schemaVersion = ''; }, { flush: 'sync' });
 watch(() => selection.sourceSystemId, () => { selection.sourceSystemKeyId = ''; selectedKey.value = null; }, { flush: 'sync' });
@@ -117,8 +118,8 @@ async function generate() {
   generating.value = true; clearOutput();
   try {
     const result = await integrationApi.example({ ...selection, requestId: idempotencyKey.value });
-    if (!result.plaintextRequest) throw new Error('接口未返回明文请求信封');
-    example.value = result; plaintext.value = typeof result.plaintextRequest === 'string' ? result.plaintextRequest : pretty(result.plaintextRequest); validation.value = result.validation;
+    if (!result || !result.payload || Array.isArray(result.payload) || typeof result.payload !== 'object') throw new Error('接口未返回有效的明文请求信封');
+    example.value = result; plaintext.value = pretty(result); plaintextVisible.value = true;
   } catch (cause) { ElMessage.error(apiErrorMessage(cause, '生成明文模板失败')); }
   finally { generating.value = false; }
 }

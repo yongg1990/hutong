@@ -11,7 +11,7 @@
       <el-input v-model="filters.sourceSystemName" placeholder="系统名称" clearable style="width: 180px" />
       <el-input v-model="filters.sourceSystemType" placeholder="来源类型" clearable style="width: 140px" />
       <el-input v-model="filters.ownerPartyId" placeholder="所属主体 ID" clearable style="width: 160px" />
-      <el-select v-model="filters.endpointType" placeholder="接入方式" clearable style="width: 130px"><el-option v-for="item in ['API', 'FILE', 'MESSAGE', 'DATABASE']" :key="item" :label="item" :value="item" /></el-select>
+      <el-select v-model="filters.endpointType" placeholder="接入方式" clearable style="width: 130px"><el-option v-for="item in ['API', 'FILE', 'MESSAGE', 'DATABASE']" :key="item" :label="enumLabel(item)" :value="item" /></el-select>
       <el-select v-model="filters.status" placeholder="状态" clearable style="width: 120px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
       <template #actions><el-button type="primary" @click="openRegister"><el-icon><Plus /></el-icon>新增</el-button></template>
     </FilterBar>
@@ -35,8 +35,11 @@
     </div>
 
     <div class="pagination-row"><el-pagination v-model:current-page="page" :page-size="10" :total="total" layout="total, prev, pager, next" @current-change="loadSources" /></div>
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑来源系统' : '注册新接入来源系统'" width="520px" :close-on-click-modal="false">
-      <el-form :model="regForm" label-position="top">
+    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑来源系统' : '注册新接入来源系统'" width="600px" :close-on-click-modal="false">
+      <el-form :model="regForm" label-position="right" label-width="168px" class="source-form">
+        <el-form-item v-if="!editingId" label="租户 ID" required>
+          <el-input v-model="regForm.tenantId" maxlength="128" placeholder="请输入数字租户 ID" />
+        </el-form-item>
         <el-form-item label="系统标识 (Source Code)" required>
           <el-input v-model="regForm.systemCode" :disabled="!!editingId" placeholder="如: WMS-KM-02" />
         </el-form-item>
@@ -47,15 +50,14 @@
         <el-form-item label="所属主体 ID" :required="!!editingId"><el-input v-model="regForm.ownerPartyId" placeholder="数字 ID 字符串" /></el-form-item>
         <el-form-item label="接入方式">
           <el-select v-model="regForm.endpointType" style="width: 100%">
-            <el-option v-for="item in ['API', 'FILE', 'MESSAGE', 'DATABASE']" :key="item" :label="item" :value="item" />
+            <el-option v-for="item in ['API', 'FILE', 'MESSAGE', 'DATABASE']" :key="item" :label="enumLabel(item)" :value="item" />
           </el-select>
         </el-form-item>
         <el-form-item label="API 基础地址"><el-input v-model="regForm.baseUrl" placeholder="https://example.com/api" /></el-form-item>
-        <el-form-item label="签名公钥或证书引用"><el-input v-model="regForm.signaturePublicKey" /></el-form-item>
-        <el-form-item label="签名算法"><el-input v-model="regForm.signatureAlgorithm" placeholder="如 SM2" /></el-form-item>
-        <el-form-item label="信任级别"><el-input v-model="regForm.trustLevel" placeholder="如 HIGH" /></el-form-item>
-        <el-form-item label="默认用途代码"><el-input v-model="regForm.purposeCodes" placeholder="多个代码用逗号分隔" /></el-form-item>
-        <el-form-item label="初始状态" required><el-select v-model="regForm.status" style="width: 100%"><el-option label="启用 ACTIVE" value="ACTIVE" /><el-option label="停用 INACTIVE" value="INACTIVE" /></el-select></el-form-item>
+        <el-form-item label="信任级别">
+          <ApiOptionSelect v-if="dialogVisible" v-model="regForm.trustLevel" :loader="loadTrustLevels" value-key="itemCode" :label="trustLevelLabel" placeholder="请选择信任级别" cache-key="dictionary:TRUST_LEVEL" />
+        </el-form-item>
+        <el-form-item label="初始状态" required><el-select v-model="regForm.status" style="width: 100%"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -68,23 +70,32 @@
 </template>
 
 <script setup lang="ts">
+import { enumLabel } from '@/utils/enumLabels';
 import { ref, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
+import ApiOptionSelect from '@/components/common/ApiOptionSelect.vue';
+import { dictionaryApi, type DictionaryItem } from '@/api/dictionary';
 import { governanceApi, type SourceSystemRequest, type SourceSystemManagement } from '@/api/governance';
 import { apiErrorMessage } from '@/api/client';
 
 const dialogVisible = ref(false);
+const trustLevelLabel = (item: DictionaryItem) => item.itemName;
+async function loadTrustLevels() {
+  const records = await dictionaryApi.listActiveItems('TRUST_LEVEL');
+  return { records, total: String(records.length) };
+}
 const detailVisible = ref(false), sourceDetail = ref<SourceSystemManagement | null>(null);
 async function viewSource(id: string) { try { sourceDetail.value = await governanceApi.getSourceSystem(id); detailVisible.value = true; } catch (error) { ElMessage.error(apiErrorMessage(error, '查询来源系统详情失败')); } }
 const saving = ref(false);
 const emptyForm = () => ({
+  tenantId: '',
   systemCode: '',
   systemName: '',
   systemType: '', ownerPartyId: '', endpointType: 'API', baseUrl: '',
-  signaturePublicKey: '', signatureAlgorithm: '', trustLevel: '', purposeCodes: '', status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE'
+  trustLevel: '', status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE'
 });
 const regForm = ref(emptyForm());
 const sources = ref<any[]>([]);
@@ -114,7 +125,7 @@ async function openEdit(id: string) {
   try {
     const item = await governanceApi.getSourceSystem(id);
     editingId.value = id; lockVersion.value = item.lockVersion;
-    regForm.value = { systemCode: item.sourceSystemCode, systemName: item.sourceSystemName, systemType: item.sourceSystemType, ownerPartyId: item.ownerPartyId || '', endpointType: item.endpointType || '', baseUrl: item.baseUrl || '', signaturePublicKey: item.signaturePublicKey || '', signatureAlgorithm: item.signatureAlgorithm || '', trustLevel: item.trustLevel || '', purposeCodes: (item.defaultPurposeCodes || []).join(', '), status: item.status };
+    regForm.value = { tenantId: item.tenantId || '', systemCode: item.sourceSystemCode, systemName: item.sourceSystemName, systemType: item.sourceSystemType, ownerPartyId: item.ownerPartyId || '', endpointType: item.endpointType || '', baseUrl: item.baseUrl || '', trustLevel: item.trustLevel || '', status: item.status };
     dialogVisible.value = true;
   } catch (error) { ElMessage.error(apiErrorMessage(error, '查询来源系统失败')); }
 }
@@ -126,7 +137,14 @@ const openRegister = () => {
 
 const confirmRegister = async () => {
   const form = regForm.value;
-  const purposeCodes = form.purposeCodes.split(',').map(item => item.trim()).filter(Boolean);
+  if (!editingId.value && !form.tenantId.trim()) {
+    ElMessage.warning('请填写租户 ID');
+    return;
+  }
+  if (!editingId.value && !/^-?\d+$/.test(form.tenantId.trim())) {
+    ElMessage.warning('租户 ID 必须是数字字符串');
+    return;
+  }
   if (form.ownerPartyId && !/^-?\d+$/.test(form.ownerPartyId)) {
     ElMessage.warning('所属主体 ID 必须是数字字符串');
     return;
@@ -138,18 +156,18 @@ const confirmRegister = async () => {
   saving.value = true;
   try {
     const payload: SourceSystemRequest = {
+      tenantId: form.tenantId.trim(),
       sourceSystemCode: form.systemCode, sourceSystemName: form.systemName, sourceSystemType: form.systemType,
       ownerPartyId: form.ownerPartyId.trim() || undefined, endpointType: form.endpointType || undefined,
-      ...(form.baseUrl ? { baseUrl: form.baseUrl } : {}), signaturePublicKey: form.signaturePublicKey,
-      signatureAlgorithm: form.signatureAlgorithm, trustLevel: form.trustLevel, defaultPurposeCodes: purposeCodes, status: form.status
+      ...(form.baseUrl ? { baseUrl: form.baseUrl } : {}),
+      trustLevel: form.trustLevel, status: form.status
     };
     const created = editingId.value
       ? await governanceApi.updateSourceSystem(editingId.value, {
           sourceSystemName: payload.sourceSystemName, sourceSystemType: payload.sourceSystemType,
           ownerPartyId: form.ownerPartyId.trim(), endpointType: payload.endpointType,
-          baseUrl: payload.baseUrl, signaturePublicKey: payload.signaturePublicKey,
-          signatureAlgorithm: payload.signatureAlgorithm, trustLevel: payload.trustLevel,
-          defaultPurposeCodes: payload.defaultPurposeCodes, status: payload.status, lockVersion: lockVersion.value
+          baseUrl: payload.baseUrl, trustLevel: payload.trustLevel,
+          status: payload.status, lockVersion: lockVersion.value
         })
       : await governanceApi.registerSourceSystem(payload);
     await loadSources();
@@ -166,6 +184,15 @@ const confirmRegister = async () => {
 </script>
 
 <style scoped>
+.source-form :deep(.el-form-item__content) {
+  min-width: 0;
+}
+@media (max-width: 560px) {
+  .source-form :deep(.el-form-item__label) {
+    width: 116px !important;
+    white-space: normal;
+  }
+}
 .panel {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

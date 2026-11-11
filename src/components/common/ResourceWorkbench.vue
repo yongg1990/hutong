@@ -1,9 +1,10 @@
 <template>
   <div>
-    <div v-if="$slots.actions" class="resource-actions"><slot name="actions" /></div>
+    <div v-if="$slots.actions" class="resource-actions query-surface"><slot name="actions" /></div>
     <FilterBar @search="search" @reset="reset">
       <template v-for="filter in filters" :key="filter.key">
-        <el-select v-if="filter.options" v-model="query[filter.key]" :placeholder="filter.label" clearable><el-option v-for="option in filter.options" :key="option" :label="option" :value="option" /></el-select>
+        <ResourceOptionSelect v-if="optionKind(filter.key)" v-model="query[filter.key]" :kind="optionKind(filter.key)" :placeholder="filter.label" :tenant-id="['sourceSystemId', 'targetSourceSystemId'].includes(filter.key) ? query.tenantId : undefined" :value-set-id="filter.key === 'standardItemId' ? query.valueSetId : undefined" :context="['status', 'processingStatus'].includes(filter.key) ? statusContext : undefined" @change="clearDependentOptions(query, filter.key)" />
+        <el-select v-else-if="filter.options" v-model="query[filter.key]" :placeholder="filter.label" clearable><el-option v-for="option in filter.options" :key="option" :label="enumLabel(option)" :value="option" /></el-select>
         <el-date-picker v-else-if="filter.type === 'date'" v-model="query[filter.key]" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" :placeholder="filter.label" />
         <el-input v-else v-model="query[filter.key]" :placeholder="filter.label" clearable />
       </template>
@@ -24,8 +25,9 @@
     </div>
     <el-dialog v-model="editorVisible" :title="editingId ? '编辑记录' : createLabel" width="min(640px, 94vw)" :close-on-click-modal="false">
       <el-form label-position="top"><el-form-item v-for="field in fields" :key="field.key" :label="field.label" :required="field.required">
-        <el-switch v-if="field.type === 'boolean'" v-model="form[field.key]" />
-        <el-select v-else-if="field.options" v-model="form[field.key]" :disabled="!!editingId && field.immutable"><el-option v-for="option in field.options" :key="option" :label="option" :value="option" /></el-select>
+        <ResourceOptionSelect v-if="optionKind(field.key)" v-model="form[field.key]" :kind="optionKind(field.key)" :placeholder="field.label" :tenant-id="['sourceSystemId', 'targetSourceSystemId'].includes(field.key) ? form.tenantId || applied.tenantId : undefined" :value-set-id="field.key === 'standardItemId' ? form.valueSetId || applied.valueSetId : undefined" :disabled="!!editingId && field.immutable" @change="clearDependentOptions(form, field.key)" />
+        <el-switch v-else-if="field.type === 'boolean'" v-model="form[field.key]" />
+        <el-select v-else-if="field.options" v-model="form[field.key]" :disabled="!!editingId && field.immutable"><el-option v-for="option in field.options" :key="option" :label="enumLabel(option)" :value="option" /></el-select>
         <JsonEditor v-else-if="field.type === 'json'" v-model="form[field.key]" :rows="5" :label="field.label" />
         <el-input-number v-else-if="field.type === 'number' || field.type === 'decimal'" v-model="form[field.key]" :min="field.min" :precision="field.type === 'number' ? 0 : undefined" />
         <el-input v-else v-model="form[field.key]" :disabled="!!editingId && field.immutable" />
@@ -37,7 +39,9 @@
   </div>
 </template>
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { enumLabel } from '@/utils/enumLabels';
+import { computed, onMounted, ref } from 'vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { Plus } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, ElTable } from 'element-plus';
@@ -51,6 +55,17 @@ const props = withDefaults(defineProps<{
   requiredFilters?: string[]; createLabel?: string; immediate?: boolean; paginated?: boolean; updateMethod?: 'POST' | 'PUT'; editStatuses?: string[]; normalizePayload?: (body: Record<string, any>) => Record<string, any>;
 }>(), { filters: () => [], fields: () => [], requiredFilters: () => [], idKey: 'id', createLabel: '新增', immediate: true, paginated: true, updateMethod: 'POST', editStatuses: () => [] });
 const query = ref<Record<string, string>>({}), applied = ref<Record<string, string>>({});
+const statusContext = computed(() => Object.fromEntries(Object.entries(query.value).filter(([key]) => ['tenantId', 'projectSpaceId', 'sourceSystemId'].includes(key))));
+function clearDependentOptions(state: Record<string, any>, key: string) {
+  if (key === 'tenantId') { state.sourceSystemId = ''; state.targetSourceSystemId = ''; }
+  if (key === 'valueSetId') state.standardItemId = '';
+}
+function optionKind(key: string) {
+  if (['tenantId', 'projectSpaceId', 'sourceSystemId', 'targetSourceSystemId', 'valueSetId', 'standardItemId', 'templateType'].includes(key)) return key;
+  if (key === 'processingStatus') return 'eventStatus';
+  if (key === 'status' && props.listPath === '/openapi/v1/raw-records') return 'rawStatus';
+  return '';
+}
 let revision = 0;
 const queryParams = () => ({ ...(props.filters.some(filter => filter.key === 'limit') ? { limit: '10' } : {}), ...Object.fromEntries(Object.entries(applied.value).filter(([key]) => !props.listPath.includes(`{${key}}`))) });
 const rows = ref<Record<string, any>[]>([]), total = ref(0), page = ref(1), loading = ref(false), saving = ref(false);

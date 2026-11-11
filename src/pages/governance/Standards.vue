@@ -43,9 +43,9 @@
         <FilterBar @search="searchElements" @reset="resetElements">
           <el-input v-model="elementFilters.elementCode" placeholder="数据元编码" clearable style="width: 150px" />
           <el-input v-model="elementFilters.elementName" placeholder="数据元名称" clearable style="width: 150px" />
-          <el-select v-model="elementFilters.dataType" placeholder="数据类型" clearable style="width: 130px"><el-option v-for="type in dataTypes" :key="type" :label="type" :value="type" /></el-select>
+          <el-select v-model="elementFilters.dataType" placeholder="数据类型" clearable style="width: 130px"><el-option v-for="type in dataTypes" :key="type" :label="enumLabel(type)" :value="type" /></el-select>
           <el-input v-model="elementFilters.valueSetCode" placeholder="关联值域编码" clearable style="width: 150px" />
-          <el-select v-model="elementFilters.securityClass" placeholder="安全级别" clearable style="width: 140px"><el-option v-for="item in securityClasses" :key="item" :label="item" :value="item" /></el-select>
+          <el-select v-model="elementFilters.securityClass" placeholder="安全级别" clearable style="width: 140px"><el-option v-for="item in securityClasses" :key="item" :label="enumLabel(item)" :value="item" /></el-select>
           <el-select v-model="elementFilters.status" placeholder="状态" clearable style="width: 110px"><el-option label="启用" value="ACTIVE" /><el-option label="停用" value="INACTIVE" /></el-select>
           <template #actions><el-button type="primary" @click="openDataElementModal"><el-icon><Plus /></el-icon>新增</el-button></template>
         </FilterBar>
@@ -110,13 +110,13 @@
         </el-form-item>
         <el-form-item label="数据类型" required>
           <el-select v-model="elementForm.type" style="width: 100%">
-            <el-option v-for="type in ['STRING', 'DECIMAL', 'INTEGER', 'BOOLEAN', 'DATE', 'DATETIME', 'OBJECT', 'ARRAY']" :key="type" :label="type" :value="type" />
+            <el-option v-for="type in ['STRING', 'DECIMAL', 'INTEGER', 'BOOLEAN', 'DATE', 'DATETIME', 'OBJECT', 'ARRAY']" :key="type" :label="enumLabel(type)" :value="type" />
           </el-select>
         </el-form-item>
         <el-form-item label="关联值域代码集 (ValueSet)">
           <el-input v-model="elementForm.valueSet" placeholder="如: VS_WATER_TEST_METHOD 或留空" />
         </el-form-item>
-        <el-form-item label="安全级别" required><el-select v-model="elementForm.securityClass" style="width: 100%"><el-option v-for="item in ['PUBLIC', 'INTERNAL', 'SENSITIVE', 'STRICT_SENSITIVE']" :key="item" :label="item" :value="item" /></el-select></el-form-item>
+        <el-form-item label="安全级别" required><el-select v-model="elementForm.securityClass" style="width: 100%"><el-option v-for="item in ['PUBLIC', 'INTERNAL', 'SENSITIVE', 'STRICT_SENSITIVE']" :key="item" :label="enumLabel(item)" :value="item" /></el-select></el-form-item>
         <el-form-item label="字符串最大长度"><el-input-number v-model="elementForm.maxLength" :min="0" :precision="0" /></el-form-item>
         <el-form-item label="数值精度"><el-input-number v-model="elementForm.numericPrecision" :min="1" :precision="0" /></el-form-item>
         <el-form-item label="数值小数位"><el-input-number v-model="elementForm.numericScale" :min="0" :precision="0" /></el-form-item>
@@ -161,6 +161,7 @@
 </template>
 
 <script setup lang="ts">
+import { enumLabel } from '@/utils/enumLabels';
 import { ref, onMounted } from 'vue';
 import { ElMessage, ElTable } from 'element-plus';
 import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';

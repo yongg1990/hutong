@@ -9,11 +9,11 @@
     <!-- Filter Bar -->
     <FilterBar @search="handleSearch" @reset="handleReset">
       <el-select v-model="subjectType" placeholder="主体类型" style="width: 140px">
-        <el-option label="EVENT" value="EVENT" />
-        <el-option label="OBJECT" value="OBJECT" />
-        <el-option label="BATCH" value="BATCH" />
-        <el-option label="FILE" value="FILE" />
-        <el-option label="PROJECTION" value="PROJECTION" />
+        <el-option label="事件" value="EVENT" />
+        <el-option label="对象" value="OBJECT" />
+        <el-option label="批次" value="BATCH" />
+        <el-option label="文件" value="FILE" />
+        <el-option label="投影" value="PROJECTION" />
       </el-select>
       <el-input v-model="subjectId" placeholder="主体 ID" style="width: 220px" />
       <el-input v-model="chainType" placeholder="链类型（可选）" style="width: 180px" clearable />
@@ -72,7 +72,7 @@
     </div>
 
     <!-- Merkle Verification Drawer -->
-    <el-dialog v-model="createVisible" title="创建存证任务" width="min(600px,94vw)"><el-form label-position="top"><el-form-item label="项目空间 ID" required><el-input v-model="proofForm.projectSpaceId" /></el-form-item><el-form-item label="存证策略 ID" required><el-input v-model="proofForm.proofPolicyId" /></el-form-item><el-form-item label="主体类型" required><el-select v-model="proofForm.subjectType"><el-option v-for="v in ['EVENT','OBJECT','FILE','PROJECTION','BATCH']" :key="v" :value="v" :label="v" /></el-select></el-form-item><el-form-item label="主体 ID" required><el-input v-model="proofForm.subjectId" /></el-form-item><el-form-item label="目标链"><div v-for="(target,index) in targets" :key="index" class="target-row"><el-select v-model="target.chainType"><el-option label="CHANGAN_CHAIN" value="CHANGAN_CHAIN" /><el-option label="FISCO_BCOS" value="FISCO_BCOS" /></el-select><el-input v-model="target.networkCode" placeholder="网络代码" /><el-button :icon="Delete" :disabled="targets.length===1" title="删除目标链" @click="targets.splice(index,1)" /></div><el-button :icon="Plus" @click="targets.push({chainType:'FISCO_BCOS',networkCode:''})">添加目标链</el-button></el-form-item></el-form><template #footer><el-button @click="createVisible=false">取消</el-button><el-button type="primary" :loading="operating" @click="createProof">提交</el-button></template></el-dialog>
+    <el-dialog v-model="createVisible" title="创建存证任务" width="min(600px,94vw)"><el-form label-position="top"><el-form-item label="项目空间" required><ResourceOptionSelect v-model="proofForm.projectSpaceId" kind="projectSpaceId" /></el-form-item><el-form-item label="存证策略 ID" required><el-input v-model="proofForm.proofPolicyId" /></el-form-item><el-form-item label="主体类型" required><el-select v-model="proofForm.subjectType"><el-option v-for="v in ['EVENT','OBJECT','FILE','PROJECTION','BATCH']" :key="v" :value="v" :label="enumLabel(v)" /></el-select></el-form-item><el-form-item label="主体 ID" required><el-input v-model="proofForm.subjectId" /></el-form-item><el-form-item label="目标链"><div v-for="(target,index) in targets" :key="index" class="target-row"><el-select v-model="target.chainType"><el-option label="长安链" value="CHANGAN_CHAIN" /><el-option label="FISCO_BCOS" value="FISCO_BCOS" /></el-select><el-input v-model="target.networkCode" placeholder="网络代码" /><el-button :icon="Delete" :disabled="targets.length===1" title="删除目标链" @click="targets.splice(index,1)" /></div><el-button :icon="Plus" @click="targets.push({chainType:'FISCO_BCOS',networkCode:''})">添加目标链</el-button></el-form-item></el-form><template #footer><el-button @click="createVisible=false">取消</el-button><el-button type="primary" :loading="operating" @click="createProof">提交</el-button></template></el-dialog>
     <el-dialog v-model="operationVisible" title="存证运维补偿" width="min(520px,94vw)"><el-form label-position="top"><el-form-item label="操作"><el-select v-model="operation"><el-option label="处理独立链任务" value="process" /><el-option label="创建补偿重试" value="retry" /><el-option label="链记录对账" value="reconcile" /></el-select></el-form-item><el-form-item :label="operation==='process'?'链任务 ID':'链记录 ID'" required><el-input v-model="operationId" /></el-form-item></el-form><template #footer><el-button @click="operationVisible=false">取消</el-button><el-button type="primary" :loading="operating" @click="runOperation">提交</el-button></template></el-dialog>
     <el-drawer v-model="operationResultVisible" title="存证操作结果" size="min(600px,94vw)"><pre style="white-space:pre-wrap;overflow-wrap:anywhere">{{ JSON.stringify(operationResult,null,2) }}</pre></el-drawer>
     <el-drawer
@@ -133,6 +133,7 @@
 </template>
 
 <script setup lang="ts">
+import { enumLabel } from '@/utils/enumLabels';
 import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -142,6 +143,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Delete, Plus } from '@element-plus/icons-vue';
 import { extendedServices } from '@/api/extendedServices';
 import PageHeader from '@/components/common/PageHeader.vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { trustApi, type ProofMerkleItem } from '@/api/trust';

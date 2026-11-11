@@ -96,8 +96,8 @@
         </el-form-item>
         <el-form-item v-if="isEditing" label="运行状态">
             <el-select v-model="form.status">
-              <el-option label="正常运行 (ACTIVE)" value="ACTIVE" />
-              <el-option label="停用 (INACTIVE)" value="INACTIVE" />
+              <el-option label="启用" value="ACTIVE" />
+              <el-option label="停用" value="INACTIVE" />
             </el-select>
         </el-form-item>
       </el-form>

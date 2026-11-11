@@ -4,9 +4,11 @@ import PageHeader from '@/components/common/PageHeader.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
 import { apiErrorMessage } from '@/api/client';
+import { usePageOptions } from '@/composables/usePageOptions';
 import { eventsApi, type SchemaSnapshot, type SchemaTestResult, type EventSchemaField, type EventSchemaReferenceRule, type EventTypeDetail } from '@/api/events';
 
 export function useEventConfiguration() {
+const pageOptions = usePageOptions();
 type EventTypeRow = EventTypeDetail;
 const emptySchemaFilters = () => ({ eventType: '', schemaVersion: '', status: '' });
 const emptyEventFilters = () => ({ eventType: '', scenarioCode: '', status: '' });
@@ -214,7 +216,7 @@ const openSchemaDialog = () => {
 };
 const openEditSchema = async (row: SchemaSnapshot) => {
   try {
-    if (!generators.value.length) { try { generators.value = await eventsApi.generators(); } catch (error) { ElMessage.error(apiErrorMessage(error, '加载生成器失败')); } }
+    try { generators.value = await pageOptions('schemas:generators', () => eventsApi.generators()); } catch (error) { ElMessage.error(apiErrorMessage(error, '加载生成器失败')); }
     const detail = await eventsApi.getSchemaDefinition(row.id);
     if (detail.status === 'PUBLISHED') throw new Error('已发布版本不可编辑，请复制新草稿');
     draftTestResult.value = null;
@@ -248,7 +250,7 @@ const saveSchemaDraft = async () => {
       : await eventsApi.createSchemaDraft({ eventType: form.eventType.trim(), schemaVersion: form.schemaVersion.trim(), fields, referenceRules: rules });
     upsertSchema(result);
     editingSchemaId.value = result.id; editingLockVersion.value = result.lockVersion;
-    if (!generators.value.length) { try { generators.value = await eventsApi.generators(); } catch (error) { ElMessage.error(apiErrorMessage(error, '加载生成器失败')); } }
+    try { generators.value = await pageOptions('schemas:generators', () => eventsApi.generators()); } catch (error) { ElMessage.error(apiErrorMessage(error, '加载生成器失败')); }
     ElMessage.success('草稿基本信息已保存');
   } catch (error) {
     ElMessage.error(apiErrorMessage(error, '保存 Schema 草稿失败'));

@@ -37,11 +37,11 @@
     </div>
 
     <div class="header-actions">
-      <el-tag v-if="isStaticMode()" type="warning">静态协同</el-tag>
-      <el-button size="small" @click="changeDataMode">{{ isStaticMode() ? '切换真实数据' : '切换静态数据' }}</el-button>
-      <el-button type="primary" size="small" @click="router.push('/business/events/new')">
-        <el-icon style="margin-right: 4px;"><Plus /></el-icon> 录入业务事件
-      </el-button>
+<!--      <el-tag v-if="isStaticMode()" type="warning">静态协同</el-tag>-->
+<!--      <el-button size="small" @click="changeDataMode">{{ isStaticMode() ? '切换真实数据' : '切换静态数据' }}</el-button>-->
+<!--      <el-button type="primary" size="small" @click="router.push('/business/events/new')">-->
+<!--        <el-icon style="margin-right: 4px;"><Plus /></el-icon> 录入业务事件-->
+<!--      </el-button>-->
 
       <el-dropdown trigger="click" @command="handleUserCommand">
         <div class="user-badge cursor-pointer" title="点击展开用户会话与注销操作">
@@ -56,16 +56,16 @@
         </div>
         <template #dropdown>
           <el-dropdown-menu class="user-session-menu">
-            <div class="dropdown-user-header">
-              <div class="dh-name">{{ contextStore.userName }}</div>
-              <div class="dh-tenant mono">{{ contextStore.tenantName }}</div>
-              <div class="dh-code mono">租户ID: {{ contextStore.tenantId }}</div>
-            </div>
-            <el-dropdown-item divided command="relogin">
-              切换其他账号登录
-            </el-dropdown-item>
+<!--            <div class="dropdown-user-header">-->
+<!--              <div class="dh-name">{{ contextStore.userName }}</div>-->
+<!--              <div class="dh-tenant mono">{{ contextStore.tenantName }}</div>-->
+<!--              <div class="dh-code mono">租户ID: {{ contextStore.tenantId }}</div>-->
+<!--            </div>-->
+<!--            <el-dropdown-item divided command="relogin">-->
+<!--              切换其他账号登录-->
+<!--            </el-dropdown-item>-->
             <el-dropdown-item command="logout" class="text-danger">
-              <span style="color: #ef4444; font-weight: 600;">安全退出登录</span>
+              <span style="color: #ef4444; font-weight: 600;">退出登录</span>
             </el-dropdown-item>
           </el-dropdown-menu>
         </template>

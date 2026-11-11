@@ -36,8 +36,8 @@
           <el-form-item label="证据类型" required><el-input v-model="createForm.evidenceType" /></el-form-item>
           <el-form-item label="主体类型" required>
             <el-select v-model="createForm.subjectType" style="width: 100%">
-              <el-option label="EVENT" value="EVENT" /><el-option label="OBJECT" value="OBJECT" />
-              <el-option label="FILE" value="FILE" /><el-option label="PROJECTION" value="PROJECTION" />
+              <el-option label="事件" value="EVENT" /><el-option label="对象" value="OBJECT" />
+              <el-option label="文件" value="FILE" /><el-option label="投影" value="PROJECTION" />
             </el-select>
           </el-form-item>
           <el-form-item label="主体 ID" required><el-input v-model="createForm.subjectId" /></el-form-item>

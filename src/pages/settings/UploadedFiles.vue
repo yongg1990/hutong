@@ -3,11 +3,11 @@
     <PageHeader title="租户上传文件" />
     <ResourceWorkbench ref="workbench" list-path="/tenant-access/files" detail-path="/tenant-access/files/{id}" :filters="filters" :columns="columns">
       <template #filter-actions><el-button :icon="Upload" type="primary" @click="uploadVisible = true">上传文件</el-button></template>
-      <template #actions><el-input v-model="downloadTenantId" placeholder="下载目标租户 ID" style="max-width:220px" /><el-input v-model="downloadId" placeholder="文件 ID" style="max-width:220px" /><el-button :icon="Download" :loading="downloading" @click="download">下载文件</el-button></template>
+      <template #actions><ResourceOptionSelect v-model="downloadTenantId" kind="tenantId" placeholder="下载目标租户" style="max-width:220px" /><el-input v-model="downloadId" placeholder="文件 ID" style="max-width:220px" /><el-button :icon="Download" :loading="downloading" @click="download">下载文件</el-button></template>
       <template #row-actions="{ row }"><el-button link :icon="Download" :disabled="downloading" @click="downloadRow(row)">下载</el-button></template>
     </ResourceWorkbench>
     <el-dialog v-model="uploadVisible" title="上传文件" width="min(520px, 94vw)" :close-on-click-modal="false">
-      <el-form label-position="top"><el-form-item label="租户 ID"><el-input v-model="form.tenantId" /></el-form-item><el-form-item label="模板类型" required><el-input v-model="form.templateType" /></el-form-item><el-form-item label="模板版本" required><el-input v-model="form.templateVersion" /></el-form-item><el-form-item label="文件" required><input type="file" @change="selectFile" /></el-form-item></el-form>
+      <el-form label-position="top"><el-form-item label="租户"><ResourceOptionSelect v-model="form.tenantId" kind="tenantId" /></el-form-item><el-form-item label="模板类型" required><ResourceOptionSelect v-model="form.templateType" kind="templateType" /></el-form-item><el-form-item label="模板版本" required><el-input v-model="form.templateVersion" /></el-form-item><el-form-item label="文件" required><input type="file" @change="selectFile" /></el-form-item></el-form>
       <template #footer><el-button @click="uploadVisible = false">取消</el-button><el-button type="primary" :loading="uploading" @click="upload">上传</el-button></template>
     </el-dialog>
   </div>
@@ -18,6 +18,7 @@ import { ElMessage } from 'element-plus';
 import { Upload, Download } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import ResourceWorkbench from '@/components/common/ResourceWorkbench.vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 import { request, apiErrorMessage } from '@/api/client';
 const workbench = ref<InstanceType<typeof ResourceWorkbench>>();
 const uploadVisible = ref(false), uploading = ref(false), downloading = ref(false), downloadId = ref('');
@@ -45,12 +46,12 @@ async function download() {
   if (!/^\d+$/.test(downloadId.value.trim())) { ElMessage.warning('请输入文件 ID'); return; }
   downloading.value = true;
   try {
-    const params = { tenantId: downloadTenantId.value.trim() || undefined };
+    const params = { tenantId: downloadTenantId.value?.trim() || undefined };
     const metadata: any = await request.get(`/tenant-access/files/${downloadId.value.trim()}`, { params });
     const blob = await request.get<Blob, Blob>(`/tenant-access/files/${downloadId.value.trim()}/content`, { responseType: 'blob', params });
     const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = metadata.originalName || `file-${downloadId.value}`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (error) { ElMessage.error(apiErrorMessage(error, '下载失败')); }
   finally { downloading.value = false; }
 }
-function downloadRow(row: { id: string; tenantId: string }) { if (downloading.value) return; downloadId.value = row.id; downloadTenantId.value = row.tenantId; void download(); }
+function downloadRow(row: { id: string; tenantId?: string | null }) { if (downloading.value) return; downloadId.value = row.id; downloadTenantId.value = row.tenantId ?? ''; void download(); }
 </script>

@@ -105,7 +105,7 @@
         </div>
         <div style="display: flex; gap: 12px;">
           <el-form-item label="来源系统 ID" style="flex: 1" required>
-            <el-input v-model="batchForm.sourceSystemId" placeholder="数字 ID 字符串" />
+            <ResourceOptionSelect v-model="batchForm.sourceSystemId" kind="sourceSystemId" />
           </el-form-item>
           <el-form-item label="输入数据格式 (inputFormat)" style="flex: 1" required>
             <el-select v-model="batchForm.inputFormat" style="width: 100%">
@@ -156,9 +156,9 @@
     </el-dialog>
     <el-dialog v-model="rawVisible" title="留存原始记录" width="560px" :close-on-click-modal="false">
       <el-form :model="rawForm" label-position="top">
-        <el-form-item label="项目空间 ID" required><el-input v-model="rawForm.projectSpaceId" placeholder="数字 ID 字符串" /></el-form-item>
+        <el-form-item label="项目空间" required><ResourceOptionSelect v-model="rawForm.projectSpaceId" kind="projectSpaceId" /></el-form-item>
         <el-form-item label="批量任务 ID"><el-input v-model="rawForm.batchId" placeholder="数字 ID 字符串" /></el-form-item>
-        <el-form-item label="来源系统 ID" required><el-input v-model="rawForm.sourceSystemId" placeholder="数字 ID 字符串" /></el-form-item>
+        <el-form-item label="来源系统" required><ResourceOptionSelect v-model="rawForm.sourceSystemId" kind="sourceSystemId" /></el-form-item>
         <el-form-item label="来源业务键" required><el-input v-model="rawForm.sourceBusinessKey" /></el-form-item>
         <el-form-item label="内容类型" required><el-input v-model="rawForm.contentType" placeholder="application/json" /></el-form-item>
         <el-form-item label="内容摘要"><el-input v-model="rawForm.contentDigest" /></el-form-item>
@@ -175,6 +175,7 @@ import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { ref, computed } from 'vue';
 import { ElMessage } from 'element-plus';
 import PageHeader from '@/components/common/PageHeader.vue';
+import ResourceOptionSelect from '@/components/common/ResourceOptionSelect.vue';
 import FilterBar from '@/components/common/FilterBar.vue';
 import JsonEditor from '@/components/common/JsonEditor.vue';
 import StatusTag from '@/components/common/StatusTag.vue';
