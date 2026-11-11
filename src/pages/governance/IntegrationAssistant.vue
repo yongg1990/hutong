@@ -31,7 +31,7 @@
     <el-drawer v-model="plaintextVisible" title="明文模板" size="min(1000px,94vw)">
     <template v-if="example">
       <div class="section-heading"><h2>SDK 明文输入</h2><div class="actions"><el-button :icon="Download" @click="download('plaintext-request.json', plaintext)">下载明文</el-button><el-button type="primary" :loading="validating" :disabled="busy || !plaintext.trim()" @click="validate">校验明文</el-button></div></div>
-      <fieldset :disabled="busy"><JsonEditor v-model="plaintext" :rows="17" label="SDK 明文输入 JSON" /></fieldset>
+      <fieldset :disabled="busy"><JsonEditor v-model="plaintext" :rows="30" label="SDK 明文输入 JSON" /></fieldset>
       <el-button :disabled="busy || !plaintext.trim()" @click="encryptVisible = true">生成模拟加密请求</el-button>
     </template>
     <section v-if="validation" class="section">
