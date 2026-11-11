@@ -47,7 +47,7 @@
     </el-drawer>
     <el-dialog v-model="schemaVisible" title="Schema 完整定义" width="min(920px, 94vw)"><pre class="json-output">{{ pretty(schema) }}</pre></el-dialog>
     <el-dialog v-model="encryptVisible" title="模拟加密请求" width="min(640px,94vw)" :close-on-click-modal="false" @closed="privateKey = ''"><el-form label-position="top"><el-form-item label="对接方 PKCS#8 私钥 Base64" required><el-input v-model="privateKey" type="password" show-password autocomplete="off" /></el-form-item></el-form><template #footer><el-button @click="encryptVisible = false">取消</el-button><el-button type="primary" :loading="encrypting" @click="encrypt">生成</el-button></template></el-dialog>
-    <el-drawer v-model="encryptedVisible" title="加密请求结果" size="min(800px,94vw)"><pre class="json-output">{{ encrypted }}</pre><el-button :icon="Download" @click="download('event-encrypted.json', encrypted)">下载加密请求</el-button></el-drawer>
+    <el-drawer v-model="encryptedVisible" title="加密请求结果" size="min(800px,94vw)"><pre class="json-output">{{ encrypted }}</pre><div class="actions"><el-button :icon="Download" @click="download('event-encrypted.json', encrypted)">下载加密请求</el-button><el-button :icon="CopyDocument" :disabled="!encrypted" @click="copyRequest">复制请求</el-button></div></el-drawer>
   </div>
 </template>
 
@@ -55,7 +55,7 @@
 import LocalPaginatedTable from '@/components/common/LocalPaginatedTable.vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
-import { Document, Download } from '@element-plus/icons-vue';
+import { CopyDocument, Document, Download } from '@element-plus/icons-vue';
 import PageHeader from '@/components/common/PageHeader.vue';
 import ApiOptionSelect from '@/components/common/ApiOptionSelect.vue';
 import { enumLabel } from '@/utils/enumLabels';
@@ -143,6 +143,32 @@ async function encrypt() {
   encrypting.value = true;
   try { encrypted.value = pretty(await integrationApi.encrypt(requireJsonObject(plaintext.value), privateKey.value.trim())); privateKey.value = ''; encryptVisible.value = false; encryptedVisible.value = true; }
   catch (error) { ElMessage.error(apiErrorMessage(error, '加密失败')); } finally { encrypting.value = false; }
+}
+async function copyRequest() {
+  if (!encrypted.value) return;
+  try {
+    let copied = false;
+    if (navigator.clipboard?.writeText) {
+      try { await navigator.clipboard.writeText(encrypted.value); copied = true; }
+      catch { /* Fall back for browsers that deny clipboard access. */ }
+    }
+    if (!copied) {
+      const focused = document.activeElement;
+      const textarea = document.createElement('textarea');
+      textarea.value = encrypted.value;
+      textarea.readOnly = true;
+      textarea.style.cssText = 'position:fixed;left:-9999px;top:0;';
+      (focused?.closest('.el-drawer') || document.body).appendChild(textarea);
+      try {
+        textarea.select();
+        if (!document.execCommand('copy')) throw new Error('复制失败');
+      } finally {
+        textarea.remove();
+        if (focused instanceof HTMLElement) focused.focus();
+      }
+    }
+    ElMessage.success('请求已复制');
+  } catch { ElMessage.error('复制失败，请检查浏览器剪贴板权限'); }
 }
 </script>
 

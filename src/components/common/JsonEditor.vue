@@ -100,11 +100,11 @@ function indent(event: KeyboardEvent) {
 .editor-toolbar { display: flex; align-items: center; justify-content: space-between; min-height: 32px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--color-border-subtle); background: var(--color-surface-subtle); }
 .editor-status { color: var(--color-success); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-status.invalid { color: var(--color-danger); }
-.editor-body { display: flex; min-width: 0; }
+.editor-body { position: relative; display: flex; min-width: 0; }
 .line-numbers, textarea, .highlight { padding: 10px 0; font: 12px/1.6 "JetBrains Mono", Consolas, monospace; letter-spacing: 0; }
-.line-numbers { width: 38px; flex: none; overflow: hidden; text-align: right; color: var(--color-muted); background: var(--color-surface-subtle); user-select: none; }
+.line-numbers { position: absolute; inset: 0 auto 0 0; width: 38px; overflow: hidden; text-align: right; color: var(--color-muted); background: var(--color-surface-subtle); user-select: none; }
 .line-numbers span { display: block; padding-right: 8px; }
-.code-area { position: relative; flex: 1; min-width: 0; }
+.code-area { position: relative; flex: 1; min-width: 0; margin-left: 38px; }
 .highlight, textarea { width: 100%; min-width: 0; min-height: 80px; margin: 0; padding: 10px 12px; border: 0; tab-size: 2; white-space: pre; overflow: auto; }
 .highlight { position: absolute; inset: 0; pointer-events: none; color: var(--color-ink); }
 .highlight :deep(.token-key) { color: #176b89; }
