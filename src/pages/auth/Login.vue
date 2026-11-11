@@ -196,6 +196,7 @@ const handleLogin = async () => {
     }
   });
 };
+
 const tipForget = () => {
   ElMessageBox.alert(
     '请联系所属租户管理员或平台运维人员处理账号密码。',
